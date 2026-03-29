@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+data/pdfs/
+.vscode/
+.DS_Store
+data/db/.monitor_state.json
