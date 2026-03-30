@@ -26,6 +26,7 @@ from pathlib import Path
 import requests
 
 from config import DB_PATH, HEADERS, SEARCH_URL, STATE_FILE
+from ingest import create_schema
 
 
 PAGE_SIZE = 100
@@ -261,6 +262,13 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(DB_PATH)
         conn.execute("PRAGMA journal_mode=WAL")
+        create_schema(conn)
+        # Ensure columns added after initial release exist
+        for col in ["entity_number"]:
+            try:
+                conn.execute(f"ALTER TABLE contracts ADD COLUMN {col} TEXT")
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
     all_new = []
     page = 1
