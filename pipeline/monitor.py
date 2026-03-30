@@ -263,12 +263,18 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
         conn = sqlite3.connect(DB_PATH)
         conn.execute("PRAGMA journal_mode=WAL")
         create_schema(conn)
-        # Ensure columns added after initial release exist
-        for col in ["entity_number"]:
-            try:
+        # Migrate: add any columns present in the INSERT but missing from the table
+        existing = {r[1] for r in conn.execute("PRAGMA table_info(contracts)").fetchall()}
+        expected = [
+            "row_hash", "contract_number", "entity", "entity_number",
+            "contractor", "amendment", "service_category", "service_type",
+            "amount", "amount_receivable", "award_date", "valid_from",
+            "valid_to", "procurement_method", "fund_type", "pco_number",
+            "cancelled", "document_url", "fiscal_year", "inserted_at",
+        ]
+        for col in expected:
+            if col not in existing:
                 conn.execute(f"ALTER TABLE contracts ADD COLUMN {col} TEXT")
-            except sqlite3.OperationalError:
-                pass  # column already exists
 
     all_new = []
     page = 1
