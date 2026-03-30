@@ -258,6 +258,7 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
 
     conn = None
     if not dry_run:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(DB_PATH)
         conn.execute("PRAGMA journal_mode=WAL")
 

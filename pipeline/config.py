@@ -4,9 +4,11 @@ Shared configuration for the OCPR contract data pipeline.
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-RAW_DIR = Path("data/raw")
-DB_PATH = Path("data/db/contratos.db")
-STATE_FILE = Path("data/db/.monitor_state.json")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+RAW_DIR    = _REPO_ROOT / "data" / "raw"
+DB_PATH    = _REPO_ROOT / "data" / "db" / "contratos.db"
+STATE_FILE = _REPO_ROOT / "data" / "db" / ".monitor_state.json"
 
 # ── OCPR endpoints ─────────────────────────────────────────────────────────
 BASE_URL = "https://consultacontratos.ocpr.gov.pr"
