@@ -29,7 +29,11 @@ from config import DB_PATH, HEADERS, SEARCH_URL, STATE_FILE
 from ingest import create_schema
 
 
-PAGE_SIZE = 100
+# The API ignores pageSize and returns its own fixed page size (~112 rows).
+# We use this only for termination: fewer rows than this means last page.
+API_PAGE_SIZE = 112
+# Stop paginating after this many consecutive pages with zero new contracts.
+MAX_STALE_PAGES = 5
 
 
 # ── State ──────────────────────────────────────────────────────────────────
@@ -64,7 +68,7 @@ def build_search_payload(since_date: str, page: int = 1) -> dict:
         "formaContratacion": "",
         "fondo": "",
         "page": page,
-        "pageSize": PAGE_SIZE,
+        "pageSize": API_PAGE_SIZE,
         "sortBy": "fechaOtorgamiento",
         "sortOrder": "desc",
     }
@@ -278,6 +282,7 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
 
     all_new = []
     page = 1
+    stale_streak = 0
 
     while True:
         rows, count = fetch_page(since_date, page, dry_run=dry_run)
@@ -292,7 +297,17 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
             all_new.extend(new)
             print(f"    -> {len(new)} new / {len(normalized) - len(new)} already known")
 
-        if count < PAGE_SIZE:
+            # Stop early: if several consecutive pages have 0 new contracts,
+            # we've passed the delta boundary — no need to scan the full DB.
+            if len(new) == 0:
+                stale_streak += 1
+                if stale_streak >= MAX_STALE_PAGES:
+                    print(f"\n  {MAX_STALE_PAGES} consecutive pages with 0 new contracts — stopping.")
+                    break
+            else:
+                stale_streak = 0
+
+        if count < API_PAGE_SIZE:
             break
         page += 1
         time.sleep(1.0)
