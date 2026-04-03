@@ -23,11 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      FULL_DB_RELEASE_TAG: data-latest
+      FULL_DB_RELEASE_ASSET: contratos-full.db.gz
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
 
       - uses: actions/setup-python@v5
         with:
@@ -35,6 +36,48 @@ jobs:
 
       - name: Install dependencies
         run: pip install requests
+
+      - name: Hydrate full DB from release asset when needed
+        id: hydrate
+        if: github.event.inputs.mode != 'full-rebuild'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/db
+
+          if [ -f data/db/contratos.db ]; then
+            echo "bootstrap=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ -f data/db/contratos-full.db.gz ]; then
+            gzip -dc data/db/contratos-full.db.gz > data/db/contratos.db
+            echo "bootstrap=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if gh release download "$FULL_DB_RELEASE_TAG" \
+            --pattern "$FULL_DB_RELEASE_ASSET" \
+            --dir data/db; then
+            gzip -dc "data/db/$FULL_DB_RELEASE_ASSET" > data/db/contratos.db
+            echo "bootstrap=false" >> $GITHUB_OUTPUT
+          else
+            echo "bootstrap=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bootstrap full DB from archived CSVs
+        if: steps.hydrate.outputs.bootstrap == 'true'
+        working-directory: pipeline
+        run: python ingest.py --reset
+
+      - name: Record full DB hash before sync
+        id: db_before
+        run: |
+          if [ -f data/db/contratos.db ]; then
+            echo "hash=$(sha256sum data/db/contratos.db | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          else
+            echo "hash=missing" >> $GITHUB_OUTPUT
+          fi
 
       - name: Determine sync mode
         id: mode
@@ -49,7 +92,7 @@ jobs:
 
       # ── Delta sync (nightly) ─────────────────────────────────────────
       - name: Delta sync — fetch new contracts
-        if: steps.mode.outputs.mode == 'delta'
+        if: steps.mode.outputs.mode == 'delta' && steps.hydrate.outputs.bootstrap != 'true'
         working-directory: pipeline
         run: python monitor.py
 
@@ -75,13 +118,51 @@ jobs:
         working-directory: pipeline
         run: python ingest.py --reset
 
+      - name: Detect whether browser artifacts need rebuild
+        id: artifacts
+        run: |
+          if [ -f data/db/contratos.db ]; then
+            after_hash=$(sha256sum data/db/contratos.db | cut -d' ' -f1)
+          else
+            after_hash=missing
+          fi
+          echo "after_hash=$after_hash" >> $GITHUB_OUTPUT
+
+          if [ "${{ steps.mode.outputs.mode }}" != "delta" ]; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.hydrate.outputs.bootstrap }}" = "true" ]; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          elif [ ! -f site/data-manifest.json ]; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.db_before.outputs.hash }}" = "$after_hash" ]; then
+            echo "rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          fi
+
       # ── Build site assets ────────────────────────────────────────────
-      - name: Compress database for site
-        run: gzip -kf data/db/contratos.db && mv data/db/contratos.db.gz site/
+      - name: Build browser DB + manifest
+        if: steps.artifacts.outputs.rebuild == 'true'
+        run: >
+          python pipeline/build_site_artifacts.py
+          --repo-raw-base https://github.com/${{ github.repository }}/raw/main
+          --full-download-url https://github.com/${{ github.repository }}/releases/download/${{ env.FULL_DB_RELEASE_TAG }}/${{ env.FULL_DB_RELEASE_ASSET }}
+
+      - name: Publish full DB release asset
+        if: steps.artifacts.outputs.rebuild == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$FULL_DB_RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$FULL_DB_RELEASE_TAG" \
+              --title "Latest data" \
+              --notes "Automated full SQLite database for OCPR Transparency."
+
+          gh release upload "$FULL_DB_RELEASE_TAG" "data/db/$FULL_DB_RELEASE_ASSET" --clobber
 
       # ── Commit changes ───────────────────────────────────────────────
       - name: Commit updated data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "data: ${{ steps.mode.outputs.mode }} sync $(date -u +%Y-%m-%d)"
-          file_pattern: "data/ site/contratos.db.gz"
+          file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz site/data-manifest.json"

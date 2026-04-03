@@ -1,57 +1,99 @@
 /**
- * db.js — sql.js wrapper with query builder and IndexedDB caching.
+ * db.js — sql.js wrapper with manifest-driven loading and IndexedDB caching.
  *
- * Loads the SQLite database (gzipped) into the browser via WebAssembly,
- * caches it in IndexedDB for instant repeat visits.
+ * The site serves a smaller browser-focused SQLite database while keeping the
+ * full database downloadable as open data.
  */
 
-const DB_FILE = "contratos.db.gz";
+const MANIFEST_URL = "data-manifest.json";
 const IDB_NAME = "ocpr-transparency";
 const IDB_STORE = "db-cache";
+const IDB_VERSION = 2;
+const CACHE_KEY = "browser-db";
 const PAGE_SIZE = 50;
 
+const DEFAULT_MANIFEST = {
+    generated_at: null,
+    row_count: null,
+    total_amount: null,
+    fiscal_years: [],
+    raw_csv_base_url: "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
+    browser_db: {
+        url: "contratos.db.gz",
+        sha256: "legacy-browser-db",
+    },
+    full_download_db: {
+        url: "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
+        sha256: null,
+    },
+};
+
 let _db = null;
+let _manifest = DEFAULT_MANIFEST;
 
-/**
- * Initialize sql.js and load the database.
- * @param {function} onStatus - callback for status updates
- * @returns {Promise<void>}
- */
-async function initDB(onStatus) {
-    onStatus("Inicializando...");
-
-    const SQL = await initSqlJs({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
-    });
-
-    // Try IndexedDB cache first
-    onStatus("Verificando cache...");
-    let dbBytes = await loadFromCache();
-
-    if (!dbBytes) {
-        onStatus("Descargando base de datos...");
-        const response = await fetch(DB_FILE);
-        if (!response.ok) throw new Error(`Failed to fetch ${DB_FILE}: ${response.status}`);
-
-        const compressed = await response.arrayBuffer();
-        onStatus("Descomprimiendo...");
-        dbBytes = await decompress(new Uint8Array(compressed));
-
-        // Cache for next time
-        await saveToCache(dbBytes);
-    } else {
-        onStatus("Cargado desde cache");
+async function loadManifest() {
+    try {
+        const response = await fetch(MANIFEST_URL, { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ${MANIFEST_URL}: ${response.status}`);
+        }
+        const loaded = await response.json();
+        return {
+            ...DEFAULT_MANIFEST,
+            ...loaded,
+            browser_db: {
+                ...DEFAULT_MANIFEST.browser_db,
+                ...(loaded.browser_db || {}),
+            },
+            full_download_db: {
+                ...DEFAULT_MANIFEST.full_download_db,
+                ...(loaded.full_download_db || {}),
+            },
+        };
+    } catch (err) {
+        console.warn("Falling back to default manifest:", err);
+        return { ...DEFAULT_MANIFEST };
     }
-
-    onStatus("Abriendo base de datos...");
-    _db = new SQL.Database(dbBytes);
-    _db.run("PRAGMA cache_size = -32000"); // 32MB cache
 }
 
-/**
- * Decompress gzipped data using DecompressionStream (modern browsers)
- * or fall back to manual approach.
- */
+function getManifest() {
+    return _manifest;
+}
+
+async function initDB(onStatus) {
+    onStatus("Initializing database...");
+    _manifest = await loadManifest();
+
+    const SQL = await initSqlJs({
+        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
+    });
+
+    const browserDb = _manifest.browser_db || DEFAULT_MANIFEST.browser_db;
+    const browserHash = browserDb.sha256 || "legacy-browser-db";
+
+    onStatus("Checking local cache...");
+    let dbBytes = await loadFromCache(browserHash);
+
+    if (!dbBytes) {
+        onStatus("Downloading contracts...");
+        const response = await fetch(browserDb.url, { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ${browserDb.url}: ${response.status}`);
+        }
+
+        const compressed = await response.arrayBuffer();
+        onStatus("Decompressing...");
+        dbBytes = await decompress(new Uint8Array(compressed));
+        await saveToCache(browserHash, dbBytes);
+    } else {
+        onStatus("Loaded from cache");
+    }
+
+    onStatus("Opening database...");
+    _db = new SQL.Database(dbBytes);
+    _db.run("PRAGMA cache_size = -32000");
+}
+
 async function decompress(compressed) {
     if (typeof DecompressionStream !== "undefined") {
         const ds = new DecompressionStream("gzip");
@@ -63,24 +105,33 @@ async function decompress(compressed) {
     throw new Error("DecompressionStream not supported. Please use a modern browser.");
 }
 
-// ── IndexedDB cache ───────────────────────────────────────────────────────
-
 function openIDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(IDB_NAME, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+                req.result.createObjectStore(IDB_STORE);
+            }
+        };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
     });
 }
 
-async function loadFromCache() {
+async function loadFromCache(expectedHash) {
     try {
         const idb = await openIDB();
-        return await new Promise((resolve, reject) => {
+        return await new Promise(resolve => {
             const tx = idb.transaction(IDB_STORE, "readonly");
-            const req = tx.objectStore(IDB_STORE).get("db");
-            req.onsuccess = () => resolve(req.result || null);
+            const req = tx.objectStore(IDB_STORE).get(CACHE_KEY);
+            req.onsuccess = () => {
+                const cached = req.result;
+                if (cached && cached.hash === expectedHash && cached.bytes) {
+                    resolve(cached.bytes);
+                } else {
+                    resolve(null);
+                }
+            };
             req.onerror = () => resolve(null);
         });
     } catch {
@@ -88,17 +139,16 @@ async function loadFromCache() {
     }
 }
 
-async function saveToCache(bytes) {
+async function saveToCache(hash, bytes) {
     try {
         const idb = await openIDB();
         const tx = idb.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(bytes, "db");
+        tx.objectStore(IDB_STORE).put({ hash, bytes }, CACHE_KEY);
     } catch {
-        // Cache failure is non-fatal
+        // Cache failure is non-fatal.
     }
 }
 
-/** Clear the IndexedDB cache (useful when DB is updated). */
 async function clearCache() {
     try {
         const idb = await openIDB();
@@ -109,11 +159,6 @@ async function clearCache() {
     }
 }
 
-// ── Query helpers ─────────────────────────────────────────────────────────
-
-/**
- * Run a SELECT query and return array of row objects.
- */
 function query(sql, params = []) {
     const stmt = _db.prepare(sql);
     stmt.bind(params);
@@ -125,9 +170,6 @@ function query(sql, params = []) {
     return rows;
 }
 
-/**
- * Run a single-value query (e.g. COUNT).
- */
 function queryScalar(sql, params = []) {
     const result = _db.exec(sql, params);
     if (result.length > 0 && result[0].values.length > 0) {
@@ -136,33 +178,46 @@ function queryScalar(sql, params = []) {
     return null;
 }
 
-/**
- * Build a search query from filter values.
- * @param {object} filters
- * @param {number} page - 1-based page number
- * @param {string} sortCol - column to sort by
- * @param {string} sortDir - 'ASC' or 'DESC'
- * @returns {{ dataSql: string, countSql: string, sumSql: string, params: array }}
- */
+function normalizeContractorFamily(value) {
+    if (!value) return "";
+    return String(value)
+        .toUpperCase()
+        .replace(/[\u0000.,;:]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function contractorFamilyExpr(alias = "c") {
+    const col = `${alias}.contractor`;
+    return `TRIM(
+        REPLACE(
+            REPLACE(
+                REPLACE(
+                    REPLACE(
+                        REPLACE(UPPER(COALESCE(${col}, '')), '.', ''),
+                    ',', ''),
+                ';', ''),
+            ':', ''),
+        CHAR(0), '')
+    )`;
+}
+
 function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC") {
     const where = [];
     const params = [];
 
     if (filters.keyword) {
         where.push("c.rowid IN (SELECT rowid FROM contracts_fts WHERE contracts_fts MATCH ?)");
-        // Escape special FTS5 characters and add prefix matching
-        const escaped = filters.keyword.replace(/['"*()]/g, "").trim();
+        const escaped = filters.keyword.replace(/['\"*()]/g, "").trim();
         params.push(escaped + "*");
     }
 
     if (filters.contractor) {
         const term = filters.contractor;
         if (term.includes("*")) {
-            // Wildcard mode: * becomes %, user controls matching
             where.push("c.contractor LIKE ?");
             params.push(term.replace(/\*/g, "%"));
         } else {
-            // Word-boundary mode: match start of name or start of any word
             where.push("(c.contractor LIKE ? OR c.contractor LIKE ?)");
             params.push(term + "%");
             params.push("% " + term + "%");
@@ -206,42 +261,172 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
 
     const whereClause = where.length ? "WHERE " + where.join(" AND ") : "";
 
-    // Validate sort column to prevent injection
     const validCols = ["contract_number", "contractor", "entity", "amount", "award_date", "service_category"];
     if (!validCols.includes(sortCol)) sortCol = "award_date";
     if (sortDir !== "ASC") sortDir = "DESC";
 
     const offset = (page - 1) * PAGE_SIZE;
+    const familyExpr = contractorFamilyExpr("c");
+    const representativeOrderExpr = `
+        CASE
+            WHEN NULLIF(TRIM(COALESCE(f.amendment, '')), '') IS NULL THEN 0
+            ELSE 1
+        END ASC,
+        f.award_date ASC,
+        f.id ASC
+    `;
 
-    const dataSql = `SELECT c.* FROM contracts c ${whereClause}
-        ORDER BY c.${sortCol} ${sortDir} NULLS LAST
+    const sortExprByCol = {
+        contract_number: "contract_number",
+        contractor: "contractor",
+        entity: "entity",
+        amount: "display_amount",
+        award_date: "display_award_date",
+        service_category: "service_category",
+    };
+    const sortExpr = sortExprByCol[sortCol] || "display_award_date";
+
+    const familyCte = `
+        WITH filtered AS (
+            SELECT
+                c.*,
+                ${familyExpr} AS contractor_family
+            FROM contracts c
+            ${whereClause}
+        ),
+        ranked AS (
+            SELECT
+                f.*,
+                ROW_NUMBER() OVER (
+                    PARTITION BY f.contract_number, f.entity, f.contractor_family
+                    ORDER BY ${representativeOrderExpr}
+                ) AS representative_row
+            FROM filtered f
+        ),
+        families AS (
+            SELECT
+                contract_number,
+                entity,
+                contractor_family,
+                COUNT(*) AS family_size,
+                SUM(COALESCE(amount, 0)) AS family_total_amount,
+                MAX(
+                    CASE
+                        WHEN NULLIF(TRIM(COALESCE(amendment, '')), '') IS NULL THEN 1
+                        ELSE 0
+                    END
+                ) AS family_has_original,
+                MAX(CASE WHEN representative_row = 1 THEN id END) AS representative_id,
+                MAX(CASE WHEN representative_row = 1 THEN contractor END) AS contractor,
+                MAX(CASE WHEN representative_row = 1 THEN service_category END) AS service_category,
+                MAX(CASE WHEN representative_row = 1 THEN service_type END) AS service_type,
+                MAX(CASE WHEN representative_row = 1 THEN fiscal_year END) AS fiscal_year,
+                MAX(CASE WHEN representative_row = 1 THEN amount END) AS representative_amount,
+                MAX(CASE WHEN representative_row = 1 THEN award_date END) AS representative_award_date,
+                MIN(award_date) AS family_earliest_award_date
+            FROM ranked
+            GROUP BY contract_number, entity, contractor_family
+        )
+    `;
+
+    const dataSql = `${familyCte}
+        SELECT
+            representative_id AS id,
+            contract_number,
+            contractor,
+            entity,
+            service_category,
+            service_type,
+            fiscal_year,
+            NULL AS amendment,
+            family_size,
+            family_total_amount,
+            family_has_original,
+            CASE
+                WHEN family_has_original = 1 THEN representative_amount
+                ELSE family_total_amount
+            END AS display_amount,
+            CASE
+                WHEN family_has_original = 1 THEN representative_award_date
+                ELSE family_earliest_award_date
+            END AS display_award_date,
+            CASE
+                WHEN family_has_original = 1 THEN representative_amount
+                ELSE family_total_amount
+            END AS amount,
+            CASE
+                WHEN family_has_original = 1 THEN representative_award_date
+                ELSE family_earliest_award_date
+            END AS award_date
+        FROM families
+        ORDER BY ${sortExpr} ${sortDir} NULLS LAST
         LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
 
-    const countSql = `SELECT COUNT(*) FROM contracts c ${whereClause}`;
-    const sumSql = `SELECT COALESCE(SUM(c.amount), 0) FROM contracts c ${whereClause}`;
+    const countSql = `${familyCte}
+        SELECT COUNT(*)
+        FROM families`;
+
+    const sumSql = `${familyCte}
+        SELECT COALESCE(SUM(family_total_amount), 0)
+        FROM families`;
 
     return { dataSql, countSql, sumSql, params };
 }
 
-/**
- * Get distinct values for a column (for populating dropdowns).
- */
 function getDistinct(column) {
     const validCols = ["entity", "service_category", "fiscal_year"];
     if (!validCols.includes(column)) return [];
     return query(
         `SELECT DISTINCT ${column} FROM contracts WHERE ${column} IS NOT NULL AND ${column} != '' ORDER BY ${column}`
-    ).map(r => r[column]);
+    ).map(row => row[column]);
 }
 
-/**
- * Get database stats for the stats bar.
- */
+function getContractById(contractId) {
+    return query("SELECT * FROM contracts WHERE id = ?", [contractId])[0] || null;
+}
+
+function getAmendmentCount(contractNumber, entity, contractor, currentId) {
+    if (!contractNumber || !entity || !contractor) return 0;
+    const contractorFamily = normalizeContractorFamily(contractor);
+    return queryScalar(
+        `SELECT COUNT(*) FROM contracts
+         WHERE contract_number = ?
+           AND entity = ?
+           AND ${contractorFamilyExpr("contracts")} = ?
+           AND (NULLIF(TRIM(COALESCE(amendment, '')), '') IS NOT NULL OR id = ?)`,
+        [contractNumber, entity, contractorFamily, currentId]
+    ) || 0;
+}
+
+function getAmendments(contractNumber, entity, contractor, excludeId) {
+    if (!contractNumber || !entity || !contractor) return [];
+    const contractorFamily = normalizeContractorFamily(contractor);
+    return query(
+        `SELECT id, amendment, amount, award_date, valid_from, valid_to, service_type
+         FROM contracts
+         WHERE contract_number = ?
+           AND entity = ?
+           AND ${contractorFamilyExpr("contracts")} = ?
+           AND (? IS NULL OR id != ?)
+         ORDER BY
+           CASE WHEN NULLIF(TRIM(COALESCE(amendment, '')), '') IS NULL THEN 0 ELSE 1 END,
+           amendment ASC,
+           award_date ASC,
+           id ASC`,
+        [contractNumber, entity, contractorFamily, excludeId, excludeId]
+    );
+}
+
 function getStats() {
-    const total = queryScalar("SELECT COUNT(*) FROM contracts") || 0;
-    const amount = queryScalar("SELECT SUM(amount) FROM contracts WHERE amount IS NOT NULL") || 0;
+    const manifest = getManifest();
+    const total = manifest.row_count != null
+        ? manifest.row_count
+        : (queryScalar("SELECT COUNT(*) FROM contracts") || 0);
+    const amount = manifest.total_amount != null
+        ? manifest.total_amount
+        : (queryScalar("SELECT SUM(amount) FROM contracts WHERE amount IS NOT NULL") || 0);
     const years = query(
-        "SELECT MIN(fiscal_year) as min_fy, MAX(fiscal_year) as max_fy FROM contracts"
+        "SELECT MIN(fiscal_year) AS min_fy, MAX(fiscal_year) AS max_fy FROM contracts"
     )[0];
     return { total, amount, minYear: years.min_fy, maxYear: years.max_fy };
 }

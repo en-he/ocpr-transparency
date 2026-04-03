@@ -14,12 +14,38 @@ function formatAmount(val) {
 
 function formatDate(val) {
     if (!val) return "-";
-    try {
-        const [y, m, d] = val.split("-");
-        return `${d}/${m}/${y}`;
-    } catch {
-        return val;
+    const raw = String(val).trim();
+    if (!raw || raw === "0.00") return "-";
+
+    let year;
+    let month;
+    let day;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        [year, month, day] = raw.split("-").map(Number);
+    } else if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(raw)) {
+        const [first, second, y] = raw.split(/[-/]/).map(Number);
+        year = y;
+        if (first > 12 && second <= 12) {
+            day = first;
+            month = second;
+        } else {
+            month = first;
+            day = second;
+        }
+    } else {
+        return raw;
     }
+
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+        return raw;
+    }
+
+    const monthLabel = new Date(Date.UTC(year, month - 1, day)).toLocaleString("en-US", {
+        month: "long",
+        timeZone: "UTC",
+    });
+    return `${monthLabel} ${day}, ${year}`;
 }
 
 function truncate(str, max = 40) {
@@ -97,15 +123,72 @@ function renderResults(rows) {
 
     for (const r of rows) {
         const tr = document.createElement("tr");
+        const amendCount =
+            Number(r.family_size || 0) ||
+            getAmendmentCount(r.contract_number, r.entity, r.contractor, r.id);
+        const hasAmendments = amendCount > 1;
+
         tr.innerHTML = `
-            <td>${r.contract_number || "-"}</td>
+            <td class="contract-cell">
+                ${hasAmendments ? '<button class="btn-expand" title="' + t("amendments.show") + '">+</button>' : ''}
+                <a href="contract.html?id=${r.id}" class="contract-link">${r.contract_number || "-"}</a>
+                ${r.amendment ? '<span class="amendment-badge">' + r.amendment + '</span>' : ''}
+            </td>
             <td title="${(r.contractor || "").replace(/"/g, "&quot;")}">${truncate(r.contractor, 35)}</td>
             <td title="${(r.entity || "").replace(/"/g, "&quot;")}">${truncate(r.entity, 30)}</td>
             <td class="amount">${formatAmount(r.amount)}</td>
             <td class="date">${formatDate(r.award_date)}</td>
             <td>${truncate(r.service_category, 25)}</td>
         `;
+
         tbody.appendChild(tr);
+
+        // Bind expand/collapse for amendments
+        if (hasAmendments) {
+            const btn = tr.querySelector(".btn-expand");
+            let expanded = false;
+            let amendmentRows = [];
+
+            btn.addEventListener("click", () => {
+                if (expanded) {
+                    // Collapse
+                    amendmentRows.forEach(ar => ar.remove());
+                    amendmentRows = [];
+                    btn.textContent = "+";
+                    btn.title = t("amendments.show");
+                    expanded = false;
+                } else {
+                    // Expand
+                    const amendments = getAmendments(
+                        r.contract_number,
+                        r.entity,
+                        r.contractor,
+                        Number(r.family_has_original) ? r.id : null
+                    );
+                    let insertionPoint = tr;
+                    for (const a of amendments) {
+                        const atr = document.createElement("tr");
+                        atr.className = "amendment-row";
+                        atr.innerHTML = `
+                            <td class="contract-cell amendment-indent">
+                                <a href="contract.html?id=${a.id}" class="contract-link">${r.contract_number}</a>
+                                <span class="amendment-badge">${a.amendment || t("detail.original")}</span>
+                            </td>
+                            <td colspan="2"></td>
+                            <td class="amount">${formatAmount(a.amount)}</td>
+                            <td class="date">${formatDate(a.award_date)}</td>
+                            <td>${truncate(a.service_type, 25)}</td>
+                        `;
+                        insertionPoint.after(atr);
+                        insertionPoint = atr;
+                        amendmentRows.push(atr);
+                    }
+                    btn.textContent = "\u2212";
+                    btn.title = t("amendments.hide");
+                    expanded = true;
+                }
+            });
+        }
     }
 }
 

@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-04-03T04:14:55.920755+00:00",
+  "row_count": 994430,
+  "total_amount": 170648990827.5,
+  "fiscal_years": [
+    "2022-2023",
+    "2021-2022",
+    "2020-2021",
+    "2019-2020",
+    "2018-2019",
+    "2017-2018",
+    "2016-2017",
+    "2015-2016",
+    "2014-2015",
+    "2013-2014",
+    "2012-2013"
+  ],
+  "raw_csv_base_url": "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
+  "browser_db": {
+    "url": "contratos.db.gz",
+    "sha256": "0e737231eaf20f3c2dcb50824914045676a942714b0897c23679fedf425642cd",
+    "size_bytes": 91760324,
+    "format": "sqlite+gzip"
+  },
+  "full_download_db": {
+    "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
+    "sha256": "bd698e8b167f478c48ebd561731190d9ea761a57f95b98360b801a032de07f65",
+    "size_bytes": 152107550,
+    "format": "sqlite+gzip"
+  }
+}

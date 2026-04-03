@@ -35,13 +35,22 @@ API_PAGE_SIZE = 112
 # Stop paginating after this many consecutive pages with zero new contracts.
 MAX_STALE_PAGES = 5
 
+STATE_DEFAULTS = {
+    "last_success_at": None,
+    "last_since_used": None,
+    "last_new_count": 0,
+}
+
 
 # ── State ──────────────────────────────────────────────────────────────────
 
 def load_state() -> dict:
     if STATE_FILE.exists():
-        return json.loads(STATE_FILE.read_text())
-    return {"last_run": None, "last_contract_date": None}
+        loaded = json.loads(STATE_FILE.read_text())
+        if loaded.get("last_run") and not loaded.get("last_success_at"):
+            loaded["last_success_at"] = loaded["last_run"]
+        return {**STATE_DEFAULTS, **loaded}
+    return dict(STATE_DEFAULTS)
 
 
 def save_state(state: dict):
@@ -74,10 +83,10 @@ def build_search_payload(since_date: str, page: int = 1) -> dict:
     }
 
 
-def fetch_page(since_date: str, page: int, dry_run: bool = False) -> tuple[list, int]:
+def fetch_page(since_date: str, page: int, dry_run: bool = False) -> tuple[list, int, bool]:
     if dry_run:
         print(f"    [dry-run] would fetch page {page} since {since_date}")
-        return [], 0
+        return [], 0, True
 
     payload = build_search_payload(since_date, page)
     try:
@@ -92,14 +101,14 @@ def fetch_page(since_date: str, page: int, dry_run: bool = False) -> tuple[list,
         content = resp.content.decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(content))
         rows = list(reader)
-        return rows, len(rows)
+        return rows, len(rows), True
 
     except requests.RequestException as e:
         print(f"    [err] fetch failed: {e}")
-        return [], 0
+        return [], 0, False
     except Exception as e:
         print(f"    [err] parse failed: {e}")
-        return [], 0
+        return [], 0, False
 
 
 # ── Normalize ──────────────────────────────────────────────────────────────
@@ -123,12 +132,22 @@ def _to_float(val) -> float | None:
 def _to_date(val) -> str | None:
     if not val:
         return None
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+    raw = str(val).strip()
+    if raw in ("", "-", "N/A", "0", "0.0", "0.00"):
+        return None
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d",
+        "%m-%d-%Y",
+        "%d-%m-%Y",
+        "%m/%d/%Y",
+        "%d/%m/%Y",
+    ):
         try:
-            return datetime.strptime(str(val)[:19], fmt).date().isoformat()
+            return datetime.strptime(raw[:19], fmt).date().isoformat()
         except ValueError:
             continue
-    return str(val)
+    return None
 
 
 def _fiscal_year_from_date(date_str) -> str | None:
@@ -256,7 +275,7 @@ def send_email_alert(new_rows: list[dict], to_addr: str):
 
 # ── Run ────────────────────────────────────────────────────────────────────
 
-def run(since_date: str, dry_run: bool, notify: str | None) -> int:
+def run(since_date: str, dry_run: bool, notify: str | None) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     print(f"\nMonitor run: {now}")
     print(f"Fetching contracts since: {since_date}\n")
@@ -283,9 +302,13 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
     all_new = []
     page = 1
     stale_streak = 0
+    success = True
 
     while True:
-        rows, count = fetch_page(since_date, page, dry_run=dry_run)
+        rows, count, ok = fetch_page(since_date, page, dry_run=dry_run)
+        if not ok:
+            success = False
+            break
         if not rows:
             break
 
@@ -320,7 +343,12 @@ def run(since_date: str, dry_run: bool, notify: str | None) -> int:
     if all_new and notify:
         send_email_alert(all_new, notify)
 
-    return len(all_new)
+    return {
+        "new_count": len(all_new),
+        "success": success,
+        "finished_at": datetime.now(timezone.utc).isoformat(),
+        "since_date": since_date,
+    }
 
 
 def main():
@@ -339,18 +367,24 @@ def main():
 
     if args.since:
         since = args.since
-    elif state.get("last_run"):
-        since = state["last_run"][:10]
+        print(f"Using explicit --since value: {since}")
+    elif state.get("last_success_at"):
+        since = state["last_success_at"][:10]
+        print(f"Loaded previous state. Continuing from {since}.")
     else:
         since = (datetime.now() - timedelta(days=args.days_back)).date().isoformat()
         print(f"No previous state. Looking back {args.days_back} days to {since}.")
 
-    new_count = run(since, args.dry_run, args.notify)
+    result = run(since, args.dry_run, args.notify)
 
-    if not args.dry_run:
-        state["last_run"] = datetime.now(timezone.utc).isoformat()[:10]
+    if not args.dry_run and result["success"]:
+        state["last_success_at"] = result["finished_at"]
+        state["last_since_used"] = result["since_date"]
+        state["last_new_count"] = result["new_count"]
         save_state(state)
         print(f"State saved -> {STATE_FILE}")
+    elif not args.dry_run:
+        print("State not updated because the run did not complete successfully.")
 
 
 if __name__ == "__main__":

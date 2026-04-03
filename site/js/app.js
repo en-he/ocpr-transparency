@@ -17,6 +17,7 @@ async function init() {
         renderStats();
         bindEvents();
         restoreFromHash();
+        populateDownloads();
         hideLoading();
     } catch (err) {
         setLoadingStatus("Error: " + err.message);
@@ -99,12 +100,9 @@ function bindEvents() {
     document.getElementById("lang-toggle").addEventListener("click", () => {
         setLang(getLang() === "es" ? "en" : "es");
         renderStats();
+        populateDownloads();
         if (totalCount > 0) {
-            const { countSql, sumSql, params } = buildSearchQuery(
-                lastFilters, currentPage, currentSort.col, currentSort.dir
-            );
-            const totalAmount = queryScalar(sumSql, params) || 0;
-            renderResultsHeader(totalCount, totalAmount);
+            doSearch(currentPage);
         }
     });
 
@@ -170,6 +168,45 @@ function restoreFromHash() {
     if (hasFilter) {
         const page = parseInt(params.get("page")) || 1;
         doSearch(page);
+    }
+}
+
+// ── Downloads grid ────────────────────────────────────────────────────────
+
+function populateDownloads() {
+    const grid = document.getElementById("downloads-grid");
+    if (!grid) return;
+
+    const manifest = getManifest();
+    const rawCsvBase = manifest.raw_csv_base_url || "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/";
+    const fiscalYears = manifest.fiscal_years && manifest.fiscal_years.length
+        ? manifest.fiscal_years
+        : getDistinct("fiscal_year").slice().reverse();
+
+    grid.innerHTML = "";
+
+    if (manifest.full_download_db && manifest.full_download_db.url) {
+        const dbLink = document.createElement("a");
+        dbLink.href = manifest.full_download_db.url;
+        dbLink.className = "download-card download-card-featured";
+        dbLink.innerHTML = `
+            <span class="download-fy">${t("downloads.fullDatabase")}</span>
+            <span class="download-label">${t("downloads.sqlite")}</span>
+        `;
+        grid.appendChild(dbLink);
+    }
+
+    for (const fy of fiscalYears) {
+        const filename = `contratos_${fy}.csv`;
+        const link = document.createElement("a");
+        link.href = rawCsvBase + filename;
+        link.className = "download-card";
+        link.download = filename;
+        link.innerHTML = `
+            <span class="download-fy">${fy}</span>
+            <span class="download-label">${t("downloads.download")} CSV</span>
+        `;
+        grid.appendChild(link);
     }
 }
 

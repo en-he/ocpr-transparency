@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 data/pdfs/
+data/db/contratos.db
+data/db/contratos.db.gz
+data/db/contratos-full.db.gz
+site/contratos.db
 .vscode/
 .DS_Store
-data/db/.monitor_state.json

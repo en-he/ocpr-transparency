@@ -47,14 +47,23 @@ def parse_amount(raw: str) -> float | None:
 
 
 def parse_date(raw: str) -> str | None:
-    if not raw or raw.strip() in ("-", "N/A", ""):
+    if not raw:
         return None
-    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+    normalized = raw.strip()
+    if normalized in ("", "-", "N/A", "0", "0.0", "0.00"):
+        return None
+    for fmt in (
+        "%Y-%m-%d",
+        "%m-%d-%Y",
+        "%d-%m-%Y",
+        "%m/%d/%Y",
+        "%d/%m/%Y",
+    ):
         try:
-            return datetime.strptime(raw.strip(), fmt).date().isoformat()
+            return datetime.strptime(normalized, fmt).date().isoformat()
         except ValueError:
             continue
-    return raw.strip()
+    return None
 
 
 def parse_cancelled(raw: str) -> int:

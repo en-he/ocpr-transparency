@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de Contrato - OCPR Transparencia</title>
+    <meta name="description" content="Detalle de contrato del gobierno de Puerto Rico.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p data-i18n="loading">Cargando base de datos...</p>
+            <p class="loading-sub" id="loading-status" data-i18n="loading.download">Descargando contratos</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container header-row">
+            <div>
+                <h1 data-i18n="title">Contratos del Gobierno de Puerto Rico</h1>
+                <p class="subtitle" data-i18n="subtitle">Datos abiertos de la Oficina del Contralor</p>
+            </div>
+            <button id="lang-toggle" class="btn btn-lang" title="Switch language">EN</button>
+        </div>
+    </header>
+
+    <!-- Contract Detail -->
+    <main class="container">
+        <div class="detail-nav">
+            <a href="index.html" class="btn btn-secondary" data-i18n="detail.back">&larr; Volver a la busqueda</a>
+            <button id="btn-print" class="btn btn-secondary" onclick="window.print()" data-i18n="detail.print">Imprimir</button>
+        </div>
+
+        <div id="contract-not-found" style="display:none;">
+            <div id="no-results">
+                <p data-i18n="detail.notFound">Contrato no encontrado.</p>
+            </div>
+        </div>
+
+        <section id="contract-detail" class="detail-card" style="display:none;">
+            <div class="detail-header">
+                <h2 id="detail-title"></h2>
+                <span id="detail-status" class="badge"></span>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3 data-i18n="detail.contractInfo">Informacion del Contrato</h3>
+                    <dl class="detail-list">
+                        <dt data-i18n="detail.contractNumber">Numero de Contrato</dt>
+                        <dd id="d-contract-number">-</dd>
+                        <dt data-i18n="detail.amendment">Enmienda</dt>
+                        <dd id="d-amendment">-</dd>
+                        <dt data-i18n="detail.entity">Entidad</dt>
+                        <dd id="d-entity">-</dd>
+                        <dt data-i18n="detail.entityNumber">Numero de Entidad</dt>
+                        <dd id="d-entity-number">-</dd>
+                        <dt data-i18n="detail.contractor">Contratista</dt>
+                        <dd id="d-contractor">-</dd>
+                        <dt data-i18n="detail.fiscalYear">Ano Fiscal</dt>
+                        <dd id="d-fiscal-year">-</dd>
+                    </dl>
+                </div>
+
+                <div class="detail-section">
+                    <h3 data-i18n="detail.financial">Informacion Financiera</h3>
+                    <dl class="detail-list">
+                        <dt data-i18n="detail.amount">Cuantia a Pagar</dt>
+                        <dd id="d-amount" class="amount-large">-</dd>
+                        <dt data-i18n="detail.amountReceivable">Cuantia a Recibir</dt>
+                        <dd id="d-amount-receivable">-</dd>
+                        <dt data-i18n="detail.fundType">Tipo de Fondos</dt>
+                        <dd id="d-fund-type">-</dd>
+                    </dl>
+                </div>
+
+                <div class="detail-section">
+                    <h3 data-i18n="detail.dates">Fechas</h3>
+                    <dl class="detail-list">
+                        <dt data-i18n="detail.awardDate">Fecha Otorgado</dt>
+                        <dd id="d-award-date">-</dd>
+                        <dt data-i18n="detail.validFrom">Vigencia Desde</dt>
+                        <dd id="d-valid-from">-</dd>
+                        <dt data-i18n="detail.validTo">Vigencia Hasta</dt>
+                        <dd id="d-valid-to">-</dd>
+                    </dl>
+                </div>
+
+                <div class="detail-section">
+                    <h3 data-i18n="detail.service">Servicio</h3>
+                    <dl class="detail-list">
+                        <dt data-i18n="detail.serviceCategory">Categoria de Servicio</dt>
+                        <dd id="d-service-category">-</dd>
+                        <dt data-i18n="detail.serviceType">Tipo de Servicio</dt>
+                        <dd id="d-service-type">-</dd>
+                        <dt data-i18n="detail.procurementMethod">Forma de Contratacion</dt>
+                        <dd id="d-procurement-method">-</dd>
+                        <dt data-i18n="detail.pcoNumber">Numero PCo</dt>
+                        <dd id="d-pco-number">-</dd>
+                    </dl>
+                </div>
+            </div>
+        </section>
+
+        <!-- Amendments -->
+        <section id="amendments-section" style="display:none;">
+            <h3 class="amendments-title" data-i18n="detail.amendments">Enmiendas de este Contrato</h3>
+            <div class="table-wrapper">
+                <table id="amendments-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="detail.amendment">Enmienda</th>
+                            <th data-i18n="th.amount">Cuantia</th>
+                            <th data-i18n="detail.awardDate">Fecha Otorgado</th>
+                            <th data-i18n="detail.validFrom">Vigencia Desde</th>
+                            <th data-i18n="detail.validTo">Vigencia Hasta</th>
+                            <th data-i18n="detail.serviceType">Tipo de Servicio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="amendments-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>
+                <span data-i18n="footer.source">Fuente:</span>
+                <a href="https://consultacontratos.ocpr.gov.pr/" target="_blank" rel="noopener" data-i18n="footer.ocpr">
+                    Oficina del Contralor de Puerto Rico
+                </a>
+            </p>
+            <p>
+                <a href="https://github.com/ocpr-transparency" target="_blank" rel="noopener">GitHub</a>
+                &middot; <span data-i18n="footer.openData">Datos abiertos</span> &middot; MIT License
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/contract.js"></script>
+</body>
+</html>

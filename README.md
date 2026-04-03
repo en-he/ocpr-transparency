@@ -28,9 +28,8 @@ python3 pipeline/download.py
 # Ingest into SQLite with full-text search
 python3 pipeline/ingest.py
 
-# Compress for the site
-gzip -kf data/db/contratos.db
-mv data/db/contratos.db.gz site/
+# Build the browser DB, full downloadable DB, and manifest
+python3 pipeline/build_site_artifacts.py
 ```
 
 ## Features
@@ -60,13 +59,24 @@ site/              Static search UI (sql.js / WebAssembly)
   js/app.js        Init, event wiring, search orchestration
 
 data/
-  raw/             Downloaded fiscal year CSVs (Git LFS)
-  db/contratos.db  SQLite database (Git LFS)
+  raw/             Archived fiscal year CSVs (committed in normal Git)
+  db/monitor_state.json  Tracked delta-sync cursor metadata
+
+site/
+  contratos.db.gz  Browser-serving SQLite DB (committed in normal Git)
 ```
+
+The full downloadable SQLite DB is published as a GitHub Release asset rather than stored in the repo. This keeps GitHub Pages and clones working without Git LFS.
 
 ## Data Source
 
 All data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal year CSV exports are downloaded via their bulk download endpoint. The integrity of the data is the responsibility of the entities that granted the contracts, as stated by OCPR.
+
+## Known Data Gaps
+
+Some contract families appear in the bulk CSV exports only as amendments, even when the live OCPR website still shows an original parent contract. Examples already confirmed in this repo include `2022-000019` (`IEMES PSC`) and `2008-000669` (`IEMS & M H, INC.`).
+
+The current site handles those families with a synthetic parent header so users are not shown a misleading amendment as the top-level contract. A future Tier 2 recovery task will query the live site to backfill missing original contracts with explicit provenance. The concrete design is tracked in [docs/backlog.md](docs/backlog.md).
 
 ### Available fields
 
@@ -91,6 +101,8 @@ GitHub Actions runs three sync schedules:
 - **Nightly** — delta sync via `monitor.py` (new contracts since last run)
 - **Weekly** (Sunday) — re-download current fiscal year CSVs
 - **Monthly** (manual) — full rebuild from all CSVs
+
+The workflow commits the browser DB and tracked metadata to the repo, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
 
 ## Legal Context
 
