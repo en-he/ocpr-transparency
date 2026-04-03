@@ -2,6 +2,9 @@
  * ui.js — DOM rendering: filters, results table, pagination, export.
  */
 
+const DASHBOARD_PREF_KEY = "ocpr-dashboard-collapsed";
+const DASHBOARD_MOBILE_MEDIA = "(max-width: 640px)";
+
 // ── Format helpers ────────────────────────────────────────────────────────
 
 function formatAmount(val) {
@@ -53,6 +56,18 @@ function truncate(str, max = 40) {
     return str.length > max ? str.slice(0, max) + "..." : str;
 }
 
+function formatCompactAmount(val) {
+    if (val == null || val === "") return "-";
+    return "$" + Number(val).toLocaleString("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+    });
+}
+
+function formatCount(val) {
+    return Number(val || 0).toLocaleString("en-US");
+}
+
 // ── Dropdown population ───────────────────────────────────────────────────
 
 function populateDropdown(selectId, values) {
@@ -87,10 +102,192 @@ function renderStats() {
     document.getElementById("stats-bar").style.display = "";
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────
+
+function getDefaultDashboardCollapsed() {
+    return Boolean(window.matchMedia && window.matchMedia(DASHBOARD_MOBILE_MEDIA).matches);
+}
+
+function isDashboardCollapsed() {
+    const section = document.getElementById("dashboard-section");
+    return section ? section.classList.contains("is-collapsed") : false;
+}
+
+function getDashboardCollapsedPreference() {
+    const stored = localStorage.getItem(DASHBOARD_PREF_KEY);
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return getDefaultDashboardCollapsed();
+}
+
+function setDashboardCollapsed(collapsed, persist = false) {
+    const section = document.getElementById("dashboard-section");
+    const toggle = document.getElementById("dashboard-toggle");
+    const label = document.getElementById("dashboard-toggle-label");
+    if (!section || !toggle || !label) return;
+
+    section.classList.toggle("is-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    label.textContent = collapsed ? t("dashboard.show") : t("dashboard.hide");
+
+    if (persist) {
+        localStorage.setItem(DASHBOARD_PREF_KEY, String(collapsed));
+    }
+}
+
+function initDashboardToggle() {
+    const toggle = document.getElementById("dashboard-toggle");
+    if (!toggle) return;
+
+    if (toggle.dataset.bound !== "true") {
+        toggle.addEventListener("click", () => {
+            setDashboardCollapsed(!isDashboardCollapsed(), true);
+        });
+        toggle.dataset.bound = "true";
+    }
+
+    setDashboardCollapsed(getDashboardCollapsedPreference());
+}
+
+function renderDashboardList(listId, items) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+
+    list.innerHTML = "";
+    if (!items || items.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "dashboard-empty";
+        empty.textContent = t("dashboard.empty");
+        list.appendChild(empty);
+        return;
+    }
+
+    const maxAmount = Math.max(...items.map(item => Number(item.total_amount || 0)), 0);
+
+    items.forEach((item, index) => {
+        const amount = Number(item.total_amount || 0);
+        const li = document.createElement("li");
+        li.className = "leaderboard-item";
+
+        const rank = document.createElement("span");
+        rank.className = "leaderboard-rank";
+        rank.textContent = String(index + 1);
+
+        const main = document.createElement("div");
+        main.className = "leaderboard-main";
+
+        const name = document.createElement("div");
+        name.className = "leaderboard-name";
+        name.textContent = item.name || "-";
+
+        const meta = document.createElement("div");
+        meta.className = "leaderboard-meta";
+        meta.textContent = `${formatCount(item.family_count)} ${t("dashboard.families")}`;
+
+        const track = document.createElement("div");
+        track.className = "leaderboard-track";
+
+        const bar = document.createElement("span");
+        bar.className = "leaderboard-bar";
+        bar.style.width = `${maxAmount > 0 ? (amount / maxAmount) * 100 : 0}%`;
+        track.appendChild(bar);
+
+        main.appendChild(name);
+        main.appendChild(meta);
+        main.appendChild(track);
+
+        const amountEl = document.createElement("div");
+        amountEl.className = "leaderboard-amount";
+        amountEl.textContent = formatCompactAmount(amount);
+        amountEl.title = formatAmount(amount);
+
+        li.appendChild(rank);
+        li.appendChild(main);
+        li.appendChild(amountEl);
+        list.appendChild(li);
+    });
+}
+
+function renderDashboardTrend(items) {
+    const container = document.getElementById("dashboard-trend");
+    if (!container) return;
+
+    container.innerHTML = "";
+    if (!items || items.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "dashboard-empty";
+        empty.textContent = t("dashboard.empty");
+        container.appendChild(empty);
+        return;
+    }
+
+    const maxAmount = Math.max(...items.map(item => Number(item.total_amount || 0)), 0);
+
+    items.forEach(item => {
+        const amount = Number(item.total_amount || 0);
+        const row = document.createElement("div");
+        row.className = "trend-row";
+
+        const label = document.createElement("div");
+        label.className = "trend-label";
+        label.textContent = item.fiscal_year || "-";
+
+        const track = document.createElement("div");
+        track.className = "trend-track";
+
+        const bar = document.createElement("span");
+        bar.className = "trend-bar";
+        bar.style.width = `${maxAmount > 0 ? (amount / maxAmount) * 100 : 0}%`;
+        track.appendChild(bar);
+
+        const values = document.createElement("div");
+        values.className = "trend-values";
+
+        const amountEl = document.createElement("span");
+        amountEl.className = "trend-amount";
+        amountEl.textContent = formatCompactAmount(amount);
+        amountEl.title = formatAmount(amount);
+
+        const families = document.createElement("span");
+        families.className = "trend-families";
+        families.textContent = `${formatCount(item.family_count)} ${t("dashboard.families")}`;
+
+        values.appendChild(amountEl);
+        values.appendChild(families);
+
+        row.appendChild(label);
+        row.appendChild(track);
+        row.appendChild(values);
+        container.appendChild(row);
+    });
+}
+
+function renderDashboard(snapshot, options = {}) {
+    const modeBadge = document.getElementById("dashboard-mode-badge");
+    if (!modeBadge) return;
+
+    const data = snapshot || {
+        top_contractors: [],
+        top_entities: [],
+        yearly_spending: [],
+    };
+
+    modeBadge.textContent = options.filtered
+        ? t("dashboard.modeFiltered")
+        : t("dashboard.modeSitewide");
+    modeBadge.classList.toggle("is-filtered", Boolean(options.filtered));
+
+    renderDashboardList("dashboard-contractors", data.top_contractors);
+    renderDashboardList("dashboard-entities", data.top_entities);
+    renderDashboardTrend(data.yearly_spending);
+    document.getElementById("dashboard-section").style.display = "";
+}
+
 // ── Collect filter values ─────────────────────────────────────────────────
 
 function getFilterValues() {
     return {
+        contractNumber: document.getElementById("f-contract-number").value.trim(),
         contractor: document.getElementById("f-contractor").value.trim(),
         entity:     document.getElementById("f-entity").value,
         amountMin:  document.getElementById("f-amount-min").value,
@@ -104,6 +301,7 @@ function getFilterValues() {
 }
 
 function clearFilters() {
+    document.getElementById("f-contract-number").value = "";
     document.getElementById("f-contractor").value = "";
     document.getElementById("f-entity").value = "";
     document.getElementById("f-amount-min").value = "";
@@ -129,10 +327,12 @@ function renderResults(rows) {
         const hasAmendments = amendCount > 1;
 
         tr.innerHTML = `
-            <td class="contract-cell">
-                ${hasAmendments ? '<button class="btn-expand" title="' + t("amendments.show") + '">+</button>' : ''}
-                <a href="contract.html?id=${r.id}" class="contract-link">${r.contract_number || "-"}</a>
-                ${r.amendment ? '<span class="amendment-badge">' + r.amendment + '</span>' : ''}
+            <td>
+                <div class="contract-cell">
+                    ${hasAmendments ? '<button class="btn-expand" title="' + t("amendments.show") + '">+</button>' : ''}
+                    <a href="contract.html?id=${r.id}" class="contract-link">${r.contract_number || "-"}</a>
+                    ${r.amendment ? '<span class="amendment-badge">' + r.amendment + '</span>' : ''}
+                </div>
             </td>
             <td title="${(r.contractor || "").replace(/"/g, "&quot;")}">${truncate(r.contractor, 35)}</td>
             <td title="${(r.entity || "").replace(/"/g, "&quot;")}">${truncate(r.entity, 30)}</td>
@@ -170,9 +370,11 @@ function renderResults(rows) {
                         const atr = document.createElement("tr");
                         atr.className = "amendment-row";
                         atr.innerHTML = `
-                            <td class="contract-cell amendment-indent">
-                                <a href="contract.html?id=${a.id}" class="contract-link">${r.contract_number}</a>
-                                <span class="amendment-badge">${a.amendment || t("detail.original")}</span>
+                            <td class="amendment-indent">
+                                <div class="contract-cell">
+                                    <a href="contract.html?id=${a.id}" class="contract-link">${r.contract_number}</a>
+                                    <span class="amendment-badge">${a.amendment || t("detail.original")}</span>
+                                </div>
                             </td>
                             <td colspan="2"></td>
                             <td class="amount">${formatAmount(a.amount)}</td>

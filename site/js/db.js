@@ -17,6 +17,11 @@ const DEFAULT_MANIFEST = {
     row_count: null,
     total_amount: null,
     fiscal_years: [],
+    dashboard: {
+        top_contractors: [],
+        top_entities: [],
+        yearly_spending: [],
+    },
     raw_csv_base_url: "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
     browser_db: {
         url: "contratos.db.gz",
@@ -41,6 +46,19 @@ async function loadManifest() {
         return {
             ...DEFAULT_MANIFEST,
             ...loaded,
+            dashboard: {
+                ...DEFAULT_MANIFEST.dashboard,
+                ...(loaded.dashboard || {}),
+                top_contractors: Array.isArray(loaded.dashboard?.top_contractors)
+                    ? loaded.dashboard.top_contractors
+                    : DEFAULT_MANIFEST.dashboard.top_contractors,
+                top_entities: Array.isArray(loaded.dashboard?.top_entities)
+                    ? loaded.dashboard.top_entities
+                    : DEFAULT_MANIFEST.dashboard.top_entities,
+                yearly_spending: Array.isArray(loaded.dashboard?.yearly_spending)
+                    ? loaded.dashboard.yearly_spending
+                    : DEFAULT_MANIFEST.dashboard.yearly_spending,
+            },
             browser_db: {
                 ...DEFAULT_MANIFEST.browser_db,
                 ...(loaded.browser_db || {}),
@@ -202,12 +220,16 @@ function contractorFamilyExpr(alias = "c") {
     )`;
 }
 
-function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC") {
-    const where = [];
+function escapeLikeValue(value) {
+    return String(value).replace(/[\\%_]/g, "\\$&");
+}
+
+function buildFamilyQueryParts(filters = {}) {
+    const baseWhere = [];
     const params = [];
 
     if (filters.keyword) {
-        where.push("c.rowid IN (SELECT rowid FROM contracts_fts WHERE contracts_fts MATCH ?)");
+        baseWhere.push("c.rowid IN (SELECT rowid FROM contracts_fts WHERE contracts_fts MATCH ?)");
         const escaped = filters.keyword.replace(/['\"*()]/g, "").trim();
         params.push(escaped + "*");
     }
@@ -215,57 +237,51 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
     if (filters.contractor) {
         const term = filters.contractor;
         if (term.includes("*")) {
-            where.push("c.contractor LIKE ?");
+            baseWhere.push("c.contractor LIKE ?");
             params.push(term.replace(/\*/g, "%"));
         } else {
-            where.push("(c.contractor LIKE ? OR c.contractor LIKE ?)");
+            baseWhere.push("(c.contractor LIKE ? OR c.contractor LIKE ?)");
             params.push(term + "%");
             params.push("% " + term + "%");
         }
     }
 
     if (filters.entity) {
-        where.push("c.entity = ?");
+        baseWhere.push("c.entity = ?");
         params.push(filters.entity);
     }
 
     if (filters.amountMin) {
-        where.push("c.amount >= ?");
+        baseWhere.push("c.amount >= ?");
         params.push(Number(filters.amountMin));
     }
 
     if (filters.amountMax) {
-        where.push("c.amount <= ?");
+        baseWhere.push("c.amount <= ?");
         params.push(Number(filters.amountMax));
     }
 
     if (filters.dateFrom) {
-        where.push("c.award_date >= ?");
+        baseWhere.push("c.award_date >= ?");
         params.push(filters.dateFrom);
     }
 
     if (filters.dateTo) {
-        where.push("c.award_date <= ?");
+        baseWhere.push("c.award_date <= ?");
         params.push(filters.dateTo);
     }
 
     if (filters.category) {
-        where.push("c.service_category = ?");
+        baseWhere.push("c.service_category = ?");
         params.push(filters.category);
     }
 
     if (filters.fiscalYear) {
-        where.push("c.fiscal_year = ?");
+        baseWhere.push("c.fiscal_year = ?");
         params.push(filters.fiscalYear);
     }
 
-    const whereClause = where.length ? "WHERE " + where.join(" AND ") : "";
-
-    const validCols = ["contract_number", "contractor", "entity", "amount", "award_date", "service_category"];
-    if (!validCols.includes(sortCol)) sortCol = "award_date";
-    if (sortDir !== "ASC") sortDir = "DESC";
-
-    const offset = (page - 1) * PAGE_SIZE;
+    const baseWhereClause = baseWhere.length ? "WHERE " + baseWhere.join(" AND ") : "";
     const familyExpr = contractorFamilyExpr("c");
     const representativeOrderExpr = `
         CASE
@@ -276,23 +292,37 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
         f.id ASC
     `;
 
-    const sortExprByCol = {
-        contract_number: "contract_number",
-        contractor: "contractor",
-        entity: "entity",
-        amount: "display_amount",
-        award_date: "display_award_date",
-        service_category: "service_category",
-    };
-    const sortExpr = sortExprByCol[sortCol] || "display_award_date";
+    let contractNumberClause = "";
+    if (filters.contractNumber) {
+        const normalized = String(filters.contractNumber).trim().toUpperCase();
+        contractNumberClause = `
+            WHERE (
+                UPPER(COALESCE(bf.contract_number, '')) = ?
+                OR (
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM base_filtered exact_match
+                        WHERE UPPER(COALESCE(exact_match.contract_number, '')) = ?
+                    )
+                    AND UPPER(COALESCE(bf.contract_number, '')) LIKE ? ESCAPE '\\'
+                )
+            )
+        `;
+        params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
+    }
 
     const familyCte = `
-        WITH filtered AS (
+        WITH base_filtered AS (
             SELECT
                 c.*,
                 ${familyExpr} AS contractor_family
             FROM contracts c
-            ${whereClause}
+            ${baseWhereClause}
+        ),
+        filtered AS (
+            SELECT *
+            FROM base_filtered bf
+            ${contractNumberClause}
         ),
         ranked AS (
             SELECT
@@ -328,6 +358,26 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
             GROUP BY contract_number, entity, contractor_family
         )
     `;
+
+    return { familyCte, params };
+}
+
+function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC") {
+    const { familyCte, params } = buildFamilyQueryParts(filters);
+    const validCols = ["contract_number", "contractor", "entity", "amount", "award_date", "service_category"];
+    if (!validCols.includes(sortCol)) sortCol = "award_date";
+    if (sortDir !== "ASC") sortDir = "DESC";
+
+    const sortExprByCol = {
+        contract_number: "contract_number",
+        contractor: "contractor",
+        entity: "entity",
+        amount: "display_amount",
+        award_date: "display_award_date",
+        service_category: "service_category",
+    };
+    const sortExpr = sortExprByCol[sortCol] || "display_award_date";
+    const offset = (page - 1) * PAGE_SIZE;
 
     const dataSql = `${familyCte}
         SELECT
@@ -379,6 +429,88 @@ function getDistinct(column) {
     return query(
         `SELECT DISTINCT ${column} FROM contracts WHERE ${column} IS NOT NULL AND ${column} != '' ORDER BY ${column}`
     ).map(row => row[column]);
+}
+
+function hasManifestDashboardData() {
+    const dashboard = getManifest().dashboard || {};
+    return Boolean(
+        (dashboard.top_contractors && dashboard.top_contractors.length) ||
+        (dashboard.top_entities && dashboard.top_entities.length) ||
+        (dashboard.yearly_spending && dashboard.yearly_spending.length)
+    );
+}
+
+function getSitewideDashboardData() {
+    if (hasManifestDashboardData()) {
+        return getManifest().dashboard;
+    }
+    return getDashboardData({});
+}
+
+function getDashboardData(filters = {}) {
+    const { familyCte, params } = buildFamilyQueryParts(filters);
+
+    const topContractors = query(
+        `${familyCte}
+            SELECT
+                MAX(contractor) AS name,
+                COUNT(*) AS family_count,
+                COALESCE(SUM(family_total_amount), 0) AS total_amount
+            FROM families
+            WHERE contractor_family IS NOT NULL
+              AND contractor_family != ''
+            GROUP BY contractor_family
+            ORDER BY total_amount DESC, family_count DESC, name ASC
+            LIMIT 5`,
+        params
+    );
+
+    const topEntities = query(
+        `${familyCte}
+            SELECT
+                entity AS name,
+                COUNT(*) AS family_count,
+                COALESCE(SUM(family_total_amount), 0) AS total_amount
+            FROM families
+            WHERE entity IS NOT NULL
+              AND TRIM(entity) != ''
+            GROUP BY entity
+            ORDER BY total_amount DESC, family_count DESC, name ASC
+            LIMIT 5`,
+        params
+    );
+
+    const yearlySpending = query(
+        `${familyCte}
+            SELECT
+                fiscal_year,
+                COUNT(*) AS family_count,
+                COALESCE(SUM(family_total_amount), 0) AS total_amount
+            FROM families
+            WHERE fiscal_year IS NOT NULL
+              AND TRIM(fiscal_year) != ''
+            GROUP BY fiscal_year
+            ORDER BY fiscal_year ASC`,
+        params
+    );
+
+    return {
+        top_contractors: topContractors.map(row => ({
+            name: row.name,
+            family_count: Number(row.family_count || 0),
+            total_amount: Number(row.total_amount || 0),
+        })),
+        top_entities: topEntities.map(row => ({
+            name: row.name,
+            family_count: Number(row.family_count || 0),
+            total_amount: Number(row.total_amount || 0),
+        })),
+        yearly_spending: yearlySpending.map(row => ({
+            fiscal_year: row.fiscal_year,
+            family_count: Number(row.family_count || 0),
+            total_amount: Number(row.total_amount || 0),
+        })),
+    };
 }
 
 function getContractById(contractId) {

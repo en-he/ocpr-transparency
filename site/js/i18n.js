@@ -17,7 +17,22 @@ const STRINGS = {
         "stats.contracts":  "contratos",
         "stats.total":      "valor total",
 
+        // Dashboard
+        "dashboard.kicker":       "Instantánea de fiscalización",
+        "dashboard.title":        "Quién recibe y quién gasta",
+        "dashboard.summary":      "Vea los principales contratistas, las entidades con más gasto y la tendencia anual para orientar la búsqueda.",
+        "dashboard.hide":         "Ocultar",
+        "dashboard.show":         "Mostrar",
+        "dashboard.modeSitewide": "Vista general",
+        "dashboard.modeFiltered": "Vista filtrada",
+        "dashboard.topContractors": "Principales contratistas",
+        "dashboard.topEntities":  "Principales entidades",
+        "dashboard.yearlyTrend":  "Tendencia anual del gasto",
+        "dashboard.families":     "familias de contratos",
+        "dashboard.empty":        "No hay datos para esta vista.",
+
         // Filter labels
+        "filter.contractNumber":  "Número de Contrato",
         "filter.contractor":    "Contratista",
         "filter.entity":        "Entidad Gubernamental",
         "filter.amountMin":     "Cuant\u00eda m\u00ednima ($)",
@@ -29,6 +44,7 @@ const STRINGS = {
         "filter.keyword":       "B\u00fasqueda libre",
 
         // Filter placeholders
+        "ph.contractNumber":  "2022-000019",
         "ph.contractor":    "Nombre del contratista... (use * como comod\u00edn)",
         "ph.amountMin":     "0",
         "ph.amountMax":     "Sin l\u00edmite",
@@ -99,12 +115,18 @@ const STRINGS = {
         "amendments.count":         "enmienda(s)",
 
         // Downloads section
-        "downloads.title":          "Descargas por A\u00f1o Fiscal",
-        "downloads.description":    "Archivos CSV archivados de la Oficina del Contralor. Algunos a\u00f1os fiscales pueden ya no estar disponibles en el sitio oficial.",
+        "downloads.kicker":         "Descargas y archivos",
+        "downloads.title":          "Datos abiertos preservados",
+        "downloads.description":    "Descargue la base de datos completa o use las copias archivadas por a\u00f1o fiscal preservadas en este repositorio.",
+        "downloads.fullDescription": "La descarga principal para an\u00e1lisis completos, sin el l\u00edmite del navegador.",
+        "downloads.archiveTitle":   "CSVs archivados por a\u00f1o fiscal",
+        "downloads.archiveDescription": "Estas copias preservadas mantienen accesibles los a\u00f1os m\u00e1s viejos aunque el portal oficial ya no ofrezca esa descarga masiva.",
         "downloads.file":           "Archivo",
         "downloads.download":       "Descargar",
         "downloads.fullDatabase":   "Base de Datos Completa",
         "downloads.sqlite":         "Descargar SQLite",
+        "downloads.archivedCsv":    "Descargar CSV archivado",
+        "downloads.archiveBadge":   "Copia preservada",
     },
     en: {
         // Header
@@ -119,7 +141,22 @@ const STRINGS = {
         "stats.contracts":  "contracts",
         "stats.total":      "total value",
 
+        // Dashboard
+        "dashboard.kicker":       "Accountability snapshot",
+        "dashboard.title":        "Who gets paid and who spends",
+        "dashboard.summary":      "See the top contractors, the biggest public entities, and the yearly spending trend before diving into search.",
+        "dashboard.hide":         "Hide",
+        "dashboard.show":         "Show",
+        "dashboard.modeSitewide": "Sitewide snapshot",
+        "dashboard.modeFiltered": "Filtered snapshot",
+        "dashboard.topContractors": "Top contractors",
+        "dashboard.topEntities":  "Top entities",
+        "dashboard.yearlyTrend":  "Yearly spending trend",
+        "dashboard.families":     "contract families",
+        "dashboard.empty":        "No data for this view.",
+
         // Filter labels
+        "filter.contractNumber":  "Contract Number",
         "filter.contractor":    "Contractor",
         "filter.entity":        "Government Entity",
         "filter.amountMin":     "Minimum amount ($)",
@@ -131,6 +168,7 @@ const STRINGS = {
         "filter.keyword":       "Free search",
 
         // Filter placeholders
+        "ph.contractNumber":  "2022-000019",
         "ph.contractor":    "Contractor name... (use * as wildcard)",
         "ph.amountMin":     "0",
         "ph.amountMax":     "No limit",
@@ -201,12 +239,18 @@ const STRINGS = {
         "amendments.count":         "amendment(s)",
 
         // Downloads section
-        "downloads.title":          "Downloads by Fiscal Year",
-        "downloads.description":    "Archived CSV files from the Office of the Comptroller. Some fiscal years may no longer be available on the official site.",
+        "downloads.kicker":         "Downloads and archives",
+        "downloads.title":          "Preserved open data",
+        "downloads.description":    "Download the full database or use the fiscal-year archive copies preserved in this repository.",
+        "downloads.fullDescription": "The main download for full analysis without browser-size constraints.",
+        "downloads.archiveTitle":   "Archived fiscal-year CSVs",
+        "downloads.archiveDescription": "These preserved copies keep older years accessible even when the official portal no longer offers that bulk download.",
         "downloads.file":           "File",
         "downloads.download":       "Download",
         "downloads.fullDatabase":   "Full Database",
         "downloads.sqlite":         "Download SQLite",
+        "downloads.archivedCsv":    "Download archived CSV",
+        "downloads.archiveBadge":   "Preserved copy",
     }
 };
 

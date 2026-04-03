@@ -37,7 +37,48 @@
 
     <!-- Filters -->
     <main class="container">
+        <section class="dashboard-section" id="dashboard-section">
+            <div class="dashboard-shell">
+                <div class="dashboard-header">
+                    <div class="dashboard-header-copy">
+                        <div class="dashboard-kicker" data-i18n="dashboard.kicker">Instantánea de fiscalización</div>
+                        <div class="dashboard-title-row">
+                            <h2 data-i18n="dashboard.title">Quién recibe y quién gasta</h2>
+                            <span class="dashboard-mode-badge" id="dashboard-mode-badge">Sitewide snapshot</span>
+                        </div>
+                        <p class="dashboard-summary" data-i18n="dashboard.summary">Vea los principales contratistas, las entidades con más gasto y la tendencia anual para orientar la búsqueda.</p>
+                    </div>
+                    <button id="dashboard-toggle" class="dashboard-toggle" type="button" aria-expanded="true">
+                        <span id="dashboard-toggle-label" data-i18n="dashboard.hide">Ocultar</span>
+                        <span class="dashboard-toggle-icon" aria-hidden="true">▾</span>
+                    </button>
+                </div>
+                <div class="dashboard-body" id="dashboard-body">
+                    <div class="dashboard-grid">
+                        <article class="dashboard-card">
+                            <h3 data-i18n="dashboard.topContractors">Principales contratistas</h3>
+                            <ol class="leaderboard-list" id="dashboard-contractors"></ol>
+                        </article>
+                        <article class="dashboard-card">
+                            <h3 data-i18n="dashboard.topEntities">Principales entidades</h3>
+                            <ol class="leaderboard-list" id="dashboard-entities"></ol>
+                        </article>
+                        <article class="dashboard-card dashboard-card-trend">
+                            <h3 data-i18n="dashboard.yearlyTrend">Tendencia anual del gasto</h3>
+                            <div class="dashboard-trend" id="dashboard-trend"></div>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="filters" id="filters">
+            <div class="filter-row">
+                <div class="filter-group filter-wide">
+                    <label for="f-contract-number" data-i18n="filter.contractNumber">Número de Contrato</label>
+                    <input type="text" id="f-contract-number" data-i18n-ph="ph.contractNumber" placeholder="2022-000019">
+                </div>
+            </div>
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="f-contractor" data-i18n="filter.contractor">Contratista</label>
@@ -128,8 +169,14 @@
 
         <!-- Downloads section -->
         <section class="downloads-section" id="downloads-section">
-            <h2 data-i18n="downloads.title">Descargas por Ano Fiscal</h2>
-            <p class="downloads-desc" data-i18n="downloads.description">Archivos CSV archivados de la Oficina del Contralor. Algunos anos fiscales pueden ya no estar disponibles en el sitio oficial.</p>
+            <div class="downloads-kicker" data-i18n="downloads.kicker">Descargas y archivos</div>
+            <h2 data-i18n="downloads.title">Datos abiertos preservados</h2>
+            <p class="downloads-desc" data-i18n="downloads.description">Descargue la base de datos completa o use las copias archivadas por año fiscal preservadas en este repositorio.</p>
+            <div class="downloads-featured" id="downloads-featured"></div>
+            <div class="downloads-archive-callout">
+                <strong data-i18n="downloads.archiveTitle">CSVs archivados por año fiscal</strong>
+                <p data-i18n="downloads.archiveDescription">Estas copias preservadas mantienen accesibles los años más viejos aunque el portal oficial ya no ofrezca esa descarga masiva.</p>
+            </div>
             <div class="downloads-grid" id="downloads-grid"></div>
         </section>
     </main>

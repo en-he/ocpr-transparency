@@ -47,6 +47,22 @@ BROWSER_COLUMNS = [
 ]
 
 
+def contractor_family_expr(alias: str = "c") -> str:
+    col = f"{alias}.contractor"
+    return (
+        "TRIM("
+        "REPLACE("
+        "REPLACE("
+        "REPLACE("
+        "REPLACE("
+        f"REPLACE(UPPER(COALESCE({col}, '')), '.', ''), ',', ''),"
+        "';', ''),"
+        "':', ''),"
+        "CHAR(0), '')"
+        ")"
+    )
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -263,6 +279,114 @@ def collect_stats(browser_db: Path) -> dict:
     }
 
 
+def collect_dashboard(browser_db: Path) -> dict:
+    conn = sqlite3.connect(f"file:{browser_db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+
+    family_expr = contractor_family_expr("c")
+    family_cte = f"""
+        WITH ranked AS (
+            SELECT
+                c.*,
+                {family_expr} AS contractor_family,
+                ROW_NUMBER() OVER (
+                    PARTITION BY c.contract_number, c.entity, {family_expr}
+                    ORDER BY
+                        CASE
+                            WHEN NULLIF(TRIM(COALESCE(c.amendment, '')), '') IS NULL THEN 0
+                            ELSE 1
+                        END ASC,
+                        c.award_date ASC,
+                        c.id ASC
+                ) AS representative_row
+            FROM contracts c
+        ),
+        families AS (
+            SELECT
+                contract_number,
+                entity,
+                contractor_family,
+                MAX(CASE WHEN representative_row = 1 THEN contractor END) AS contractor,
+                MAX(CASE WHEN representative_row = 1 THEN fiscal_year END) AS fiscal_year,
+                SUM(COALESCE(amount, 0)) AS family_total_amount
+            FROM ranked
+            GROUP BY contract_number, entity, contractor_family
+        )
+    """
+
+    top_contractors = [
+        {
+            "name": row["name"],
+            "family_count": int(row["family_count"] or 0),
+            "total_amount": float(row["total_amount"] or 0),
+        }
+        for row in conn.execute(
+            f"""{family_cte}
+                SELECT
+                    MAX(contractor) AS name,
+                    COUNT(*) AS family_count,
+                    COALESCE(SUM(family_total_amount), 0) AS total_amount
+                FROM families
+                WHERE contractor_family IS NOT NULL
+                  AND contractor_family != ''
+                GROUP BY contractor_family
+                ORDER BY total_amount DESC, family_count DESC, name ASC
+                LIMIT 5
+            """
+        ).fetchall()
+    ]
+
+    top_entities = [
+        {
+            "name": row["name"],
+            "family_count": int(row["family_count"] or 0),
+            "total_amount": float(row["total_amount"] or 0),
+        }
+        for row in conn.execute(
+            f"""{family_cte}
+                SELECT
+                    entity AS name,
+                    COUNT(*) AS family_count,
+                    COALESCE(SUM(family_total_amount), 0) AS total_amount
+                FROM families
+                WHERE entity IS NOT NULL
+                  AND TRIM(entity) != ''
+                GROUP BY entity
+                ORDER BY total_amount DESC, family_count DESC, name ASC
+                LIMIT 5
+            """
+        ).fetchall()
+    ]
+
+    yearly_spending = [
+        {
+            "fiscal_year": row["fiscal_year"],
+            "family_count": int(row["family_count"] or 0),
+            "total_amount": float(row["total_amount"] or 0),
+        }
+        for row in conn.execute(
+            f"""{family_cte}
+                SELECT
+                    fiscal_year,
+                    COUNT(*) AS family_count,
+                    COALESCE(SUM(family_total_amount), 0) AS total_amount
+                FROM families
+                WHERE fiscal_year IS NOT NULL
+                  AND TRIM(fiscal_year) != ''
+                GROUP BY fiscal_year
+                ORDER BY fiscal_year ASC
+            """
+        ).fetchall()
+    ]
+
+    conn.close()
+    return {
+        "top_contractors": top_contractors,
+        "top_entities": top_entities,
+        "yearly_spending": yearly_spending,
+    }
+
+
 def write_manifest(
     manifest_path: Path,
     browser_gz: Path,
@@ -270,6 +394,7 @@ def write_manifest(
     repo_raw_base: str,
     full_download_url: str,
     stats: dict,
+    dashboard: dict,
 ):
     now = datetime.now(timezone.utc).isoformat()
     manifest = {
@@ -277,6 +402,7 @@ def write_manifest(
         "row_count": stats["row_count"],
         "total_amount": stats["total_amount"],
         "fiscal_years": stats["fiscal_years"],
+        "dashboard": dashboard,
         "raw_csv_base_url": f"{repo_raw_base}/data/raw/",
         "browser_db": {
             "url": browser_gz.name,
@@ -328,6 +454,7 @@ def main():
     gzip_file(browser_db, browser_gz)
 
     stats = collect_stats(browser_db)
+    dashboard = collect_dashboard(browser_db)
     print(f"Writing manifest -> {manifest}")
     write_manifest(
         manifest,
@@ -336,6 +463,7 @@ def main():
         args.repo_raw_base.rstrip("/"),
         args.full_download_url,
         stats,
+        dashboard,
     )
 
     if browser_db.exists():

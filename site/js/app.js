@@ -7,6 +7,18 @@ let currentSort = { col: "award_date", dir: "DESC" };
 let lastFilters = {};
 let totalCount = 0;
 
+function hasActiveFilters(filters) {
+    return Object.values(filters || {}).some(val => String(val || "").trim() !== "");
+}
+
+function renderDashboardForFilters(filters) {
+    const filtered = hasActiveFilters(filters);
+    const snapshot = filtered
+        ? getDashboardData(filters)
+        : getSitewideDashboardData();
+    renderDashboard(snapshot, { filtered });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -15,9 +27,11 @@ async function init() {
         await initDB(setLoadingStatus);
         populateFilters();
         renderStats();
+        initDashboardToggle();
+        renderDashboardForFilters(getFilterValues());
+        populateDownloads();
         bindEvents();
         restoreFromHash();
-        populateDownloads();
         hideLoading();
     } catch (err) {
         setLoadingStatus("Error: " + err.message);
@@ -51,6 +65,7 @@ function doSearch(page = 1) {
         showResults(false);
     }
 
+    renderDashboardForFilters(filters);
     saveToHash(filters, page);
 
     // Scroll to results on page change (not first search)
@@ -65,10 +80,14 @@ function bindEvents() {
     document.getElementById("btn-search").addEventListener("click", () => doSearch(1));
     document.getElementById("btn-clear").addEventListener("click", () => {
         clearFilters();
+        lastFilters = {};
+        totalCount = 0;
+        currentPage = 1;
         document.getElementById("results-section").style.display = "none";
         document.getElementById("no-results").style.display = "none";
         document.getElementById("btn-export").style.display = "none";
         window.location.hash = "";
+        renderDashboardForFilters(getFilterValues());
     });
     document.getElementById("btn-export").addEventListener("click", () => {
         exportCSV(lastFilters);
@@ -82,27 +101,17 @@ function bindEvents() {
         }
     });
 
-    // Debounced text input search
-    let debounceTimer;
-    for (const id of ["f-contractor", "f-keyword"]) {
-        document.getElementById(id).addEventListener("input", () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => doSearch(1), 400);
-        });
-    }
-
-    // Dropdown change triggers search
-    for (const id of ["f-entity", "f-category", "f-fiscal-year"]) {
-        document.getElementById(id).addEventListener("change", () => doSearch(1));
-    }
-
     // Language toggle
     document.getElementById("lang-toggle").addEventListener("click", () => {
         setLang(getLang() === "es" ? "en" : "es");
         renderStats();
         populateDownloads();
-        if (totalCount > 0) {
+        setDashboardCollapsed(isDashboardCollapsed());
+
+        if (hasActiveFilters(getFilterValues()) || totalCount > 0) {
             doSearch(currentPage);
+        } else {
+            renderDashboardForFilters(getFilterValues());
         }
     });
 
@@ -135,6 +144,8 @@ function saveToHash(filters, page) {
     const hash = params.toString();
     if (hash) {
         history.replaceState(null, "", "#" + hash);
+    } else {
+        history.replaceState(null, "", window.location.pathname);
     }
 }
 
@@ -145,6 +156,7 @@ function restoreFromHash() {
     const params = new URLSearchParams(hash);
 
     const fieldMap = {
+        contractNumber: "f-contract-number",
         contractor: "f-contractor",
         entity:     "f-entity",
         amountMin:  "f-amount-min",
@@ -174,8 +186,9 @@ function restoreFromHash() {
 // ── Downloads grid ────────────────────────────────────────────────────────
 
 function populateDownloads() {
+    const featured = document.getElementById("downloads-featured");
     const grid = document.getElementById("downloads-grid");
-    if (!grid) return;
+    if (!grid || !featured) return;
 
     const manifest = getManifest();
     const rawCsvBase = manifest.raw_csv_base_url || "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/";
@@ -183,28 +196,31 @@ function populateDownloads() {
         ? manifest.fiscal_years
         : getDistinct("fiscal_year").slice().reverse();
 
+    featured.innerHTML = "";
     grid.innerHTML = "";
 
     if (manifest.full_download_db && manifest.full_download_db.url) {
         const dbLink = document.createElement("a");
         dbLink.href = manifest.full_download_db.url;
-        dbLink.className = "download-card download-card-featured";
+        dbLink.className = "download-feature-card";
         dbLink.innerHTML = `
-            <span class="download-fy">${t("downloads.fullDatabase")}</span>
-            <span class="download-label">${t("downloads.sqlite")}</span>
+            <span class="download-feature-kicker">${t("downloads.fullDatabase")}</span>
+            <strong class="download-feature-title">${t("downloads.sqlite")}</strong>
+            <span class="download-feature-copy">${t("downloads.fullDescription")}</span>
         `;
-        grid.appendChild(dbLink);
+        featured.appendChild(dbLink);
     }
 
     for (const fy of fiscalYears) {
         const filename = `contratos_${fy}.csv`;
         const link = document.createElement("a");
         link.href = rawCsvBase + filename;
-        link.className = "download-card";
+        link.className = "download-card download-card-archive";
         link.download = filename;
         link.innerHTML = `
             <span class="download-fy">${fy}</span>
-            <span class="download-label">${t("downloads.download")} CSV</span>
+            <span class="download-label">${t("downloads.archivedCsv")}</span>
+            <span class="download-badge">${t("downloads.archiveBadge")}</span>
         `;
         grid.appendChild(link);
     }
