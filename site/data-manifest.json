@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-03T18:11:14.393269+00:00",
-  "row_count": 994430,
+  "generated_at": "2026-04-04T07:08:38.857648+00:00",
+  "row_count": 994431,
   "total_amount": 170648990827.5,
   "fiscal_years": [
     "2022-2023",
@@ -73,72 +73,72 @@
     "yearly_spending": [
       {
         "fiscal_year": "2012-2013",
-        "family_count": 101627,
-        "total_amount": 17480962143.03
+        "family_count": 101669,
+        "total_amount": 17584315465.18
       },
       {
         "fiscal_year": "2013-2014",
-        "family_count": 86873,
-        "total_amount": 13003996882.77
+        "family_count": 86846,
+        "total_amount": 12913265672.65
       },
       {
         "fiscal_year": "2014-2015",
-        "family_count": 89908,
-        "total_amount": 19276000189.84
+        "family_count": 89906,
+        "total_amount": 19265660637.53
       },
       {
         "fiscal_year": "2015-2016",
-        "family_count": 91218,
-        "total_amount": 30436394969.03
+        "family_count": 91215,
+        "total_amount": 30430147689.94
       },
       {
         "fiscal_year": "2016-2017",
-        "family_count": 88232,
-        "total_amount": 6561231248.53
+        "family_count": 88224,
+        "total_amount": 6566680467.9
       },
       {
         "fiscal_year": "2017-2018",
-        "family_count": 73584,
-        "total_amount": 10728034770.34
+        "family_count": 73583,
+        "total_amount": 10726550270.34
       },
       {
         "fiscal_year": "2018-2019",
-        "family_count": 75934,
-        "total_amount": 37160043483.66
+        "family_count": 75938,
+        "total_amount": 37160091883.66
       },
       {
         "fiscal_year": "2019-2020",
-        "family_count": 63925,
-        "total_amount": 10177327295.56
+        "family_count": 63924,
+        "total_amount": 10178253217.81
       },
       {
         "fiscal_year": "2020-2021",
-        "family_count": 60875,
-        "total_amount": 11586742132.91
+        "family_count": 60915,
+        "total_amount": 11619233836.49
       },
       {
         "fiscal_year": "2021-2022",
-        "family_count": 12217,
-        "total_amount": 12614706187.66
+        "family_count": 12374,
+        "total_amount": 12718487145.11
       },
       {
         "fiscal_year": "2022-2023",
-        "family_count": 9782,
-        "total_amount": 1623551524.17
+        "family_count": 9581,
+        "total_amount": 1486304540.89
       }
     ]
   },
   "raw_csv_base_url": "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
   "browser_db": {
     "url": "contratos.db.gz",
-    "sha256": "0df47f87ef621eba864099e305b70de0f65477cfe0d3c1dbf262b29cb48dc3b4",
-    "size_bytes": 91760324,
+    "sha256": "f48efe63eb6462c1549532bfcff8d9f1535fb8506559da35e25e5799e825a81a",
+    "size_bytes": 91925492,
     "format": "sqlite+gzip"
   },
   "full_download_db": {
     "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
-    "sha256": "9c505d9185a95dc5a95ae6755fa9d8d6077d642d5c19d14be14ab11b9e96d185",
-    "size_bytes": 152107550,
+    "sha256": "b310ed315c02f2e6084e6febbd2cd1e8d1a0f216a78c36b1cab74d9c41204dc7",
+    "size_bytes": 146905448,
     "format": "sqlite+gzip"
   }
 }
