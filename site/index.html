@@ -86,9 +86,14 @@
                 </div>
                 <div class="filter-group">
                     <label for="f-entity" data-i18n="filter.entity">Entidad Gubernamental</label>
-                    <select id="f-entity">
-                        <option value="" data-i18n="all.f">Todas</option>
-                    </select>
+                    <input
+                        type="text"
+                        id="f-entity"
+                        list="f-entity-options"
+                        data-i18n-ph="ph.entity"
+                        placeholder="Escriba o seleccione una entidad"
+                    >
+                    <datalist id="f-entity-options"></datalist>
                 </div>
             </div>
             <div class="filter-row">
@@ -127,6 +132,29 @@
             </div>
             <div class="filter-row">
                 <div class="filter-group filter-wide">
+                    <label for="f-service-type" data-i18n="filter.serviceType">Tipo de Servicio</label>
+                    <input
+                        type="text"
+                        id="f-service-type"
+                        list="f-service-type-options"
+                        data-i18n-ph="ph.serviceType"
+                        placeholder="Escriba o seleccione un tipo de servicio"
+                    >
+                    <datalist id="f-service-type-options"></datalist>
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="f-valid-from" data-i18n="filter.validFrom">Vigencia desde</label>
+                    <input type="date" id="f-valid-from">
+                </div>
+                <div class="filter-group">
+                    <label for="f-valid-to" data-i18n="filter.validTo">Vigencia hasta</label>
+                    <input type="date" id="f-valid-to">
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group filter-wide">
                     <label for="f-keyword" data-i18n="filter.keyword">Busqueda libre</label>
                     <input type="text" id="f-keyword" data-i18n-ph="ph.keyword" placeholder="Buscar en todos los campos...">
                 </div>
@@ -134,7 +162,29 @@
             <div class="filter-actions">
                 <button id="btn-search" class="btn btn-primary" data-i18n="btn.search">Buscar</button>
                 <button id="btn-clear" class="btn btn-secondary" data-i18n="btn.clear">Limpiar filtros</button>
-                <button id="btn-export" class="btn btn-secondary" style="display:none;" data-i18n="btn.export">Exportar CSV</button>
+            </div>
+            <div id="export-panel" class="export-panel" style="display:none;">
+                <div class="export-panel-row">
+                    <div class="filter-group">
+                        <label for="export-mode" data-i18n="export.mode">Modo de exportación</label>
+                        <select id="export-mode">
+                            <option value="summary" data-i18n="export.mode.summary">Resumen</option>
+                            <option value="detailed" data-i18n="export.mode.detailed">Detallado</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="export-format" data-i18n="export.format">Formato</label>
+                        <select id="export-format">
+                            <option value="csv" data-i18n="export.format.csv">CSV</option>
+                            <option value="xlsx" data-i18n="export.format.xlsx">Excel (.xlsx)</option>
+                            <option value="pdf" data-i18n="export.format.pdf">PDF</option>
+                        </select>
+                    </div>
+                    <div class="export-action">
+                        <button id="btn-export" class="btn btn-secondary" data-i18n="btn.export">Exportar</button>
+                    </div>
+                </div>
+                <p id="export-helper" class="export-helper" aria-live="polite"></p>
             </div>
         </section>
 

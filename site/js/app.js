@@ -6,6 +6,7 @@ let currentPage = 1;
 let currentSort = { col: "award_date", dir: "DESC" };
 let lastFilters = {};
 let totalCount = 0;
+let exportCounts = { summary: 0, detailed: 0 };
 
 function hasActiveFilters(filters) {
     return Object.values(filters || {}).some(val => String(val || "").trim() !== "");
@@ -31,6 +32,7 @@ async function init() {
         renderDashboardForFilters(getFilterValues());
         populateDownloads();
         bindEvents();
+        setExportResultsState({ visible: false });
         restoreFromHash();
         hideLoading();
     } catch (err) {
@@ -53,6 +55,16 @@ function doSearch(page = 1) {
     totalCount = queryScalar(countSql, params) || 0;
     const totalAmount = queryScalar(sumSql, params) || 0;
     const rows = query(dataSql, params);
+    const detailedQuery = totalCount > 0
+        ? buildDetailedQuery(filters, 1, "award_date", "DESC", { limit: 1, offset: 0 })
+        : null;
+    const detailedCount = detailedQuery
+        ? (queryScalar(detailedQuery.countSql, detailedQuery.params) || 0)
+        : 0;
+    exportCounts = {
+        summary: Number(totalCount || 0),
+        detailed: Number(detailedCount || 0),
+    };
 
     const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -61,8 +73,10 @@ function doSearch(page = 1) {
         renderResultsHeader(totalCount, totalAmount);
         renderPagination(page, totalPages, doSearch);
         showResults(true);
+        setExportResultsState({ visible: true, counts: exportCounts });
     } else {
         showResults(false);
+        setExportResultsState({ visible: false });
     }
 
     renderDashboardForFilters(filters);
@@ -83,18 +97,24 @@ function bindEvents() {
         lastFilters = {};
         totalCount = 0;
         currentPage = 1;
+        exportCounts = { summary: 0, detailed: 0 };
         document.getElementById("results-section").style.display = "none";
         document.getElementById("no-results").style.display = "none";
-        document.getElementById("btn-export").style.display = "none";
+        setExportResultsState({ visible: false });
         window.location.hash = "";
         renderDashboardForFilters(getFilterValues());
     });
     document.getElementById("btn-export").addEventListener("click", () => {
-        exportCSV(lastFilters);
+        exportResults(lastFilters);
     });
+    document.getElementById("export-mode").addEventListener("change", updateExportHelper);
+    document.getElementById("export-format").addEventListener("change", updateExportHelper);
 
     // Enter key triggers search
     document.getElementById("filters").addEventListener("keydown", (e) => {
+        if (e.target && e.target.closest("#export-panel")) {
+            return;
+        }
         if (e.key === "Enter") {
             e.preventDefault();
             doSearch(1);
@@ -164,6 +184,9 @@ function restoreFromHash() {
         dateFrom:   "f-date-from",
         dateTo:     "f-date-to",
         category:   "f-category",
+        serviceType: "f-service-type",
+        validFrom:  "f-valid-from",
+        validTo:    "f-valid-to",
         fiscalYear: "f-fiscal-year",
         keyword:    "f-keyword",
     };

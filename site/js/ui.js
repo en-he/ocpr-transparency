@@ -4,6 +4,23 @@
 
 const DASHBOARD_PREF_KEY = "ocpr-dashboard-collapsed";
 const DASHBOARD_MOBILE_MEDIA = "(max-width: 640px)";
+const EXPORT_LIMITS = {
+    csv: 100000,
+    xlsx: 100000,
+    pdf: {
+        summary: 250,
+        detailed: 100,
+    },
+};
+
+let exportState = {
+    visible: false,
+    busy: false,
+    counts: {
+        summary: 0,
+        detailed: 0,
+    },
+};
 
 // ── Format helpers ────────────────────────────────────────────────────────
 
@@ -83,9 +100,22 @@ function populateDropdown(selectId, values) {
     }
 }
 
+function populateDatalist(listId, values) {
+    const el = document.getElementById(listId);
+    if (!el) return;
+
+    el.innerHTML = "";
+    for (const val of values) {
+        const opt = document.createElement("option");
+        opt.value = val;
+        el.appendChild(opt);
+    }
+}
+
 function populateFilters() {
-    populateDropdown("f-entity", getDistinct("entity"));
+    populateDatalist("f-entity-options", getDistinct("entity"));
     populateDropdown("f-category", getDistinct("service_category"));
+    populateDatalist("f-service-type-options", getDistinct("service_type"));
     populateDropdown("f-fiscal-year", getDistinct("fiscal_year"));
 }
 
@@ -295,6 +325,9 @@ function getFilterValues() {
         dateFrom:   document.getElementById("f-date-from").value,
         dateTo:     document.getElementById("f-date-to").value,
         category:   document.getElementById("f-category").value,
+        serviceType: document.getElementById("f-service-type").value.trim(),
+        validFrom:  document.getElementById("f-valid-from").value,
+        validTo:    document.getElementById("f-valid-to").value,
         fiscalYear: document.getElementById("f-fiscal-year").value,
         keyword:    document.getElementById("f-keyword").value.trim(),
     };
@@ -309,6 +342,9 @@ function clearFilters() {
     document.getElementById("f-date-from").value = "";
     document.getElementById("f-date-to").value = "";
     document.getElementById("f-category").value = "";
+    document.getElementById("f-service-type").value = "";
+    document.getElementById("f-valid-from").value = "";
+    document.getElementById("f-valid-to").value = "";
     document.getElementById("f-fiscal-year").value = "";
     document.getElementById("f-keyword").value = "";
 }
@@ -456,39 +492,353 @@ function renderPagination(currentPage, totalPages, onPageChange) {
     addBtn("\u00bb", totalPages, currentPage === totalPages);
 }
 
-// ── CSV Export ─────────────────────────────────────────────────────────────
+// ── Export panel ───────────────────────────────────────────────────────────
 
-function exportCSV(filters) {
-    const { dataSql, params } = buildSearchQuery(filters, 1, "award_date", "DESC");
-    // Remove LIMIT/OFFSET for full export
-    const fullSql = dataSql.replace(/LIMIT \d+ OFFSET \d+/, "LIMIT 100000");
-    const rows = query(fullSql, params);
+const EXPORT_SCRIPT_LOADERS = new Map();
 
-    if (rows.length === 0) return;
+function setExportResultsState({ visible = false, counts = {} } = {}) {
+    exportState.visible = Boolean(visible);
+    exportState.counts = {
+        summary: Number(counts.summary || 0),
+        detailed: Number(counts.detailed || 0),
+    };
+    updateExportHelper();
+}
 
-    const headers = ["contract_number", "contractor", "entity", "amount",
-                     "award_date", "valid_from", "valid_to", "service_category",
-                     "service_type", "fiscal_year", "procurement_method", "fund_type"];
+function setExportBusy(busy) {
+    exportState.busy = Boolean(busy);
+    updateExportHelper();
+}
 
-    const csvLines = [headers.join(",")];
-    for (const r of rows) {
-        const line = headers.map(h => {
-            let val = r[h] == null ? "" : String(r[h]);
-            if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-                val = '"' + val.replace(/"/g, '""') + '"';
-            }
-            return val;
-        });
-        csvLines.push(line.join(","));
+function getExportSelection() {
+    return {
+        mode: document.getElementById("export-mode")?.value || "summary",
+        format: document.getElementById("export-format")?.value || "csv",
+    };
+}
+
+function getExportRowLabel(mode) {
+    return t(mode === "detailed" ? "export.rows.detailed" : "export.rows.summary");
+}
+
+function getExportLimit(mode, format) {
+    if (format === "pdf") {
+        return EXPORT_LIMITS.pdf[mode] || EXPORT_LIMITS.pdf.summary;
+    }
+    return EXPORT_LIMITS[format] || EXPORT_LIMITS.csv;
+}
+
+function getExportEligibility() {
+    const { mode, format } = getExportSelection();
+    const count = Number(exportState.counts[mode] || 0);
+    const limit = getExportLimit(mode, format);
+    return {
+        mode,
+        format,
+        count,
+        limit,
+        overLimit: count > limit,
+        canExport: exportState.visible && count > 0 && count <= limit && !exportState.busy,
+    };
+}
+
+function updateExportHelper() {
+    const panel = document.getElementById("export-panel");
+    const helper = document.getElementById("export-helper");
+    const button = document.getElementById("btn-export");
+    if (!panel || !helper || !button) return;
+
+    panel.style.display = exportState.visible ? "" : "none";
+    if (!exportState.visible) {
+        helper.textContent = "";
+        helper.classList.remove("is-warning");
+        button.disabled = true;
+        button.textContent = t("btn.export");
+        return;
     }
 
-    const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const { mode, format, count, limit, overLimit } = getExportEligibility();
+    const helperPrefix = `${t("export.limitLabel")}: ${formatCount(limit)} ${getExportRowLabel(mode)}.`;
+    const helperCount = `${t("export.currentLabel")}: ${formatCount(count)}.`;
+
+    let helperText;
+    if (exportState.busy) {
+        helperText = `${helperPrefix} ${helperCount} ${t("btn.exporting")}`;
+        helper.classList.remove("is-warning");
+    } else if (overLimit) {
+        helperText = `${helperPrefix} ${helperCount} ${t("export.overLimit")} ${t("export.chooseAnother")}`;
+        helper.classList.add("is-warning");
+    } else {
+        const guidance = format === "pdf"
+            ? t("export.pdfFallback")
+            : t("export.tableFallback");
+        helperText = `${helperPrefix} ${helperCount} ${guidance}`;
+        helper.classList.remove("is-warning");
+    }
+
+    helper.textContent = helperText;
+    button.disabled = !getExportEligibility().canExport;
+    button.textContent = exportState.busy ? t("btn.exporting") : t("btn.export");
+}
+
+function getSummaryExportColumns(format) {
+    if (format === "pdf") {
+        return [
+            { key: "contract_number", label: t("th.contract") },
+            { key: "contractor", label: t("th.contractor") },
+            { key: "entity", label: t("th.entity") },
+            { key: "amount", label: t("th.amount"), formatter: formatAmount },
+            { key: "award_date", label: t("th.date"), formatter: formatDate },
+            { key: "valid_from", label: t("detail.validFrom"), formatter: formatDate },
+            { key: "valid_to", label: t("detail.validTo"), formatter: formatDate },
+            { key: "service_category", label: t("th.category") },
+        ];
+    }
+
+    return [
+        { key: "contract_number", label: t("th.contract") },
+        { key: "contractor", label: t("th.contractor") },
+        { key: "entity", label: t("th.entity") },
+        { key: "amount", label: t("th.amount") },
+        { key: "award_date", label: t("th.date") },
+        { key: "valid_from", label: t("detail.validFrom") },
+        { key: "valid_to", label: t("detail.validTo") },
+        { key: "service_category", label: t("th.category") },
+        { key: "service_type", label: t("detail.serviceType") },
+        { key: "fiscal_year", label: t("detail.fiscalYear") },
+        { key: "family_size", label: t("export.familySize") },
+        { key: "family_total_amount", label: t("export.familyTotalAmount") },
+        { key: "procurement_method", label: t("detail.procurementMethod") },
+        { key: "fund_type", label: t("detail.fundType") },
+    ];
+}
+
+function getDetailedExportColumns(format) {
+    if (format === "pdf") {
+        return [
+            { key: "contract_number", label: t("th.contract") },
+            { key: "amendment", label: t("detail.amendment") },
+            { key: "contractor", label: t("th.contractor") },
+            { key: "entity", label: t("th.entity") },
+            { key: "amount", label: t("th.amount"), formatter: formatAmount },
+            { key: "award_date", label: t("th.date"), formatter: formatDate },
+            { key: "valid_from", label: t("detail.validFrom"), formatter: formatDate },
+            { key: "valid_to", label: t("detail.validTo"), formatter: formatDate },
+            { key: "service_type", label: t("detail.serviceType") },
+        ];
+    }
+
+    return [
+        { key: "contract_number", label: t("th.contract") },
+        { key: "amendment", label: t("detail.amendment") },
+        { key: "contractor", label: t("th.contractor") },
+        { key: "entity", label: t("th.entity") },
+        { key: "entity_number", label: t("detail.entityNumber") },
+        { key: "amount", label: t("th.amount") },
+        { key: "amount_receivable", label: t("detail.amountReceivable") },
+        { key: "award_date", label: t("th.date") },
+        { key: "valid_from", label: t("detail.validFrom") },
+        { key: "valid_to", label: t("detail.validTo") },
+        { key: "service_category", label: t("th.category") },
+        { key: "service_type", label: t("detail.serviceType") },
+        { key: "fiscal_year", label: t("detail.fiscalYear") },
+        { key: "procurement_method", label: t("detail.procurementMethod") },
+        { key: "fund_type", label: t("detail.fundType") },
+        { key: "pco_number", label: t("detail.pcoNumber") },
+        { key: "cancelled", label: t("detail.cancelled") },
+        { key: "document_url", label: "document_url" },
+    ];
+}
+
+function getExportColumns(mode, format) {
+    return mode === "detailed"
+        ? getDetailedExportColumns(format)
+        : getSummaryExportColumns(format);
+}
+
+function getExportCellValue(row, column, format) {
+    const value = row[column.key];
+    if (format === "pdf" && typeof column.formatter === "function") {
+        return column.formatter(value);
+    }
+    return value == null ? "" : value;
+}
+
+function buildExportQuery(filters, mode, limit) {
+    if (mode === "detailed") {
+        return buildDetailedQuery(filters, 1, "award_date", "DESC", { limit, offset: 0 });
+    }
+    return buildSearchQuery(filters, 1, "award_date", "DESC", { limit, offset: 0 });
+}
+
+function buildExportFilename(mode, format) {
+    const datePart = new Date().toISOString().slice(0, 10);
+    return `ocpr_contracts_${mode}_${datePart}.${format}`;
+}
+
+function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contratos_ocpr.csv";
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
     URL.revokeObjectURL(url);
+}
+
+function escapeCsvValue(value) {
+    let formatted = value == null ? "" : String(value);
+    if (formatted.includes(",") || formatted.includes('"') || formatted.includes("\n")) {
+        formatted = '"' + formatted.replace(/"/g, '""') + '"';
+    }
+    return formatted;
+}
+
+function exportCsvFile(filename, columns, rows) {
+    const csvLines = [columns.map(column => escapeCsvValue(column.label)).join(",")];
+    for (const row of rows) {
+        csvLines.push(
+            columns.map(column => escapeCsvValue(getExportCellValue(row, column, "csv"))).join(",")
+        );
+    }
+
+    downloadBlob(
+        new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" }),
+        filename
+    );
+}
+
+function loadScriptOnce(src, globalCheck) {
+    if (globalCheck()) return Promise.resolve();
+    if (EXPORT_SCRIPT_LOADERS.has(src)) return EXPORT_SCRIPT_LOADERS.get(src);
+
+    const promise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.onload = () => {
+            if (globalCheck()) {
+                resolve();
+            } else {
+                reject(new Error(`Failed to initialize ${src}`));
+            }
+        };
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+    }).catch(err => {
+        EXPORT_SCRIPT_LOADERS.delete(src);
+        throw err;
+    });
+
+    EXPORT_SCRIPT_LOADERS.set(src, promise);
+    return promise;
+}
+
+async function ensureXlsx() {
+    await loadScriptOnce(
+        "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+        () => Boolean(window.XLSX)
+    );
+    return window.XLSX;
+}
+
+async function ensureJsPdf() {
+    await loadScriptOnce(
+        "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+        () => Boolean(window.jspdf && window.jspdf.jsPDF)
+    );
+    await loadScriptOnce(
+        "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js",
+        () => Boolean(window.jspdf?.jsPDF?.API?.autoTable)
+    );
+    return window.jspdf.jsPDF;
+}
+
+async function exportXlsxFile(filename, columns, rows) {
+    const XLSX = await ensureXlsx();
+    const aoa = [
+        columns.map(column => column.label),
+        ...rows.map(row => columns.map(column => getExportCellValue(row, column, "xlsx"))),
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Contracts");
+
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    downloadBlob(
+        new Blob(
+            [buffer],
+            { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+        ),
+        filename
+    );
+}
+
+async function exportPdfFile(filename, title, columns, rows) {
+    const JsPdf = await ensureJsPdf();
+    const doc = new JsPdf({
+        orientation: "landscape",
+        unit: "pt",
+        format: "letter",
+    });
+
+    if (typeof doc.autoTable !== "function") {
+        throw new Error("jsPDF autoTable plugin is not available");
+    }
+
+    doc.setFontSize(14);
+    doc.text(title, 32, 34);
+    doc.setFontSize(9);
+    doc.text(new Date().toISOString().slice(0, 10), 32, 50);
+    doc.autoTable({
+        startY: 62,
+        head: [columns.map(column => column.label)],
+        body: rows.map(row => columns.map(column => {
+            const value = getExportCellValue(row, column, "pdf");
+            return value == null || value === "" ? "-" : String(value);
+        })),
+        margin: { top: 24, right: 24, bottom: 24, left: 24 },
+        styles: { fontSize: 7, cellPadding: 4, overflow: "linebreak" },
+        headStyles: { fillColor: [13, 110, 253] },
+    });
+    doc.save(filename);
+}
+
+async function exportResults(filters) {
+    const eligibility = getExportEligibility();
+    if (!eligibility.canExport) {
+        updateExportHelper();
+        return;
+    }
+
+    setExportBusy(true);
+    try {
+        const queryDef = buildExportQuery(filters, eligibility.mode, eligibility.limit);
+        const rows = query(queryDef.dataSql, queryDef.params);
+        if (rows.length === 0) {
+            return;
+        }
+
+        const columns = getExportColumns(eligibility.mode, eligibility.format);
+        const filename = buildExportFilename(eligibility.mode, eligibility.format);
+
+        if (eligibility.format === "csv") {
+            exportCsvFile(filename, columns, rows);
+        } else if (eligibility.format === "xlsx") {
+            await exportXlsxFile(filename, columns, rows);
+        } else {
+            const title = `${t("title")} - ${t(
+                eligibility.mode === "detailed"
+                    ? "export.mode.detailed"
+                    : "export.mode.summary"
+            )}`;
+            await exportPdfFile(filename, title, columns, rows);
+        }
+    } catch (err) {
+        console.error("Export failed:", err);
+        window.alert(t("export.error"));
+    } finally {
+        setExportBusy(false);
+    }
 }
 
 // ── Show/hide sections ────────────────────────────────────────────────────
@@ -496,7 +846,6 @@ function exportCSV(filters) {
 function showResults(hasResults) {
     document.getElementById("results-section").style.display = hasResults ? "" : "none";
     document.getElementById("no-results").style.display = hasResults ? "none" : "";
-    document.getElementById("btn-export").style.display = hasResults ? "" : "none";
 }
 
 function hideLoading() {

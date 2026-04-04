@@ -224,7 +224,7 @@ function escapeLikeValue(value) {
     return String(value).replace(/[\\%_]/g, "\\$&");
 }
 
-function buildFamilyQueryParts(filters = {}) {
+function buildFilteredQueryParts(filters = {}) {
     const baseWhere = [];
     const params = [];
 
@@ -247,8 +247,19 @@ function buildFamilyQueryParts(filters = {}) {
     }
 
     if (filters.entity) {
-        baseWhere.push("c.entity = ?");
-        params.push(filters.entity);
+        const normalized = String(filters.entity).trim().toUpperCase();
+        baseWhere.push(`(
+            UPPER(TRIM(COALESCE(c.entity, ''))) = ?
+            OR (
+                NOT EXISTS (
+                    SELECT 1
+                    FROM contracts exact_entity
+                    WHERE UPPER(TRIM(COALESCE(exact_entity.entity, ''))) = ?
+                )
+                AND UPPER(TRIM(COALESCE(c.entity, ''))) LIKE ? ESCAPE '\\'
+            )
+        )`);
+        params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
     }
 
     if (filters.amountMin) {
@@ -271,9 +282,35 @@ function buildFamilyQueryParts(filters = {}) {
         params.push(filters.dateTo);
     }
 
+    if (filters.validFrom) {
+        baseWhere.push("c.valid_from >= ?");
+        params.push(filters.validFrom);
+    }
+
+    if (filters.validTo) {
+        baseWhere.push("c.valid_to <= ?");
+        params.push(filters.validTo);
+    }
+
     if (filters.category) {
         baseWhere.push("c.service_category = ?");
         params.push(filters.category);
+    }
+
+    if (filters.serviceType) {
+        const normalized = String(filters.serviceType).trim().toUpperCase();
+        baseWhere.push(`(
+            UPPER(TRIM(COALESCE(c.service_type, ''))) = ?
+            OR (
+                NOT EXISTS (
+                    SELECT 1
+                    FROM contracts exact_service
+                    WHERE UPPER(TRIM(COALESCE(exact_service.service_type, ''))) = ?
+                )
+                AND UPPER(TRIM(COALESCE(c.service_type, ''))) LIKE ? ESCAPE '\\'
+            )
+        )`);
+        params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
     }
 
     if (filters.fiscalYear) {
@@ -282,16 +319,6 @@ function buildFamilyQueryParts(filters = {}) {
     }
 
     const baseWhereClause = baseWhere.length ? "WHERE " + baseWhere.join(" AND ") : "";
-    const familyExpr = contractorFamilyExpr("c");
-    const representativeOrderExpr = `
-        CASE
-            WHEN NULLIF(TRIM(COALESCE(f.amendment, '')), '') IS NULL THEN 0
-            ELSE 1
-        END ASC,
-        f.award_date ASC,
-        f.id ASC
-    `;
-
     let contractNumberClause = "";
     if (filters.contractNumber) {
         const normalized = String(filters.contractNumber).trim().toUpperCase();
@@ -311,11 +338,11 @@ function buildFamilyQueryParts(filters = {}) {
         params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
     }
 
-    const familyCte = `
+    const filteredCte = `
         WITH base_filtered AS (
             SELECT
                 c.*,
-                ${familyExpr} AS contractor_family
+                ${contractorFamilyExpr("c")} AS contractor_family
             FROM contracts c
             ${baseWhereClause}
         ),
@@ -323,7 +350,25 @@ function buildFamilyQueryParts(filters = {}) {
             SELECT *
             FROM base_filtered bf
             ${contractNumberClause}
-        ),
+        )
+    `;
+
+    return { filteredCte, params };
+}
+
+function buildFamilyQueryParts(filters = {}) {
+    const { filteredCte, params } = buildFilteredQueryParts(filters);
+    const representativeOrderExpr = `
+        CASE
+            WHEN NULLIF(TRIM(COALESCE(f.amendment, '')), '') IS NULL THEN 0
+            ELSE 1
+        END ASC,
+        f.award_date ASC,
+        f.id ASC
+    `;
+
+    const familyCte = `
+        ${filteredCte},
         ranked AS (
             SELECT
                 f.*,
@@ -351,6 +396,10 @@ function buildFamilyQueryParts(filters = {}) {
                 MAX(CASE WHEN representative_row = 1 THEN service_category END) AS service_category,
                 MAX(CASE WHEN representative_row = 1 THEN service_type END) AS service_type,
                 MAX(CASE WHEN representative_row = 1 THEN fiscal_year END) AS fiscal_year,
+                MAX(CASE WHEN representative_row = 1 THEN valid_from END) AS valid_from,
+                MAX(CASE WHEN representative_row = 1 THEN valid_to END) AS valid_to,
+                MAX(CASE WHEN representative_row = 1 THEN procurement_method END) AS procurement_method,
+                MAX(CASE WHEN representative_row = 1 THEN fund_type END) AS fund_type,
                 MAX(CASE WHEN representative_row = 1 THEN amount END) AS representative_amount,
                 MAX(CASE WHEN representative_row = 1 THEN award_date END) AS representative_award_date,
                 MIN(award_date) AS family_earliest_award_date
@@ -362,7 +411,7 @@ function buildFamilyQueryParts(filters = {}) {
     return { familyCte, params };
 }
 
-function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC") {
+function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC", options = {}) {
     const { familyCte, params } = buildFamilyQueryParts(filters);
     const validCols = ["contract_number", "contractor", "entity", "amount", "award_date", "service_category"];
     if (!validCols.includes(sortCol)) sortCol = "award_date";
@@ -377,7 +426,8 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
         service_category: "service_category",
     };
     const sortExpr = sortExprByCol[sortCol] || "display_award_date";
-    const offset = (page - 1) * PAGE_SIZE;
+    const limit = Number.isFinite(options.limit) ? options.limit : PAGE_SIZE;
+    const offset = Number.isFinite(options.offset) ? options.offset : (page - 1) * PAGE_SIZE;
 
     const dataSql = `${familyCte}
         SELECT
@@ -388,6 +438,10 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
             service_category,
             service_type,
             fiscal_year,
+            valid_from,
+            valid_to,
+            procurement_method,
+            fund_type,
             NULL AS amendment,
             family_size,
             family_total_amount,
@@ -410,7 +464,7 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
             END AS award_date
         FROM families
         ORDER BY ${sortExpr} ${sortDir} NULLS LAST
-        LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
+        LIMIT ${limit} OFFSET ${offset}`;
 
     const countSql = `${familyCte}
         SELECT COUNT(*)
@@ -423,8 +477,79 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
     return { dataSql, countSql, sumSql, params };
 }
 
+function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir = "DESC", options = {}) {
+    const { filteredCte, params } = buildFilteredQueryParts(filters);
+    const validCols = [
+        "contract_number",
+        "amendment",
+        "contractor",
+        "entity",
+        "amount",
+        "award_date",
+        "valid_from",
+        "valid_to",
+        "service_category",
+        "service_type",
+        "fiscal_year",
+    ];
+    if (!validCols.includes(sortCol)) sortCol = "award_date";
+    if (sortDir !== "ASC") sortDir = "DESC";
+
+    const limit = Number.isFinite(options.limit) ? options.limit : PAGE_SIZE;
+    const offset = Number.isFinite(options.offset) ? options.offset : (page - 1) * PAGE_SIZE;
+    const sortExprByCol = {
+        contract_number: "contract_number",
+        amendment: "amendment",
+        contractor: "contractor",
+        entity: "entity",
+        amount: "amount",
+        award_date: "award_date",
+        valid_from: "valid_from",
+        valid_to: "valid_to",
+        service_category: "service_category",
+        service_type: "service_type",
+        fiscal_year: "fiscal_year",
+    };
+    const sortExpr = sortExprByCol[sortCol] || "award_date";
+
+    const dataSql = `${filteredCte}
+        SELECT
+            id,
+            contract_number,
+            entity,
+            entity_number,
+            contractor,
+            amendment,
+            service_category,
+            service_type,
+            amount,
+            amount_receivable,
+            award_date,
+            valid_from,
+            valid_to,
+            procurement_method,
+            fund_type,
+            pco_number,
+            cancelled,
+            document_url,
+            fiscal_year
+        FROM filtered
+        ORDER BY ${sortExpr} ${sortDir} NULLS LAST, id ${sortDir}
+        LIMIT ${limit} OFFSET ${offset}`;
+
+    const countSql = `${filteredCte}
+        SELECT COUNT(*)
+        FROM filtered`;
+
+    const sumSql = `${filteredCte}
+        SELECT COALESCE(SUM(amount), 0)
+        FROM filtered`;
+
+    return { dataSql, countSql, sumSql, params };
+}
+
 function getDistinct(column) {
-    const validCols = ["entity", "service_category", "fiscal_year"];
+    const validCols = ["entity", "service_category", "service_type", "fiscal_year"];
     if (!validCols.includes(column)) return [];
     return query(
         `SELECT DISTINCT ${column} FROM contracts WHERE ${column} IS NOT NULL AND ${column} != '' ORDER BY ${column}`

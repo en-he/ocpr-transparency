@@ -380,6 +380,39 @@ header .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.15
     flex-wrap: wrap;
 }
 
+.export-panel {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.export-panel-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.export-panel-row .filter-group {
+    min-width: 180px;
+}
+
+.export-action {
+    display: flex;
+    align-items: flex-end;
+}
+
+.export-helper {
+    margin-top: 0.65rem;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+}
+
+.export-helper.is-warning {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 .btn {
     padding: 0.5rem 1.25rem;
@@ -404,6 +437,10 @@ header .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.15
     border-color: var(--border);
 }
 .btn-secondary:hover { background: var(--bg); }
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
 
 /* ── Results ───────────────────────────────────────────────────────────── */
 #results-section { margin-top: 1rem; }
@@ -835,7 +872,7 @@ footer p + p { margin-top: 0.25rem; }
 /* ── Print styles ─────────────────────────────────────────────────────── */
 @media print {
     header, footer, .detail-nav button, .loading-overlay,
-    .btn-expand, .filters, .filter-actions, .pagination,
+    .btn-expand, .filters, .filter-actions, .export-panel, .pagination,
     #downloads-section, #dashboard-section, .btn-lang { display: none !important; }
     .detail-nav a { display: none !important; }
     .detail-card { box-shadow: none; border: 1px solid #ccc; }
@@ -867,6 +904,17 @@ footer p + p { margin-top: 0.25rem; }
         align-items: flex-start;
     }
     .filter-row { grid-template-columns: 1fr; }
+    .export-panel-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .export-panel-row .filter-group,
+    .export-action {
+        width: 100%;
+    }
+    .export-action .btn {
+        width: 100%;
+    }
     header h1 { font-size: 1.15rem; }
     .stats-bar { flex-direction: column; gap: 0.25rem; }
     table { font-size: 0.82rem; }

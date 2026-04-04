@@ -41,13 +41,18 @@ const STRINGS = {
         "filter.dateTo":        "Fecha hasta",
         "filter.category":      "Categor\u00eda de Servicio",
         "filter.fiscalYear":    "A\u00f1o Fiscal",
+        "filter.serviceType":   "Tipo de Servicio",
+        "filter.validFrom":     "Vigencia desde",
+        "filter.validTo":       "Vigencia hasta",
         "filter.keyword":       "B\u00fasqueda libre",
 
         // Filter placeholders
         "ph.contractNumber":  "2022-000019",
         "ph.contractor":    "Nombre del contratista... (use * como comod\u00edn)",
+        "ph.entity":        "Escriba o seleccione una entidad",
         "ph.amountMin":     "0",
         "ph.amountMax":     "Sin l\u00edmite",
+        "ph.serviceType":   "Escriba o seleccione un tipo de servicio",
         "ph.keyword":       "Buscar en todos los campos...",
 
         // Filter defaults
@@ -57,7 +62,28 @@ const STRINGS = {
         // Buttons
         "btn.search":       "Buscar",
         "btn.clear":        "Limpiar filtros",
-        "btn.export":       "Exportar CSV",
+        "btn.export":       "Exportar",
+        "btn.exporting":    "Preparando...",
+
+        // Export panel
+        "export.mode":              "Modo de exportaci\u00f3n",
+        "export.format":            "Formato",
+        "export.mode.summary":      "Resumen",
+        "export.mode.detailed":     "Detallado",
+        "export.format.csv":        "CSV",
+        "export.format.xlsx":       "Excel (.xlsx)",
+        "export.format.pdf":        "PDF",
+        "export.limitLabel":        "L\u00edmite",
+        "export.currentLabel":      "Selecci\u00f3n actual",
+        "export.rows.summary":      "filas agrupadas",
+        "export.rows.detailed":     "filas de contratos",
+        "export.overLimit":         "La selecci\u00f3n supera este l\u00edmite.",
+        "export.chooseAnother":     "Aplique m\u00e1s filtros o cambie de formato.",
+        "export.pdfFallback":       "PDF funciona mejor para reportes compactos; use Excel o CSV para conjuntos grandes.",
+        "export.tableFallback":     "Excel y CSV permiten exportaciones m\u00e1s grandes, hasta 100,000 filas.",
+        "export.error":             "No se pudo generar la exportaci\u00f3n.",
+        "export.familySize":        "Filas en la familia",
+        "export.familyTotalAmount": "Valor total de la familia",
 
         // Results
         "results.found":    "contrato(s) encontrado(s)",
@@ -165,13 +191,18 @@ const STRINGS = {
         "filter.dateTo":        "Date to",
         "filter.category":      "Service Category",
         "filter.fiscalYear":    "Fiscal Year",
+        "filter.serviceType":   "Service Type",
+        "filter.validFrom":     "Valid from",
+        "filter.validTo":       "Valid to",
         "filter.keyword":       "Free search",
 
         // Filter placeholders
         "ph.contractNumber":  "2022-000019",
         "ph.contractor":    "Contractor name... (use * as wildcard)",
+        "ph.entity":        "Type or select an entity",
         "ph.amountMin":     "0",
         "ph.amountMax":     "No limit",
+        "ph.serviceType":   "Type or select a service type",
         "ph.keyword":       "Search all fields...",
 
         // Filter defaults
@@ -181,7 +212,28 @@ const STRINGS = {
         // Buttons
         "btn.search":       "Search",
         "btn.clear":        "Clear filters",
-        "btn.export":       "Export CSV",
+        "btn.export":       "Export",
+        "btn.exporting":    "Preparing...",
+
+        // Export panel
+        "export.mode":              "Export mode",
+        "export.format":            "Format",
+        "export.mode.summary":      "Summary",
+        "export.mode.detailed":     "Detailed",
+        "export.format.csv":        "CSV",
+        "export.format.xlsx":       "Excel (.xlsx)",
+        "export.format.pdf":        "PDF",
+        "export.limitLabel":        "Limit",
+        "export.currentLabel":      "Current selection",
+        "export.rows.summary":      "grouped rows",
+        "export.rows.detailed":     "contract rows",
+        "export.overLimit":         "This selection is over the limit.",
+        "export.chooseAnother":     "Narrow the filters or switch formats.",
+        "export.pdfFallback":       "PDF works best for compact reports; use Excel or CSV for larger result sets.",
+        "export.tableFallback":     "Excel and CSV support larger exports, up to 100,000 rows.",
+        "export.error":             "The export could not be generated.",
+        "export.familySize":        "Rows in family",
+        "export.familyTotalAmount": "Family total amount",
 
         // Results
         "results.found":    "contract(s) found",
