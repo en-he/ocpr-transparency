@@ -25,6 +25,7 @@ const DEFAULT_MANIFEST = {
     raw_csv_base_url: "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
     browser_db: {
         url: "contratos.db.gz",
+        parts: null,
         sha256: "legacy-browser-db",
     },
     full_download_db: {
@@ -62,6 +63,9 @@ async function loadManifest() {
             browser_db: {
                 ...DEFAULT_MANIFEST.browser_db,
                 ...(loaded.browser_db || {}),
+                parts: Array.isArray(loaded.browser_db?.parts)
+                    ? loaded.browser_db.parts
+                    : DEFAULT_MANIFEST.browser_db.parts,
             },
             full_download_db: {
                 ...DEFAULT_MANIFEST.full_download_db,
@@ -93,15 +97,9 @@ async function initDB(onStatus) {
     let dbBytes = await loadFromCache(browserHash);
 
     if (!dbBytes) {
-        onStatus("Downloading contracts...");
-        const response = await fetch(browserDb.url, { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${browserDb.url}: ${response.status}`);
-        }
-
-        const compressed = await response.arrayBuffer();
+        const compressed = await fetchBrowserDb(browserDb, onStatus);
         onStatus("Decompressing...");
-        dbBytes = await decompress(new Uint8Array(compressed));
+        dbBytes = await decompress(compressed);
         await saveToCache(browserHash, dbBytes);
     } else {
         onStatus("Loaded from cache");
@@ -121,6 +119,54 @@ async function decompress(compressed) {
         return new Uint8Array(result);
     }
     throw new Error("DecompressionStream not supported. Please use a modern browser.");
+}
+
+async function fetchBrowserDb(browserDb, onStatus) {
+    if (Array.isArray(browserDb.parts) && browserDb.parts.length > 0) {
+        const chunks = [];
+        let totalBytes = 0;
+
+        for (let index = 0; index < browserDb.parts.length; index += 1) {
+            const partUrl = browserDb.parts[index];
+            onStatus(`Downloading contracts (${index + 1}/${browserDb.parts.length})...`);
+            const response = await fetch(partUrl, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${partUrl}: ${response.status}`);
+            }
+
+            const chunk = new Uint8Array(await response.arrayBuffer());
+            chunks.push(chunk);
+            totalBytes += chunk.byteLength;
+        }
+
+        return concatUint8Arrays(chunks, totalBytes);
+    }
+
+    if (!browserDb.url) {
+        throw new Error("Browser DB download URL missing from manifest.");
+    }
+
+    onStatus("Downloading contracts...");
+    const response = await fetch(browserDb.url, { cache: "no-store" });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch ${browserDb.url}: ${response.status}`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+}
+
+function concatUint8Arrays(chunks, totalBytes = null) {
+    const size = totalBytes == null
+        ? chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
+        : totalBytes;
+    const merged = new Uint8Array(size);
+    let offset = 0;
+
+    for (const chunk of chunks) {
+        merged.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+
+    return merged;
 }
 
 function openIDB() {

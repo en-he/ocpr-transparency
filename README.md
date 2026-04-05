@@ -2,7 +2,7 @@
 
 Open-source tool for searching and analyzing Puerto Rico government contracts from the [Oficina del Contralor](https://consultacontratos.ocpr.gov.pr/).
 
-**994,000+ contracts | $170B+ in government spending | 11 fiscal years (2012-2023)**
+**1.23M+ contracts | $212B+ in government spending | 13 fiscal years (2010-2023)**
 
 ## Quick Start
 
@@ -22,7 +22,8 @@ The site loads a SQLite database in your browser via WebAssembly — no backend 
 ```bash
 pip install requests
 
-# Download all fiscal year CSVs from OCPR
+# Refresh currently available OCPR CSVs
+# Older missing years preserved in data/raw stay in place
 python3 pipeline/download.py
 
 # Ingest into SQLite with full-text search
@@ -48,7 +49,7 @@ python3 pipeline/build_site_artifacts.py
 ```
 pipeline/          Python data pipeline
   config.py        Constants, column mappings, OCPR URLs
-  download.py      Bulk CSV downloader (11 fiscal years)
+  download.py      Bulk CSV downloader with archive-safe refreshes
   ingest.py        CSV → SQLite with FTS5 full-text search
   monitor.py       Tier 2: nightly delta sync from OCPR search
 
@@ -63,20 +64,24 @@ data/
   db/monitor_state.json  Tracked delta-sync cursor metadata
 
 site/
-  contratos.db.gz  Browser-serving SQLite DB (committed in normal Git)
+  contratos.db.gz(.part-*)  Browser-serving SQLite DB artifact(s) tracked in normal Git
 ```
 
-The full downloadable SQLite DB is published as a GitHub Release asset rather than stored in the repo. This keeps GitHub Pages and clones working without Git LFS.
+The full downloadable SQLite DB is published as a GitHub Release asset rather than stored in the repo. When the browser DB grows too large for GitHub's single-file limit, the site build automatically splits it into `contratos.db.gz.part-*` chunks and the manifest tells the frontend how to reassemble them. This keeps GitHub Pages and clones working without Git LFS.
 
 ## Data Source
 
-All data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal year CSV exports are downloaded via their bulk download endpoint. The integrity of the data is the responsibility of the entities that granted the contracts, as stated by OCPR.
+All data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal year CSV exports are downloaded via their bulk download endpoint when the official portal still serves them. The integrity of the data is the responsibility of the entities that granted the contracts, as stated by OCPR.
+
+Because the official portal no longer serves some older fiscal-year exports, this repo now preserves archive.org-recovered copies for `2010-2011` and `2011-2012` in `data/raw/`. As of April 4, 2026, `2023-2024` still appears in the official UI but no official bulk CSV has been recovered.
 
 ## Known Data Gaps
 
 Some contract families appear in the bulk CSV exports only as amendments, even when the live OCPR website still shows an original parent contract. Examples already confirmed in this repo include `2022-000019` (`IEMES PSC`) and `2008-000669` (`IEMS & M H, INC.`).
 
-The current site handles those families with a synthetic parent header so users are not shown a misleading amendment as the top-level contract. A future Tier 2 recovery task will query the live site to backfill missing original contracts with explicit provenance. The concrete design is tracked in [docs/backlog.md](docs/backlog.md).
+Separately, the official portal still advertises fiscal year `2023-2024`, but that bulk export remains unavailable from the official record and has not yet been recovered into this repo.
+
+The current site handles those families with a synthetic parent header so users are not shown a misleading amendment as the top-level contract. A future Tier 2 recovery task will query the live site to backfill missing original contracts with explicit provenance. The concrete design is tracked in `docs/backlog.md`.
 
 ### Available fields
 
@@ -96,13 +101,15 @@ The current site handles those families with a synthetic parent header so users 
 
 ## Automated Sync
 
-GitHub Actions runs three sync schedules:
+GitHub Actions supports two scheduled syncs plus a manual full rebuild:
 
 - **Nightly** — delta sync via `monitor.py` (new contracts since last run)
-- **Weekly** (Sunday) — re-download current fiscal year CSVs
-- **Monthly** (manual) — full rebuild from all CSVs
+- **Weekly** (Sunday) — refresh the last confirmed live fiscal year (`2022-2023`) and separately probe unresolved `2023-2024`
+- **Manual full rebuild** — reprocess all preserved CSVs on demand
 
-The workflow commits the browser DB and tracked metadata to the repo, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
+The workflow commits the browser DB artifact chunks and tracked metadata to the repo, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
+
+Archive-only preserved years such as `2010-2011` and `2011-2012` remain committed in `data/raw/` and are intentionally not replaced from the live portal during refreshes.
 
 ## Legal Context
 

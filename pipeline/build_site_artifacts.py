@@ -3,7 +3,7 @@ Build static site artifacts from the full OCPR SQLite database.
 
 Creates:
     - data/db/contratos-full.db.gz (full downloadable open-data DB)
-    - site/contratos.db.gz         (smaller browser-serving DB)
+    - site/contratos.db.gz         (smaller browser-serving DB, chunked when needed)
     - site/data-manifest.json      (artifact metadata for the frontend)
 """
 import argparse
@@ -23,6 +23,7 @@ DEFAULT_REPO_RAW_BASE = "https://github.com/en-he/ocpr-transparency/raw/main"
 DEFAULT_FULL_DOWNLOAD_URL = (
     "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz"
 )
+DEFAULT_BROWSER_MAX_PART_BYTES = 95 * 1024 * 1024
 
 BROWSER_COLUMNS = [
     "id",
@@ -79,6 +80,58 @@ def gzip_file(src: Path, dest: Path):
             check=True,
             stdout=output,
         )
+
+
+def browser_part_paths(browser_gz: Path) -> list[Path]:
+    return sorted(browser_gz.parent.glob(f"{browser_gz.name}.part-*"))
+
+
+def cleanup_browser_parts(browser_gz: Path):
+    for part_path in browser_part_paths(browser_gz):
+        part_path.unlink()
+
+
+def split_file(src: Path, max_part_bytes: int) -> list[Path]:
+    cleanup_browser_parts(src)
+
+    part_paths: list[Path] = []
+    with open(src, "rb") as handle:
+        part_number = 1
+        while True:
+            chunk = handle.read(max_part_bytes)
+            if not chunk:
+                break
+
+            part_path = src.with_name(f"{src.name}.part-{part_number:03d}")
+            with open(part_path, "wb") as output:
+                output.write(chunk)
+            part_paths.append(part_path)
+            part_number += 1
+
+    if not part_paths:
+        raise RuntimeError(f"Split requested for empty file: {src}")
+
+    return part_paths
+
+
+def prepare_browser_download(browser_gz: Path, max_part_bytes: int) -> dict:
+    sha256 = sha256_file(browser_gz)
+    size_bytes = browser_gz.stat().st_size
+    metadata = {
+        "sha256": sha256,
+        "size_bytes": size_bytes,
+        "format": "sqlite+gzip",
+    }
+
+    if size_bytes > max_part_bytes:
+        part_paths = split_file(browser_gz, max_part_bytes)
+        browser_gz.unlink()
+        metadata["parts"] = [path.name for path in part_paths]
+    else:
+        cleanup_browser_parts(browser_gz)
+        metadata["url"] = browser_gz.name
+
+    return metadata
 
 
 def normalize_date(raw: str | None) -> str | None:
@@ -389,7 +442,7 @@ def collect_dashboard(browser_db: Path) -> dict:
 
 def write_manifest(
     manifest_path: Path,
-    browser_gz: Path,
+    browser_download: dict,
     full_gz: Path,
     repo_raw_base: str,
     full_download_url: str,
@@ -404,12 +457,7 @@ def write_manifest(
         "fiscal_years": stats["fiscal_years"],
         "dashboard": dashboard,
         "raw_csv_base_url": f"{repo_raw_base}/data/raw/",
-        "browser_db": {
-            "url": browser_gz.name,
-            "sha256": sha256_file(browser_gz),
-            "size_bytes": browser_gz.stat().st_size,
-            "format": "sqlite+gzip",
-        },
+        "browser_db": browser_download,
         "full_download_db": {
             "url": full_download_url,
             "sha256": sha256_file(full_gz),
@@ -429,6 +477,7 @@ def main():
     parser.add_argument("--manifest", default=str(REPO_ROOT / "site" / "data-manifest.json"))
     parser.add_argument("--repo-raw-base", default=DEFAULT_REPO_RAW_BASE)
     parser.add_argument("--full-download-url", default=DEFAULT_FULL_DOWNLOAD_URL)
+    parser.add_argument("--browser-max-part-bytes", type=int, default=DEFAULT_BROWSER_MAX_PART_BYTES)
     parser.add_argument("--normalize-source-db", action="store_true")
     args = parser.parse_args()
 
@@ -452,13 +501,14 @@ def main():
 
     print(f"Gzipping browser DB -> {browser_gz}")
     gzip_file(browser_db, browser_gz)
+    browser_download = prepare_browser_download(browser_gz, args.browser_max_part_bytes)
 
     stats = collect_stats(browser_db)
     dashboard = collect_dashboard(browser_db)
     print(f"Writing manifest -> {manifest}")
     write_manifest(
         manifest,
-        browser_gz,
+        browser_download,
         full_gz,
         args.repo_raw_base.rstrip("/"),
         args.full_download_url,
@@ -471,7 +521,7 @@ def main():
 
     print(
         f"Done. browser_rows={stats['row_count']:,} "
-        f"browser_gz={browser_gz.stat().st_size / (1024 * 1024):.1f}MB "
+        f"browser_gz={browser_download['size_bytes'] / (1024 * 1024):.1f}MB "
         f"full_gz={full_gz.stat().st_size / (1024 * 1024):.1f}MB"
     )
 

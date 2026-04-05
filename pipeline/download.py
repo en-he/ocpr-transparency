@@ -1,9 +1,13 @@
 """
-Download all fiscal year bulk CSVs from the OCPR contract registry.
+Download fiscal year bulk CSVs from the OCPR contract registry.
+
+Years preserved locally from archive.org are treated as archive-only copies and
+are kept in place during refreshes even when the live portal no longer serves
+them.
 
 Usage:
     python pipeline/download.py
-    python pipeline/download.py --years 2023-2024 2022-2023
+    python pipeline/download.py --years 2022-2023 2023-2024
     python pipeline/download.py --force
 """
 import argparse
@@ -12,18 +16,36 @@ from pathlib import Path
 
 import requests
 
-from config import ALL_FISCAL_YEARS, BASE_URL, DOWNLOAD_PATH, HEADERS, RAW_DIR
+from config import (
+    ALL_FISCAL_YEARS,
+    ARCHIVED_ONLY_FISCAL_YEARS,
+    BASE_URL,
+    DOWNLOAD_PATH,
+    HEADERS,
+    KNOWN_LIVE_404_YEARS,
+    RAW_DIR,
+)
 
 
 def download_year(year: str, out_dir: Path, force: bool = False) -> bool:
     """Download a single fiscal year CSV. Returns True on success."""
     out_path = out_dir / f"contratos_{year}.csv"
+    tmp_path = out_dir / f"contratos_{year}.csv.part"
 
     if out_path.exists() and not force:
         print(f"  [skip] {year} already exists ({out_path.stat().st_size / 1024:.1f} KB)")
         return True
 
+    if year in ARCHIVED_ONLY_FISCAL_YEARS:
+        if out_path.exists():
+            print(f"  [keep] {year} preserved archived copy retained ({out_path.stat().st_size / 1024:.1f} KB)")
+            return True
+        print(f"  [warn] {year} is archive-only and missing locally; live portal copy is unavailable")
+        return False
+
     url = f"{BASE_URL}{DOWNLOAD_PATH}?q={year}"
+    if year in KNOWN_LIVE_404_YEARS:
+        print(f"  [probe] {year} is still listed in the portal UI but currently unresolved in the official record")
     print(f"  [fetch] {year} <- {url}")
 
     try:
@@ -32,18 +54,25 @@ def download_year(year: str, out_dir: Path, force: bool = False) -> bool:
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
         total = 0
-        with open(out_path, "wb") as f:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        with open(tmp_path, "wb") as f:
             for chunk in resp.iter_content(chunk_size=65536):
                 f.write(chunk)
                 total += len(chunk)
+        tmp_path.replace(out_path)
 
         print(f"  [ok]   {year} -> {out_path} ({total / 1024:.1f} KB)")
         return True
 
-    except requests.RequestException as e:
+    except (requests.RequestException, OSError) as e:
         print(f"  [err]  {year} failed: {e}")
+        if tmp_path.exists():
+            tmp_path.unlink()
         if out_path.exists():
-            out_path.unlink()
+            print(f"  [keep] {year} left existing local copy in place")
+        elif year in KNOWN_LIVE_404_YEARS:
+            print(f"  [note] {year} remains absent locally until an official bulk CSV is recovered")
         return False
 
 

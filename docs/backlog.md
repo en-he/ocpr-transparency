@@ -12,8 +12,8 @@ Some contract families in the fiscal-year CSV exports only contain amendment row
 
 Evidence:
 
-- The archived CSVs in [data/raw](data/raw) only contain amendment rows for those families.
-- The rebuilt SQLite DB in [data/db/contratos.db](data/db/contratos.db) matches the CSVs.
+- The archived CSVs in `data/raw/` only contain amendment rows for those families.
+- The rebuilt SQLite DB in `data/db/contratos.db` matches the CSVs.
 - The live OCPR site still exposes a parent/original contract row for at least `2022-000019`.
 
 Goal:
@@ -50,11 +50,11 @@ Proposed implementation:
 1. Add a helper script such as `pipeline/refresh_local_full_db.py`.
 2. Download `contratos-full.db.gz` from the `data-latest` release asset.
 3. Verify checksum when `site/data-manifest.json` provides one.
-4. Decompress into [data/db/contratos.db](data/db/contratos.db).
+4. Decompress into `data/db/contratos.db`.
 5. Optionally keep a backup of the previous local DB before replacement.
 
 Acceptance criteria:
 
-- Running the helper updates the local [data/db/contratos.db](data/db/contratos.db) to the latest published dataset.
+- Running the helper updates the local `data/db/contratos.db` to the latest published dataset.
 - The helper fails clearly if the release asset is unavailable or the checksum does not match.
 - The workflow remains one-way by default: GitHub updates do not overwrite local data unless the helper is run explicitly.

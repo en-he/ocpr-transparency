@@ -16,13 +16,24 @@ DOWNLOAD_PATH = "/contract/downloadfrequentsearchfiscalyeardocument"
 SEARCH_URL = f"{BASE_URL}/contract/search"
 
 # ── Fiscal years ───────────────────────────────────────────────────────────
-# All years listed on the site.  Known 404s: 2023-2024, 2011-2012, 2010-2011
+# All fiscal years listed in the public portal UI.
 ALL_FISCAL_YEARS = [
     "2023-2024", "2022-2023", "2021-2022", "2020-2021",
     "2019-2020", "2018-2019", "2017-2018", "2016-2017",
     "2015-2016", "2014-2015", "2013-2014", "2012-2013",
     "2011-2012", "2010-2011",
 ]
+
+# These older exports were recovered from archive.org and are now preserved in-repo.
+ARCHIVED_ONLY_FISCAL_YEARS = {
+    "2011-2012",
+    "2010-2011",
+}
+
+# As of April 4, 2026, the live portal still exposes this year in the UI but returns 404.
+KNOWN_LIVE_404_YEARS = {
+    "2023-2024",
+}
 
 # ── HTTP ───────────────────────────────────────────────────────────────────
 HEADERS = {
@@ -36,9 +47,13 @@ HEADERS = {
 
 # ── Column mapping ─────────────────────────────────────────────────────────
 # Keys are canonical internal names; values are known CSV header variants.
-# Validated against actual 2012-2023 exports.
+# Validated against archived 2010-2023 exports.
 COLUMN_MAP = {
-    "contract_number":    ["Núm. Contrato", "Num. Contrato", "Numero Contrato", "NumContrato"],
+    "contract_number":    [
+        "Núm. Contrato", "Num. Contrato",
+        "Número de Contrato", "Numero de Contrato",
+        "Numero Contrato", "NumContrato",
+    ],
     "entity":             ["Entidad", "Entidad Gubernamental"],
     "entity_number":      ["Número de Entidad", "Numero de Entidad"],
     "contractor":         ["Contratista"],

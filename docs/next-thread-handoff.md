@@ -6,15 +6,24 @@ Branch: `main`
 Current state as of April 4, 2026:
 
 - Local `main` and `origin/main` are aligned at:
-  - `f8853b2 chore: refresh Pages workflow versions`
+  - `7ac85bc docs: add next-thread handoff`
+- Published history was rewritten to remove leaked local filesystem paths before the project is shared publicly.
+- Archived fiscal-year coverage has been extended with preserved bulk CSVs for:
+  - `2010-2011`
+  - `2011-2012`
+- The rebuilt dataset now spans:
+  - `13` fiscal years (`2010-2011` through `2022-2023`)
+  - `1,230,066` contract rows
+  - `$212.1B` total contract value
+- The official portal still advertises `2023-2024`, but that bulk CSV remains unavailable from the official record and has not been recovered yet.
 - Previous feature commit for this session:
   - `0451b02 feat: add advanced filters, exports, and Pages deployment`
-- Worktree is clean except for untracked local-only `.claude/`
+- Worktree currently includes uncommitted archive-extension + workflow-cleanup changes, plus local-only `.claude/`
 - The public site is now live at:
   - `https://en-he.github.io/ocpr-transparency/`
 - The app remains static-browser architecture:
   - GitHub Pages serves the static frontend from `site/`
-  - the browser downloads `site/contratos.db.gz`
+  - the browser downloads the manifest-listed browser DB artifact from `site/` and can reassemble `contratos.db.gz.part-*` chunks when needed
   - the browser runs `sql.js`
   - IndexedDB caching improves repeat visits after the first load
 - The older idea of splitting Pages artifacts and source code across separate long-lived branches is no longer planned.
@@ -94,15 +103,16 @@ Still in place and currently does all of the following:
 - hydrates the full DB from the `data-latest` release asset when available
 - bootstraps from archived CSVs if needed
 - runs nightly delta syncs
-- runs weekly current-year refreshes
+- runs weekly refreshes for the last confirmed live fiscal year (`2022-2023`)
+- separately probes unresolved portal year `2023-2024`
 - rebuilds the browser DB and manifest when needed
 - republishes the full DB to release tag `data-latest`
-- auto-commits `site/contratos.db.gz`, `site/data-manifest.json`, and `data/db/monitor_state.json` back to `main`
+- auto-commits `site/contratos.db.gz*`, `site/data-manifest.json`, and `data/db/monitor_state.json` back to `main`
 
-Important known workflow follow-up:
+Important archive/live distinction:
 
-- The sync auto-commit message still uses the literal string:
-  - `$(date -u +%Y-%m-%d)`
+- `2010-2011` and `2011-2012` are archive.org-recovered preserved CSVs and should remain committed in `data/raw/`
+- `2023-2024` is still treated as unresolved in the official record and should not be represented as recovered until an official bulk CSV is found
 
 ### `.github/workflows/pages.yml`
 
@@ -140,7 +150,6 @@ From `docs/backlog.md`:
 
 Additional infra follow-up from this session:
 
-- Fix the sync workflow auto-commit message so it records a real UTC date instead of the literal shell expression.
 - Keep the current `main` + Pages Actions deployment model.
   - Do not revive the old branch-separation idea unless a future architecture change makes it clearly necessary.
 
@@ -194,11 +203,11 @@ Important note on the first two:
 
 Recommended next-thread focus:
 
-1. Fix the sync workflow commit-message date bug.
-2. Add the local full-DB refresh helper from the backlog.
-3. Scope the data-enrichment path needed for:
+1. Add the local full-DB refresh helper from the backlog.
+2. Scope the data-enrichment path needed for:
    - procurement method filter
    - fund type filter
+3. Continue searching the official record for a recoverable `2023-2024` bulk CSV.
 4. Continue closing the feature gap with the official site, starting with:
    - PCo number search
    - PDF document links

@@ -90,17 +90,27 @@ jobs:
             echo "mode=delta" >> $GITHUB_OUTPUT
           fi
 
+      - name: Compute sync stamp
+        id: stamp
+        run: echo "date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
       # ── Delta sync (nightly) ─────────────────────────────────────────
       - name: Delta sync — fetch new contracts
         if: steps.mode.outputs.mode == 'delta' && steps.hydrate.outputs.bootstrap != 'true'
         working-directory: pipeline
         run: python monitor.py
 
-      # ── Weekly — re-download current fiscal years ────────────────────
-      - name: Weekly — download current fiscal years
+      # ── Weekly — refresh last confirmed live fiscal year ─────────────
+      - name: Weekly — refresh last confirmed live fiscal year
         if: steps.mode.outputs.mode == 'weekly'
         working-directory: pipeline
-        run: python download.py --years 2023-2024 2022-2023 --force
+        run: python download.py --years 2022-2023 --force
+
+      # ── Weekly — probe unresolved portal year without archive overwrite ──
+      - name: Weekly — probe unresolved portal year
+        if: steps.mode.outputs.mode == 'weekly'
+        working-directory: pipeline
+        run: python download.py --years 2023-2024 --force
 
       - name: Weekly — re-ingest
         if: steps.mode.outputs.mode == 'weekly'
@@ -164,5 +174,5 @@ jobs:
       - name: Commit updated data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "data: ${{ steps.mode.outputs.mode }} sync $(date -u +%Y-%m-%d)"
-          file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz site/data-manifest.json"
+          commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"
+          file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"
