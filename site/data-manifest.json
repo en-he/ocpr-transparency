@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-05T07:15:21.465718+00:00",
-  "row_count": 994431,
-  "total_amount": 170648990827.5,
+  "generated_at": "2026-04-05T08:02:35.822091+00:00",
+  "row_count": 1230067,
+  "total_amount": 212124998752.68,
   "fiscal_years": [
     "2022-2023",
     "2021-2022",
@@ -13,14 +13,16 @@
     "2015-2016",
     "2014-2015",
     "2013-2014",
-    "2012-2013"
+    "2012-2013",
+    "2011-2012",
+    "2010-2011"
   ],
   "dashboard": {
     "top_contractors": [
       {
         "name": "Triple-S Salud, Inc.",
-        "family_count": 76,
-        "total_amount": 10791401035.49
+        "family_count": 90,
+        "total_amount": 14597705249.289999
       },
       {
         "name": "NATURGY APROVISIONAMIENTOS S.A.",
@@ -39,82 +41,92 @@
       },
       {
         "name": "First Medical Health Plan, Inc.",
-        "family_count": 202,
-        "total_amount": 5456687272.04
+        "family_count": 230,
+        "total_amount": 5483974181.44
       }
     ],
     "top_entities": [
       {
         "name": "Autoridad de Energ\u00eda El\u00e9ctrica de Puerto Rico",
-        "family_count": 1485,
-        "total_amount": 61226320877.77
+        "family_count": 1767,
+        "total_amount": 74080060409.22
       },
       {
         "name": "Administraci\u00f3n de Seguros de Salud de Puerto Rico",
-        "family_count": 834,
-        "total_amount": 31366071756.97
+        "family_count": 966,
+        "total_amount": 38225563941.01
+      },
+      {
+        "name": "Autoridad de Carreteras y Transportaci\u00f3n de Puerto Rico",
+        "family_count": 3611,
+        "total_amount": 7647516406.51
       },
       {
         "name": "Departamento de la Vivienda",
-        "family_count": 3036,
-        "total_amount": 6996229088.68
+        "family_count": 3695,
+        "total_amount": 7051428403.93
       },
       {
         "name": "Departamento de Educaci\u00f3n de Puerto Rico",
-        "family_count": 12998,
-        "total_amount": 5682206865.33
-      },
-      {
-        "name": "Autoridad Metropolitana de Autobuses",
-        "family_count": 150,
-        "total_amount": 5629236253.66
+        "family_count": 14056,
+        "total_amount": 7011807919.17
       }
     ],
     "yearly_spending": [
       {
+        "fiscal_year": "2010-2011",
+        "family_count": 97736,
+        "total_amount": 23531165489.3
+      },
+      {
+        "fiscal_year": "2011-2012",
+        "family_count": 95178,
+        "total_amount": 25177356453.28
+      },
+      {
         "fiscal_year": "2012-2013",
-        "family_count": 101669,
-        "total_amount": 17584315465.18
+        "family_count": 94484,
+        "total_amount": 13410779006.18
       },
       {
         "fiscal_year": "2013-2014",
-        "family_count": 86846,
-        "total_amount": 12913265672.65
+        "family_count": 86490,
+        "total_amount": 10080075408.25
       },
       {
         "fiscal_year": "2014-2015",
-        "family_count": 89906,
-        "total_amount": 19265660637.53
+        "family_count": 89785,
+        "total_amount": 19084529769.18
       },
       {
         "fiscal_year": "2015-2016",
-        "family_count": 91215,
-        "total_amount": 30430147689.94
+        "family_count": 91135,
+        "total_amount": 30393734322.51
       },
       {
         "fiscal_year": "2016-2017",
-        "family_count": 88224,
-        "total_amount": 6566680467.9
+        "family_count": 88178,
+        "total_amount": 6560160295.94
       },
       {
         "fiscal_year": "2017-2018",
-        "family_count": 73583,
-        "total_amount": 10726550270.34
+        "family_count": 73577,
+        "total_amount": 10725466404.58
       },
       {
         "fiscal_year": "2018-2019",
-        "family_count": 75938,
-        "total_amount": 37160091883.66
+        "family_count": 75934,
+        "total_amount": 37159419115.66
       },
       {
         "fiscal_year": "2019-2020",
-        "family_count": 63924,
-        "total_amount": 10178253217.81
+        "family_count": 63919,
+        "total_amount": 10178291465.31
       },
       {
         "fiscal_year": "2020-2021",
-        "family_count": 60915,
-        "total_amount": 11619233836.49
+        "family_count": 60910,
+        "total_amount": 11619229336.49
       },
       {
         "fiscal_year": "2021-2022",
@@ -130,15 +142,18 @@
   },
   "raw_csv_base_url": "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
   "browser_db": {
-    "sha256": "f0abd5b0ad20b86e30b01b9b353f04bc32a04298599e668ebd263804e3928a09",
-    "size_bytes": 91925492,
+    "sha256": "4f95f169fb1934eab577e88a6189bbac724de64364acfe830656c23aa00e5e4b",
+    "size_bytes": 112881245,
     "format": "sqlite+gzip",
-    "url": "contratos.db.gz"
+    "parts": [
+      "contratos.db.gz.part-001",
+      "contratos.db.gz.part-002"
+    ]
   },
   "full_download_db": {
     "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
-    "sha256": "b3ea83d8ac683649e86cfbd58659cec316ed932743206d77fda3fd4ea49ba3b8",
-    "size_bytes": 146905447,
+    "sha256": "be5d8acb61d0477a495f5ef106d8a2561b38b40b2aa511f2ff70e23566903bb0",
+    "size_bytes": 181413657,
     "format": "sqlite+gzip"
   }
 }
