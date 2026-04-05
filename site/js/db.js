@@ -36,6 +36,7 @@ const DEFAULT_MANIFEST = {
 
 let _db = null;
 let _manifest = DEFAULT_MANIFEST;
+const _distinctCache = new Map();
 
 async function loadManifest() {
     try {
@@ -85,6 +86,7 @@ function getManifest() {
 async function initDB(onStatus) {
     onStatus("Initializing database...");
     _manifest = await loadManifest();
+    _distinctCache.clear();
 
     const SQL = await initSqlJs({
         locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
@@ -270,6 +272,38 @@ function escapeLikeValue(value) {
     return String(value).replace(/[\\%_]/g, "\\$&");
 }
 
+function normalizeLookupValue(value) {
+    if (value == null) return "";
+    return String(value)
+        .normalize("NFC")
+        .trim()
+        .toLocaleUpperCase("es");
+}
+
+function resolveExactOrPrefixMatches(column, rawValue) {
+    const normalized = normalizeLookupValue(rawValue);
+    if (!normalized) {
+        return { mode: "none", matches: [] };
+    }
+
+    const options = getDistinct(column);
+    const normalizedOptions = options.map(value => ({
+        value,
+        normalized: normalizeLookupValue(value),
+    }));
+    const exact = normalizedOptions.find(option => option.normalized === normalized);
+
+    if (exact) {
+        return { mode: "exact", matches: [exact.value] };
+    }
+
+    const matches = normalizedOptions
+        .filter(option => option.normalized.startsWith(normalized))
+        .map(option => option.value);
+
+    return { mode: matches.length ? "prefix" : "none", matches };
+}
+
 function buildFilteredQueryParts(filters = {}) {
     const baseWhere = [];
     const params = [];
@@ -293,19 +327,16 @@ function buildFilteredQueryParts(filters = {}) {
     }
 
     if (filters.entity) {
-        const normalized = String(filters.entity).trim().toUpperCase();
-        baseWhere.push(`(
-            UPPER(TRIM(COALESCE(c.entity, ''))) = ?
-            OR (
-                NOT EXISTS (
-                    SELECT 1
-                    FROM contracts exact_entity
-                    WHERE UPPER(TRIM(COALESCE(exact_entity.entity, ''))) = ?
-                )
-                AND UPPER(TRIM(COALESCE(c.entity, ''))) LIKE ? ESCAPE '\\'
-            )
-        )`);
-        params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
+        const entityMatches = resolveExactOrPrefixMatches("entity", filters.entity);
+        if (entityMatches.mode === "exact") {
+            baseWhere.push("c.entity = ?");
+            params.push(entityMatches.matches[0]);
+        } else if (entityMatches.mode === "prefix") {
+            baseWhere.push(`c.entity IN (${entityMatches.matches.map(() => "?").join(", ")})`);
+            params.push(...entityMatches.matches);
+        } else {
+            baseWhere.push("1 = 0");
+        }
     }
 
     if (filters.amountMin) {
@@ -344,19 +375,16 @@ function buildFilteredQueryParts(filters = {}) {
     }
 
     if (filters.serviceType) {
-        const normalized = String(filters.serviceType).trim().toUpperCase();
-        baseWhere.push(`(
-            UPPER(TRIM(COALESCE(c.service_type, ''))) = ?
-            OR (
-                NOT EXISTS (
-                    SELECT 1
-                    FROM contracts exact_service
-                    WHERE UPPER(TRIM(COALESCE(exact_service.service_type, ''))) = ?
-                )
-                AND UPPER(TRIM(COALESCE(c.service_type, ''))) LIKE ? ESCAPE '\\'
-            )
-        )`);
-        params.push(normalized, normalized, escapeLikeValue(normalized) + "%");
+        const serviceTypeMatches = resolveExactOrPrefixMatches("service_type", filters.serviceType);
+        if (serviceTypeMatches.mode === "exact") {
+            baseWhere.push("c.service_type = ?");
+            params.push(serviceTypeMatches.matches[0]);
+        } else if (serviceTypeMatches.mode === "prefix") {
+            baseWhere.push(`c.service_type IN (${serviceTypeMatches.matches.map(() => "?").join(", ")})`);
+            params.push(...serviceTypeMatches.matches);
+        } else {
+            baseWhere.push("1 = 0");
+        }
     }
 
     if (filters.fiscalYear) {
@@ -597,9 +625,14 @@ function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir =
 function getDistinct(column) {
     const validCols = ["entity", "service_category", "service_type", "fiscal_year"];
     if (!validCols.includes(column)) return [];
-    return query(
+    if (_distinctCache.has(column)) {
+        return _distinctCache.get(column);
+    }
+    const values = query(
         `SELECT DISTINCT ${column} FROM contracts WHERE ${column} IS NOT NULL AND ${column} != '' ORDER BY ${column}`
     ).map(row => row[column]);
+    _distinctCache.set(column, values);
+    return values;
 }
 
 function hasManifestDashboardData() {

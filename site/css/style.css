@@ -480,12 +480,151 @@ thead th {
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--text-muted);
-    cursor: pointer;
     user-select: none;
     white-space: nowrap;
 }
 
+thead th[data-sort] {
+    position: relative;
+    cursor: pointer;
+}
+
+.sort-header-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    position: relative;
+}
+
+.sort-header-label {
+    display: inline-flex;
+    align-items: center;
+}
+
 thead th:hover { color: var(--text); }
+
+.sort-indicator-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    color: #7a8896;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.sort-indicator-btn:hover {
+    border-color: #b8c4cf;
+    color: var(--text);
+}
+
+.sort-indicator-btn[hidden] {
+    display: none;
+}
+
+thead th:not(.sort-active) .sort-indicator-btn {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+thead th:not(.sort-active):hover .sort-indicator-btn {
+    opacity: 0.5;
+}
+
+.sort-indicator-icon {
+    font-size: 0.8rem;
+    line-height: 1;
+}
+
+thead th.sort-asc,
+thead th.sort-desc {
+    color: var(--text);
+}
+
+thead th[data-sort]:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, 0.25);
+    outline-offset: -2px;
+}
+
+thead th.sort-active .sort-header-label {
+    color: var(--text);
+}
+
+thead th.sort-menu-open .sort-indicator-btn {
+    border-color: #9fb3c8;
+    color: var(--primary);
+}
+
+.sort-order-menu {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: -0.75rem;
+    min-width: 180px;
+    padding: 0.55rem 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+    z-index: 20;
+}
+
+.sort-order-menu[hidden] {
+    display: none;
+}
+
+.sort-order-arrow {
+    position: absolute;
+    top: -0.45rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    transform: rotate(45deg);
+}
+
+.sort-order-title {
+    padding: 0 0.9rem 0.45rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a98a8;
+}
+
+.sort-order-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.55rem 0.9rem;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.sort-order-item:hover {
+    background: #f7faff;
+}
+
+.sort-order-check {
+    width: 0.9rem;
+    color: var(--primary);
+    opacity: 0;
+}
+
+.sort-order-item.is-selected .sort-order-check {
+    opacity: 1;
+}
 
 tbody td {
     padding: 0.55rem 0.75rem;

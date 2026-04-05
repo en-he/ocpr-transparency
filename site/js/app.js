@@ -7,6 +7,7 @@ let currentSort = { col: "award_date", dir: "DESC" };
 let lastFilters = {};
 let totalCount = 0;
 let exportCounts = { summary: 0, detailed: 0 };
+let openSortMenuCol = null;
 
 function hasActiveFilters(filters) {
     return Object.values(filters || {}).some(val => String(val || "").trim() !== "");
@@ -20,6 +21,181 @@ function renderDashboardForFilters(filters) {
     renderDashboard(snapshot, { filtered });
 }
 
+function ensureSortHeaderUI() {
+    document.querySelectorAll("thead th[data-sort]").forEach(th => {
+        if (th.querySelector(".sort-header-inner")) return;
+        const label = th.dataset.i18n ? t(th.dataset.i18n) : th.textContent.trim();
+        th.replaceChildren();
+
+        const inner = document.createElement("span");
+        inner.className = "sort-header-inner";
+
+        const labelSpan = document.createElement("span");
+        labelSpan.className = "sort-header-label";
+        labelSpan.textContent = label;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "sort-indicator-btn";
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (currentSort.col !== th.dataset.sort) {
+                currentSort.col = th.dataset.sort;
+                currentSort.dir = th.dataset.sort === "amount" ? "DESC" : "ASC";
+            }
+
+            openSortMenuCol = openSortMenuCol === th.dataset.sort ? null : th.dataset.sort;
+            syncSortIndicators();
+        });
+
+        const icon = document.createElement("span");
+        icon.className = "sort-indicator-icon";
+        icon.setAttribute("aria-hidden", "true");
+        button.appendChild(icon);
+
+        inner.appendChild(labelSpan);
+        inner.appendChild(button);
+
+        const menu = document.createElement("div");
+        menu.className = "sort-order-menu";
+
+        const arrow = document.createElement("div");
+        arrow.className = "sort-order-arrow";
+        menu.appendChild(arrow);
+
+        const title = document.createElement("div");
+        title.className = "sort-order-title";
+        title.textContent = t("sort.order");
+        menu.appendChild(title);
+
+        ["ASC", "DESC"].forEach(dir => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "sort-order-item";
+            item.dataset.sortDirection = dir;
+            item.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                currentSort.col = th.dataset.sort;
+                currentSort.dir = dir;
+                openSortMenuCol = null;
+                syncSortIndicators();
+                doSearch(currentPage);
+            });
+
+            const check = document.createElement("span");
+            check.className = "sort-order-check";
+            check.textContent = "\u2713";
+
+            const text = document.createElement("span");
+            text.textContent = dir === "ASC" ? t("sort.ascending") : t("sort.descending");
+
+            item.appendChild(check);
+            item.appendChild(text);
+            menu.appendChild(item);
+        });
+
+        inner.appendChild(menu);
+        th.appendChild(inner);
+    });
+}
+
+function updateSortMenuLabels() {
+    document.querySelectorAll("thead th[data-sort]").forEach(th => {
+        const title = th.querySelector(".sort-order-title");
+        if (title) title.textContent = t("sort.order");
+        th.querySelectorAll(".sort-order-item").forEach(item => {
+            const textSpan = item.querySelector("span:last-child");
+            if (textSpan) {
+                textSpan.textContent = item.dataset.sortDirection === "ASC"
+                    ? t("sort.ascending")
+                    : t("sort.descending");
+            }
+        });
+        const btn = th.querySelector(".sort-indicator-btn");
+        if (btn) btn.setAttribute("aria-label", t("sort.changeOrder"));
+    });
+}
+
+function syncSortIndicators() {
+    if (!document.querySelector("thead th .sort-header-inner")) {
+        ensureSortHeaderUI();
+    }
+
+    document.querySelectorAll("thead th[data-sort]").forEach(th => {
+        const active = th.dataset.sort === currentSort.col;
+        const menuOpen = active && openSortMenuCol === th.dataset.sort;
+        const button = th.querySelector(".sort-indicator-btn");
+        const icon = th.querySelector(".sort-indicator-icon");
+        const menu = th.querySelector(".sort-order-menu");
+
+        th.classList.remove("sort-asc", "sort-desc");
+        th.classList.remove("sort-active", "sort-menu-open");
+        th.setAttribute("aria-sort", "none");
+
+        if (icon) {
+            icon.textContent = active
+                ? (currentSort.dir === "ASC" ? "\u25B2" : "\u25BC")
+                : "\u2195";
+        }
+
+        if (active) {
+            const direction = currentSort.dir === "ASC" ? "ascending" : "descending";
+            th.classList.add(currentSort.dir === "ASC" ? "sort-asc" : "sort-desc");
+            th.classList.add("sort-active");
+            th.setAttribute("aria-sort", direction);
+        }
+
+        if (button) {
+            button.hidden = false;
+            button.setAttribute("aria-label", t("sort.changeOrder"));
+            button.setAttribute("aria-expanded", String(menuOpen));
+        }
+
+        if (menu) {
+            menu.hidden = !menuOpen;
+            th.classList.toggle("sort-menu-open", menuOpen);
+            menu.querySelectorAll(".sort-order-item").forEach(item => {
+                const selected = active && item.dataset.sortDirection === currentSort.dir;
+                item.classList.toggle("is-selected", selected);
+                item.setAttribute("aria-pressed", String(selected));
+            });
+        }
+    });
+
+    const wrapper = document.querySelector(".table-wrapper");
+    if (wrapper) {
+        wrapper.style.overflowX = openSortMenuCol ? "visible" : "";
+    }
+
+    // Position open menu and arrow relative to the button
+    document.querySelectorAll(".sort-order-menu").forEach(menu => {
+        menu.style.right = "";
+        menu.style.left = "";
+        const arrowEl = menu.querySelector(".sort-order-arrow");
+        if (arrowEl) arrowEl.style.left = "";
+        if (!menu.hidden) {
+            const menuRect = menu.getBoundingClientRect();
+            const btn = menu.closest(".sort-header-inner")?.querySelector(".sort-indicator-btn");
+            // Clamp if overflowing left viewport edge
+            if (menuRect.left < 4) {
+                menu.style.right = "auto";
+                menu.style.left = "0";
+            }
+            // Point arrow at the button center
+            if (btn && arrowEl) {
+                const btnRect = btn.getBoundingClientRect();
+                const updatedMenuRect = menu.getBoundingClientRect();
+                const btnCenter = btnRect.left + btnRect.width / 2;
+                const arrowLeft = btnCenter - updatedMenuRect.left - 6;
+                arrowEl.style.left = arrowLeft + "px";
+            }
+        }
+    });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -31,7 +207,9 @@ async function init() {
         initDashboardToggle();
         renderDashboardForFilters(getFilterValues());
         populateDownloads();
+        ensureSortHeaderUI();
         bindEvents();
+        syncSortIndicators();
         setExportResultsState({ visible: false });
         restoreFromHash();
         hideLoading();
@@ -47,6 +225,7 @@ function doSearch(page = 1) {
     const filters = getFilterValues();
     lastFilters = filters;
     currentPage = page;
+    syncSortIndicators();
 
     const { dataSql, countSql, sumSql, params } = buildSearchQuery(
         filters, page, currentSort.col, currentSort.dir
@@ -56,7 +235,7 @@ function doSearch(page = 1) {
     const totalAmount = queryScalar(sumSql, params) || 0;
     const rows = query(dataSql, params);
     const detailedQuery = totalCount > 0
-        ? buildDetailedQuery(filters, 1, "award_date", "DESC", { limit: 1, offset: 0 })
+        ? buildDetailedQuery(filters, 1, currentSort.col, currentSort.dir, { limit: 1, offset: 0 })
         : null;
     const detailedCount = detailedQuery
         ? (queryScalar(detailedQuery.countSql, detailedQuery.params) || 0)
@@ -127,6 +306,8 @@ function bindEvents() {
         renderStats();
         populateDownloads();
         setDashboardCollapsed(isDashboardCollapsed());
+        updateSortMenuLabels();
+        syncSortIndicators();
 
         if (hasActiveFilters(getFilterValues()) || totalCount > 0) {
             doSearch(currentPage);
@@ -137,7 +318,11 @@ function bindEvents() {
 
     // Column sort
     document.querySelectorAll("thead th[data-sort]").forEach(th => {
-        th.addEventListener("click", () => {
+        th.tabIndex = 0;
+        th.addEventListener("click", event => {
+            if (event.target.closest(".sort-indicator-btn") || event.target.closest(".sort-order-menu")) {
+                return;
+            }
             const col = th.dataset.sort;
             if (currentSort.col === col) {
                 currentSort.dir = currentSort.dir === "ASC" ? "DESC" : "ASC";
@@ -145,11 +330,28 @@ function bindEvents() {
                 currentSort.col = col;
                 currentSort.dir = col === "amount" ? "DESC" : "ASC";
             }
-            // Update header indicators
-            document.querySelectorAll("thead th").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
-            th.classList.add(currentSort.dir === "ASC" ? "sort-asc" : "sort-desc");
+            openSortMenuCol = null;
+            syncSortIndicators();
             doSearch(currentPage);
         });
+        th.addEventListener("keydown", event => {
+            if (event.target.closest(".sort-indicator-btn") || event.target.closest(".sort-order-menu")) {
+                return;
+            }
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                th.click();
+            }
+        });
+    });
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest("thead th[data-sort]")) {
+            if (openSortMenuCol) {
+                openSortMenuCol = null;
+                syncSortIndicators();
+            }
+        }
     });
 }
 
@@ -161,6 +363,10 @@ function saveToHash(filters, page) {
         if (val) params.set(key, val);
     }
     if (page > 1) params.set("page", page);
+    if (currentSort.col !== "award_date" || currentSort.dir !== "DESC") {
+        params.set("sortCol", currentSort.col);
+        params.set("sortDir", currentSort.dir);
+    }
     const hash = params.toString();
     if (hash) {
         history.replaceState(null, "", "#" + hash);
@@ -197,6 +403,16 @@ function restoreFromHash() {
         if (val) {
             document.getElementById(elId).value = val;
             hasFilter = true;
+        }
+    }
+
+    const sortCol = params.get("sortCol");
+    const sortDir = params.get("sortDir");
+    if (sortCol) {
+        const validCols = ["contract_number", "contractor", "entity", "amount", "award_date", "service_category"];
+        if (validCols.includes(sortCol)) {
+            currentSort.col = sortCol;
+            currentSort.dir = sortDir === "ASC" ? "ASC" : "DESC";
         }
     }
 

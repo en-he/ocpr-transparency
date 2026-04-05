@@ -89,6 +89,12 @@ const STRINGS = {
         "results.found":    "contrato(s) encontrado(s)",
         "results.total":    "Valor total:",
 
+        // Sorting
+        "sort.order":       "Orden",
+        "sort.ascending":   "Ascendente",
+        "sort.descending":  "Descendente",
+        "sort.changeOrder": "Cambiar orden",
+
         // Table headers
         "th.contract":      "Contrato",
         "th.contractor":    "Contratista",
@@ -239,6 +245,12 @@ const STRINGS = {
         "results.found":    "contract(s) found",
         "results.total":    "Total value:",
 
+        // Sorting
+        "sort.order":       "Order",
+        "sort.ascending":   "Ascending",
+        "sort.descending":  "Descending",
+        "sort.changeOrder": "Change sort order",
+
         // Table headers
         "th.contract":      "Contract",
         "th.contractor":    "Contractor",
@@ -325,7 +337,12 @@ function setLang(lang) {
 function applyLang() {
     // Update all elements with data-i18n attribute (text content)
     document.querySelectorAll("[data-i18n]").forEach(el => {
-        el.textContent = t(el.dataset.i18n);
+        const sortLabel = el.querySelector(".sort-header-label");
+        if (sortLabel) {
+            sortLabel.textContent = t(el.dataset.i18n);
+        } else {
+            el.textContent = t(el.dataset.i18n);
+        }
     });
 
     // Update all elements with data-i18n-ph attribute (placeholders)

@@ -3,10 +3,10 @@
 Repo: `ocpr-transparency`  
 Branch: `main`
 
-Current state as of April 4, 2026:
+Current state as of April 5, 2026:
 
 - Local `main` and `origin/main` are aligned at:
-  - `7ac85bc docs: add next-thread handoff`
+  - `c6ac2c9 data: archive recovered years and split browser db`
 - Published history was rewritten to remove leaked local filesystem paths before the project is shared publicly.
 - Archived fiscal-year coverage has been extended with preserved bulk CSVs for:
   - `2010-2011`
@@ -18,7 +18,10 @@ Current state as of April 4, 2026:
 - The official portal still advertises `2023-2024`, but that bulk CSV remains unavailable from the official record and has not been recovered yet.
 - Previous feature commit for this session:
   - `0451b02 feat: add advanced filters, exports, and Pages deployment`
-- Worktree currently includes uncommitted archive-extension + workflow-cleanup changes, plus local-only `.claude/`
+- Remaining post-deploy bugs found during manual review in this session were resolved before closeout:
+  - accented typed entity search
+  - visible table sorting controls and dropdown behavior
+- Local-only `.claude/` is still present and should remain untracked.
 - The public site is now live at:
   - `https://en-he.github.io/ocpr-transparency/`
 - The app remains static-browser architecture:
@@ -94,6 +97,31 @@ Current state as of April 4, 2026:
 - Verified the updated filters and export UI in the browser before pushing.
 - Confirmed the Pages deployment path after fixing the initial workflow/settings issue.
 
+### Post-deploy debugging discovered after launch
+
+- A real bug was found in the new typed government-entity search:
+  - accented agency names such as `Autoridad de Asesoría Financiera y Agencia Fiscal de Puerto Rico` returned no results even though matching contracts existed
+- Root cause identified:
+  - the search path relied on SQLite `UPPER(...)` logic for exact/prefix matching
+  - SQLite case folding is not reliable for non-ASCII accented characters
+- The fix was implemented in `site/js/db.js`:
+  - resolve exact/prefix matches in JavaScript against canonical datalist values
+  - then pass canonical matched values into SQL instead of relying on SQLite accent-sensitive uppercase comparisons
+
+- A follow-up usability issue was also found with table sorting:
+  - sorting worked functionally, but the indicator/menu behavior was not clear enough and the popup could be clipped by the table wrapper
+- That sorting work was completed in:
+  - `site/js/app.js`
+  - `site/js/i18n.js`
+  - `site/css/style.css`
+- Current sorting behavior now includes:
+  - visible active sort state with an explicit control
+  - ascending/descending menu labels in both languages
+  - URL persistence for sort state
+  - export queries respecting the active sort
+  - floating dropdown behavior above table rows
+  - dynamic arrow alignment so the menu pointer tracks the triggering button even near viewport edges
+
 ## Workflow status
 
 ### `.github/workflows/sync.yml`
@@ -152,6 +180,7 @@ Additional infra follow-up from this session:
 
 - Keep the current `main` + Pages Actions deployment model.
   - Do not revive the old branch-separation idea unless a future architecture change makes it clearly necessary.
+- Fix the sync workflow auto-commit message so it uses a real date instead of the literal `$(date -u +%Y-%m-%d)`.
 
 ## Feature gaps still left compared to the official government site
 
@@ -211,6 +240,7 @@ Recommended next-thread focus:
 4. Continue closing the feature gap with the official site, starting with:
    - PCo number search
    - PDF document links
+5. Polish workflow ergonomics, starting with the sync auto-commit date string bug.
 
 ## Summary of what is left
 
@@ -228,6 +258,7 @@ Everything else from the session plan has been implemented and deployed:
 
 Next work should now shift from deployment to:
 
+- finishing the local post-deploy bugfix/debug state
 - data recovery
 - data enrichment
 - workflow polish
