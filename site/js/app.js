@@ -8,6 +8,7 @@ let lastFilters = {};
 let totalCount = 0;
 let exportCounts = { summary: 0, detailed: 0 };
 let openSortMenuCol = null;
+let currentSearchStateRef = "";
 
 function hasActiveFilters(filters) {
     return Object.values(filters || {}).some(val => String(val || "").trim() !== "");
@@ -222,48 +223,67 @@ async function init() {
 // ── Search ────────────────────────────────────────────────────────────────
 
 function doSearch(page = 1) {
-    const filters = getFilterValues();
-    lastFilters = filters;
-    currentPage = page;
-    syncSortIndicators();
+    try {
+        const filters = getFilterValues();
+        lastFilters = filters;
+        currentPage = page;
+        syncSortIndicators();
+        setSearchStateRef(buildHashState(filters, page));
 
-    const { dataSql, countSql, sumSql, params } = buildSearchQuery(
-        filters, page, currentSort.col, currentSort.dir
-    );
+        let rows = [];
+        let totalAmount = 0;
+        let detailedCount = 0;
 
-    totalCount = queryScalar(countSql, params) || 0;
-    const totalAmount = queryScalar(sumSql, params) || 0;
-    const rows = query(dataSql, params);
-    const detailedQuery = totalCount > 0
-        ? buildDetailedQuery(filters, 1, currentSort.col, currentSort.dir, { limit: 1, offset: 0 })
-        : null;
-    const detailedCount = detailedQuery
-        ? (queryScalar(detailedQuery.countSql, detailedQuery.params) || 0)
-        : 0;
-    exportCounts = {
-        summary: Number(totalCount || 0),
-        detailed: Number(detailedCount || 0),
-    };
+        if (filters.contractNumber) {
+            const mergedResults = searchContractFamilies(filters, page, currentSort.col, currentSort.dir);
+            rows = mergedResults.rows;
+            totalCount = mergedResults.totalCount;
+            totalAmount = mergedResults.totalAmount;
+            detailedCount = mergedResults.detailedCount;
+        } else {
+            const { dataSql, countSql, sumSql, params } = buildSearchQuery(
+                filters, page, currentSort.col, currentSort.dir
+            );
 
-    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+            totalCount = queryScalar(countSql, params) || 0;
+            totalAmount = queryScalar(sumSql, params) || 0;
+            rows = query(dataSql, params);
+            const detailedQuery = totalCount > 0
+                ? buildDetailedQuery(filters, 1, currentSort.col, currentSort.dir, { limit: 1, offset: 0 })
+                : null;
+            detailedCount = detailedQuery
+                ? (queryScalar(detailedQuery.countSql, detailedQuery.params) || 0)
+                : 0;
+        }
 
-    if (totalCount > 0) {
-        renderResults(rows);
-        renderResultsHeader(totalCount, totalAmount);
-        renderPagination(page, totalPages, doSearch);
-        showResults(true);
-        setExportResultsState({ visible: true, counts: exportCounts });
-    } else {
+        exportCounts = {
+            summary: Number(totalCount || 0),
+            detailed: Number(detailedCount || 0),
+        };
+
+        const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+        if (totalCount > 0) {
+            renderResults(rows);
+            renderResultsHeader(totalCount, totalAmount);
+            renderPagination(page, totalPages, doSearch);
+            showResults(true);
+            setExportResultsState({ visible: true, counts: exportCounts });
+        } else {
+            showResults(false);
+            setExportResultsState({ visible: false });
+        }
+
+        renderDashboardForFilters(filters);
+        saveToHash(filters, page);
+
+        // Scroll to results on page change (not first search)
+        if (page > 1) {
+            document.getElementById("results-section").scrollIntoView({ behavior: "smooth" });
+        }
+    } catch (err) {
+        console.error("Search failed:", err);
         showResults(false);
-        setExportResultsState({ visible: false });
-    }
-
-    renderDashboardForFilters(filters);
-    saveToHash(filters, page);
-
-    // Scroll to results on page change (not first search)
-    if (page > 1) {
-        document.getElementById("results-section").scrollIntoView({ behavior: "smooth" });
     }
 }
 
@@ -277,6 +297,7 @@ function bindEvents() {
         totalCount = 0;
         currentPage = 1;
         exportCounts = { summary: 0, detailed: 0 };
+        setSearchStateRef("");
         document.getElementById("results-section").style.display = "none";
         document.getElementById("no-results").style.display = "none";
         setExportResultsState({ visible: false });
@@ -357,7 +378,12 @@ function bindEvents() {
 
 // ── URL hash state (shareable searches) ───────────────────────────────────
 
-function saveToHash(filters, page) {
+function setSearchStateRef(hash) {
+    currentSearchStateRef = String(hash || "").replace(/^#/, "");
+    window.__ocprCurrentSearchRef = currentSearchStateRef;
+}
+
+function buildHashState(filters, page) {
     const params = new URLSearchParams();
     for (const [key, val] of Object.entries(filters)) {
         if (val) params.set(key, val);
@@ -367,7 +393,12 @@ function saveToHash(filters, page) {
         params.set("sortCol", currentSort.col);
         params.set("sortDir", currentSort.dir);
     }
-    const hash = params.toString();
+    return params.toString();
+}
+
+function saveToHash(filters, page) {
+    const hash = buildHashState(filters, page);
+    setSearchStateRef(hash);
     if (hash) {
         history.replaceState(null, "", "#" + hash);
     } else {
@@ -379,6 +410,7 @@ function restoreFromHash() {
     const hash = window.location.hash.slice(1);
     if (!hash) return;
 
+    setSearchStateRef(hash);
     const params = new URLSearchParams(hash);
 
     const fieldMap = {

@@ -357,6 +357,7 @@ function renderResults(rows) {
 
     for (const r of rows) {
         const tr = document.createElement("tr");
+        const parentUrl = buildContractUrl(r.id);
         const amendCount =
             Number(r.family_size || 0) ||
             getAmendmentCount(r.contract_number, r.entity, r.contractor, r.id);
@@ -366,7 +367,7 @@ function renderResults(rows) {
             <td>
                 <div class="contract-cell">
                     ${hasAmendments ? '<button class="btn-expand" title="' + t("amendments.show") + '">+</button>' : ''}
-                    <a href="contract.html?id=${r.id}" class="contract-link">${r.contract_number || "-"}</a>
+                    <a href="${parentUrl}" class="contract-link">${r.contract_number || "-"}</a>
                     ${r.amendment ? '<span class="amendment-badge">' + r.amendment + '</span>' : ''}
                 </div>
             </td>
@@ -403,13 +404,14 @@ function renderResults(rows) {
                     );
                     let insertionPoint = tr;
                     for (const a of amendments) {
+                        const amendmentUrl = buildContractUrl(a.id);
                         const atr = document.createElement("tr");
                         atr.className = "amendment-row";
                         atr.innerHTML = `
                             <td class="amendment-indent">
                                 <div class="contract-cell">
-                                    <a href="contract.html?id=${a.id}" class="contract-link">${r.contract_number}</a>
-                                    <span class="amendment-badge">${a.amendment || t("detail.original")}</span>
+                                    <a href="${parentUrl}" class="contract-link">${r.contract_number}</a>
+                                    <a href="${amendmentUrl}" class="amendment-badge amendment-link">${a.amendment || t("detail.original")}</a>
                                 </div>
                             </td>
                             <td colspan="2"></td>

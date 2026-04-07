@@ -57,6 +57,10 @@ async function initDetail() {
 
         const params = new URLSearchParams(window.location.search);
         const contractId = parseInt(params.get("id"));
+        const backLink = document.getElementById("back-to-search");
+        if (backLink) {
+            backLink.href = buildSearchUrl();
+        }
 
         if (!contractId) {
             document.getElementById("loading").style.display = "none";
@@ -155,13 +159,14 @@ function renderAmendments(c) {
     tbody.innerHTML = "";
 
     for (const a of amendments) {
+        const amendmentUrl = buildContractUrl(a.id);
         const tr = document.createElement("tr");
         tr.style.cursor = "pointer";
         tr.addEventListener("click", () => {
-            window.location.href = `contract.html?id=${a.id}`;
+            window.location.href = amendmentUrl;
         });
         tr.innerHTML = `
-            <td><a href="contract.html?id=${a.id}">${a.amendment || t("detail.original")}</a></td>
+            <td><a href="${amendmentUrl}">${a.amendment || t("detail.original")}</a></td>
             <td class="amount">${formatAmount(a.amount)}</td>
             <td class="date">${formatDate(a.award_date)}</td>
             <td class="date">${formatDate(a.valid_from)}</td>

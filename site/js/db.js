@@ -230,7 +230,11 @@ function query(sql, params = []) {
     stmt.bind(params);
     const rows = [];
     while (stmt.step()) {
-        rows.push(stmt.getAsObject());
+        const row = stmt.getAsObject();
+        if (Object.prototype.hasOwnProperty.call(row, "amendment")) {
+            row.amendment = normalizeAmendmentValue(row.amendment);
+        }
+        rows.push(row);
     }
     stmt.free();
     return rows;
@@ -244,28 +248,138 @@ function queryScalar(sql, params = []) {
     return null;
 }
 
+const CONTRACTOR_ALIAS_PATTERNS = [
+    /\bA\s+DIVISION\s+OF\b.*$/u,
+    /\bDIVISION\s+OF\b.*$/u,
+    /\bD\s*B\s*A\b.*$/u,
+    /\bA\s*K\s*A\b.*$/u,
+];
+
+const CONTRACTOR_STOPWORDS = new Set([
+    "INC",
+    "INCORPORATED",
+    "LLC",
+    "LLLP",
+    "LLP",
+    "LP",
+    "LTD",
+    "LIMITED",
+    "CORP",
+    "CORPORATION",
+    "CO",
+    "COMPANY",
+    "PSC",
+    "PC",
+    "SE",
+    "SC",
+    "US",
+    "USA",
+    "THE",
+    "OF",
+    "DE",
+    "DEL",
+    "LA",
+    "LAS",
+    "LOS",
+    "Y",
+    "AND",
+]);
+
+const CONTRACTOR_SQL_CLEANUPS = [
+    ["CHAR(0)", "' '"],
+    ["'.'", "' '"],
+    ["','", "' '"],
+    ["';'", "' '"],
+    ["':'", "' '"],
+    ["'('", "' '"],
+    ["')'", "' '"],
+    ["'/'", "' '"],
+    ["'-'", "' '"],
+];
+
+
+function applySqlReplacements(expr, replacements) {
+    return replacements.reduce(
+        (sql, [needle, replacement]) => `REPLACE(${sql}, ${needle}, ${replacement})`,
+        expr
+    );
+}
+
 function normalizeContractorFamily(value) {
     if (!value) return "";
-    return String(value)
+
+    let normalized = String(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u0000.,;:()/-]/g, " ")
         .toUpperCase()
-        .replace(/[\u0000.,;:]/g, "")
+        .replace(/\bP\s*R\b/g, "PUERTO RICO")
         .replace(/\s+/g, " ")
         .trim();
+
+    for (const pattern of CONTRACTOR_ALIAS_PATTERNS) {
+        normalized = normalized.replace(pattern, "").trim();
+    }
+
+    const tokens = normalized
+        .split(" ")
+        .filter(token => token && !CONTRACTOR_STOPWORDS.has(token));
+
+    return tokens.join(" ").trim();
+}
+
+function normalizeAmendmentValue(value) {
+    if (value == null) return "";
+    return String(value)
+        .replace(/\u0000/g, "")
+        .trim();
+}
+
+function amendmentValueExpr(alias = "c") {
+    return `CASE
+        WHEN REPLACE(COALESCE(HEX(${alias}.amendment), ''), '00', '') = '' THEN ''
+        ELSE TRIM(COALESCE(${alias}.amendment, ''))
+    END`;
+}
+
+function blankAmendmentExpr(alias = "c") {
+    return `(REPLACE(COALESCE(HEX(${alias}.amendment), ''), '00', '') = ''
+        OR NULLIF(TRIM(COALESCE(${alias}.amendment, '')), '') IS NULL)`;
+}
+
+function getSearchStateReference() {
+    const params = new URLSearchParams(window.location.search);
+    const savedBack = params.get("back");
+    if (savedBack) return String(savedBack).replace(/^#/, "");
+    const liveBackRef = window.__ocprCurrentSearchRef;
+    if (liveBackRef) return String(liveBackRef).replace(/^#/, "");
+    return window.location.hash.replace(/^#/, "");
+}
+
+function buildContractUrl(contractId, backRef = getSearchStateReference()) {
+    const params = new URLSearchParams();
+    params.set("id", contractId);
+
+    const normalizedBackRef = String(backRef || "").replace(/^#/, "");
+    if (normalizedBackRef) {
+        params.set("back", normalizedBackRef);
+    }
+
+    return `contract.html?${params.toString()}`;
+}
+
+function buildSearchUrl(backRef = getSearchStateReference()) {
+    const normalizedBackRef = String(backRef || "").replace(/^#/, "");
+    return normalizedBackRef ? `index.html#${normalizedBackRef}` : "index.html";
 }
 
 function contractorFamilyExpr(alias = "c") {
     const col = `${alias}.contractor`;
-    return `TRIM(
-        REPLACE(
-            REPLACE(
-                REPLACE(
-                    REPLACE(
-                        REPLACE(UPPER(COALESCE(${col}, '')), '.', ''),
-                    ',', ''),
-                ';', ''),
-            ':', ''),
-        CHAR(0), '')
-    )`;
+    const cleaned = applySqlReplacements(
+        `UPPER(COALESCE(${col}, ''))`,
+        CONTRACTOR_SQL_CLEANUPS
+    );
+    return `TRIM(REPLACE(REPLACE(REPLACE(${cleaned}, '  ', ' '), '  ', ' '), '  ', ' '))`;
 }
 
 function escapeLikeValue(value) {
@@ -434,7 +548,7 @@ function buildFamilyQueryParts(filters = {}) {
     const { filteredCte, params } = buildFilteredQueryParts(filters);
     const representativeOrderExpr = `
         CASE
-            WHEN NULLIF(TRIM(COALESCE(f.amendment, '')), '') IS NULL THEN 0
+            WHEN ${blankAmendmentExpr("f")} THEN 0
             ELSE 1
         END ASC,
         f.award_date ASC,
@@ -461,7 +575,7 @@ function buildFamilyQueryParts(filters = {}) {
                 SUM(COALESCE(amount, 0)) AS family_total_amount,
                 MAX(
                     CASE
-                        WHEN NULLIF(TRIM(COALESCE(amendment, '')), '') IS NULL THEN 1
+                        WHEN ${blankAmendmentExpr("ranked")} THEN 1
                         ELSE 0
                     END
                 ) AS family_has_original,
@@ -622,6 +736,166 @@ function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir =
     return { dataSql, countSql, sumSql, params };
 }
 
+function isOriginalAmendment(value) {
+    return normalizeAmendmentValue(value) === "";
+}
+
+function compareFamilyMembers(a, b) {
+    const amendmentA = normalizeAmendmentValue(a.amendment);
+    const amendmentB = normalizeAmendmentValue(b.amendment);
+    const originalA = amendmentA === "";
+    const originalB = amendmentB === "";
+
+    if (originalA !== originalB) {
+        return originalA ? -1 : 1;
+    }
+
+    const awardDateA = a.award_date || "";
+    const awardDateB = b.award_date || "";
+    if (awardDateA !== awardDateB) {
+        return awardDateA.localeCompare(awardDateB);
+    }
+
+    if (amendmentA !== amendmentB) {
+        return amendmentA.localeCompare(amendmentB);
+    }
+
+    return Number(a.id || 0) - Number(b.id || 0);
+}
+
+function compareSummaryValues(left, right, sortDir) {
+    const direction = sortDir === "ASC" ? 1 : -1;
+    const leftEmpty = left == null || left === "";
+    const rightEmpty = right == null || right === "";
+
+    if (leftEmpty && rightEmpty) return 0;
+    if (leftEmpty) return 1;
+    if (rightEmpty) return -1;
+
+    if (typeof left === "number" || typeof right === "number") {
+        const numericLeft = Number(left || 0);
+        const numericRight = Number(right || 0);
+        if (numericLeft === numericRight) return 0;
+        return numericLeft < numericRight ? -1 * direction : 1 * direction;
+    }
+
+    const compared = String(left).localeCompare(String(right), "es", { sensitivity: "base" });
+    return compared * direction;
+}
+
+function compareSummaryRows(a, b, sortCol = "award_date", sortDir = "DESC") {
+    const sortValues = {
+        contract_number: [a.contract_number, b.contract_number],
+        contractor: [a.contractor, b.contractor],
+        entity: [a.entity, b.entity],
+        amount: [Number(a.display_amount || a.amount || 0), Number(b.display_amount || b.amount || 0)],
+        award_date: [a.display_award_date || a.award_date, b.display_award_date || b.award_date],
+        service_category: [a.service_category, b.service_category],
+    };
+
+    const [left, right] = sortValues[sortCol] || sortValues.award_date;
+    const primary = compareSummaryValues(left, right, sortDir);
+    if (primary !== 0) return primary;
+
+    return Number(a.id || 0) - Number(b.id || 0);
+}
+
+function buildMergedFamilySummaries(rows = []) {
+    const groups = new Map();
+
+    for (const row of rows) {
+        const key = [
+            row.contract_number || "",
+            row.entity || "",
+            normalizeContractorFamily(row.contractor),
+        ].join("\u001F");
+
+        if (!groups.has(key)) {
+            groups.set(key, []);
+        }
+        groups.get(key).push(row);
+    }
+
+    return Array.from(groups.values()).map(groupRows => {
+        const members = groupRows.slice().sort(compareFamilyMembers);
+        const representative = members[0];
+        const familyHasOriginal = members.some(row => isOriginalAmendment(row.amendment));
+        const familyTotalAmount = members.reduce(
+            (sum, row) => sum + Number(row.amount || 0),
+            0
+        );
+        const earliestAwardDate = members.reduce((earliest, row) => {
+            const awardDate = row.award_date || "";
+            if (!awardDate) return earliest;
+            if (!earliest || awardDate < earliest) return awardDate;
+            return earliest;
+        }, "");
+
+        const displayAmount = familyHasOriginal
+            ? Number(representative.amount || 0)
+            : familyTotalAmount;
+        const displayAwardDate = familyHasOriginal
+            ? (representative.award_date || earliestAwardDate)
+            : earliestAwardDate;
+
+        return {
+            id: representative.id,
+            contract_number: representative.contract_number,
+            contractor: representative.contractor,
+            entity: representative.entity,
+            service_category: representative.service_category,
+            service_type: representative.service_type,
+            fiscal_year: representative.fiscal_year,
+            valid_from: representative.valid_from,
+            valid_to: representative.valid_to,
+            procurement_method: representative.procurement_method,
+            fund_type: representative.fund_type,
+            amendment: null,
+            family_size: members.length,
+            family_total_amount: familyTotalAmount,
+            family_has_original: familyHasOriginal ? 1 : 0,
+            display_amount: displayAmount,
+            display_award_date: displayAwardDate,
+            amount: displayAmount,
+            award_date: displayAwardDate,
+        };
+    });
+}
+
+function searchContractFamilies(filters, page = 1, sortCol = "award_date", sortDir = "DESC") {
+    const initialQuery = buildDetailedQuery(filters, 1, "award_date", "DESC", { limit: 1, offset: 0 });
+    const detailedCount = Number(queryScalar(initialQuery.countSql, initialQuery.params) || 0);
+
+    if (detailedCount === 0) {
+        return {
+            rows: [],
+            totalCount: 0,
+            totalAmount: 0,
+            detailedCount: 0,
+        };
+    }
+
+    const rawQuery = buildDetailedQuery(filters, 1, "award_date", "DESC", {
+        limit: detailedCount,
+        offset: 0,
+    });
+    const rawRows = query(rawQuery.dataSql, rawQuery.params);
+    const mergedFamilies = buildMergedFamilySummaries(rawRows)
+        .sort((left, right) => compareSummaryRows(left, right, sortCol, sortDir));
+    const totalAmount = mergedFamilies.reduce(
+        (sum, row) => sum + Number(row.family_total_amount || 0),
+        0
+    );
+    const offset = (page - 1) * PAGE_SIZE;
+
+    return {
+        rows: mergedFamilies.slice(offset, offset + PAGE_SIZE),
+        totalCount: mergedFamilies.length,
+        totalAmount,
+        detailedCount,
+    };
+}
+
 function getDistinct(column) {
     const validCols = ["entity", "service_category", "service_type", "fiscal_year"];
     if (!validCols.includes(column)) return [];
@@ -721,36 +995,39 @@ function getContractById(contractId) {
     return query("SELECT * FROM contracts WHERE id = ?", [contractId])[0] || null;
 }
 
-function getAmendmentCount(contractNumber, entity, contractor, currentId) {
-    if (!contractNumber || !entity || !contractor) return 0;
+function getContractFamilyRows(contractNumber, entity, contractor) {
+    if (!contractNumber || !entity || !contractor) return [];
+
     const contractorFamily = normalizeContractorFamily(contractor);
-    return queryScalar(
-        `SELECT COUNT(*) FROM contracts
+    return query(
+        `SELECT *
+         FROM contracts
          WHERE contract_number = ?
-           AND entity = ?
-           AND ${contractorFamilyExpr("contracts")} = ?
-           AND (NULLIF(TRIM(COALESCE(amendment, '')), '') IS NOT NULL OR id = ?)`,
-        [contractNumber, entity, contractorFamily, currentId]
-    ) || 0;
+           AND entity = ?`,
+        [contractNumber, entity]
+    )
+        .filter(row => normalizeContractorFamily(row.contractor) === contractorFamily)
+        .sort(compareFamilyMembers);
+}
+
+function getAmendmentCount(contractNumber, entity, contractor, currentId) {
+    return getContractFamilyRows(contractNumber, entity, contractor)
+        .filter(row => !isOriginalAmendment(row.amendment) || row.id === currentId)
+        .length;
 }
 
 function getAmendments(contractNumber, entity, contractor, excludeId) {
-    if (!contractNumber || !entity || !contractor) return [];
-    const contractorFamily = normalizeContractorFamily(contractor);
-    return query(
-        `SELECT id, amendment, amount, award_date, valid_from, valid_to, service_type
-         FROM contracts
-         WHERE contract_number = ?
-           AND entity = ?
-           AND ${contractorFamilyExpr("contracts")} = ?
-           AND (? IS NULL OR id != ?)
-         ORDER BY
-           CASE WHEN NULLIF(TRIM(COALESCE(amendment, '')), '') IS NULL THEN 0 ELSE 1 END,
-           amendment ASC,
-           award_date ASC,
-           id ASC`,
-        [contractNumber, entity, contractorFamily, excludeId, excludeId]
-    );
+    return getContractFamilyRows(contractNumber, entity, contractor)
+        .filter(row => excludeId == null || row.id !== excludeId)
+        .map(row => ({
+            id: row.id,
+            amendment: row.amendment,
+            amount: row.amount,
+            award_date: row.award_date,
+            valid_from: row.valid_from,
+            valid_to: row.valid_to,
+            service_type: row.service_type,
+        }));
 }
 
 function getStats() {
