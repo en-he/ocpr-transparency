@@ -87,6 +87,7 @@ async function initDB(onStatus) {
     onStatus("Initializing database...");
     _manifest = await loadManifest();
     _distinctCache.clear();
+    _ftsKeywordSupport = null;
 
     const SQL = await initSqlJs({
         locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
@@ -386,6 +387,104 @@ function escapeLikeValue(value) {
     return String(value).replace(/[\\%_]/g, "\\$&");
 }
 
+function tokenizeKeywordSearch(value) {
+    return String(value || "")
+        .normalize("NFC")
+        .replace(/['"*()]/g, " ")
+        .replace(/[^0-9A-Za-z\u00C0-\u024F]+/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+}
+
+let _ftsKeywordSupport = null;
+
+function hasFtsKeywordSupport() {
+    if (_ftsKeywordSupport != null) {
+        return _ftsKeywordSupport;
+    }
+
+    if (!_db) {
+        _ftsKeywordSupport = false;
+        return _ftsKeywordSupport;
+    }
+
+    try {
+        queryScalar(
+            "SELECT COUNT(*) FROM contracts_fts WHERE contracts_fts MATCH ?",
+            ["zzzzunlikelytoken*"]
+        );
+        _ftsKeywordSupport = true;
+    } catch {
+        _ftsKeywordSupport = false;
+    }
+
+    return _ftsKeywordSupport;
+}
+
+function buildKeywordSubstringParts(tokens, alias = "c") {
+    const searchableColumns = [
+        "contract_number",
+        "entity",
+        "contractor",
+        "service_category",
+        "service_type",
+    ];
+    const tokenClauses = [];
+    const tokenParams = [];
+
+    for (const token of tokens) {
+        const likePattern = `%${escapeLikeValue(token.toLocaleUpperCase("es"))}%`;
+        tokenClauses.push(`(${
+            searchableColumns
+                .map(column => `UPPER(COALESCE(${alias}.${column}, '')) LIKE ? ESCAPE '\\'`)
+                .join(" OR ")
+        })`);
+        tokenParams.push(...searchableColumns.map(() => likePattern));
+    }
+
+    return {
+        clause: tokenClauses.join(" AND "),
+        params: tokenParams,
+    };
+}
+
+function buildKeywordSearchParts(rawKeyword, alias = "c") {
+    const tokens = tokenizeKeywordSearch(rawKeyword);
+    if (!tokens.length) return null;
+
+    const substringSearch = buildKeywordSubstringParts(tokens, alias);
+
+    if (!hasFtsKeywordSupport()) {
+        return substringSearch;
+    }
+
+    const ftsQuery = tokens.map(token => `${token}*`).join(" ");
+
+    return {
+        clause: `(
+            ${alias}.rowid IN (
+                SELECT rowid
+                FROM contracts_fts
+                WHERE contracts_fts MATCH ?
+            )
+            OR (
+                NOT EXISTS (
+                    SELECT 1
+                    FROM contracts_fts
+                    WHERE contracts_fts MATCH ?
+                )
+                AND (${substringSearch.clause})
+            )
+        )`,
+        params: [
+            ftsQuery,
+            ftsQuery,
+            ...substringSearch.params,
+        ],
+    };
+}
+
 function normalizeLookupValue(value) {
     if (value == null) return "";
     return String(value)
@@ -423,9 +522,11 @@ function buildFilteredQueryParts(filters = {}) {
     const params = [];
 
     if (filters.keyword) {
-        baseWhere.push("c.rowid IN (SELECT rowid FROM contracts_fts WHERE contracts_fts MATCH ?)");
-        const escaped = filters.keyword.replace(/['\"*()]/g, "").trim();
-        params.push(escaped + "*");
+        const keywordSearch = buildKeywordSearchParts(filters.keyword, "c");
+        if (keywordSearch) {
+            baseWhere.push(keywordSearch.clause);
+            params.push(...keywordSearch.params);
+        }
     }
 
     if (filters.contractor) {
