@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Refresh local contratos.db after git pull when remote data has changed.
+# Fires automatically after every successful merge (git pull, git merge).
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Only refresh if the manifest or monitor state changed in this merge.
+CHANGED=$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null)
+
+if ! echo "$CHANGED" | grep -qE "(data-manifest\.json|monitor_state\.json|contratos\.db\.gz)"; then
+  exit 0
+fi
+
+echo "[post-merge] Data files changed — refreshing local DB..."
+
+# Find a Python interpreter that can run the helper without extra setup.
+PYTHON=""
+for candidate in python3 python "$REPO_ROOT/.venv/bin/python" "$REPO_ROOT/venv/bin/python"; do
+  if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+
+if [ -z "$PYTHON" ]; then
+  echo "[post-merge] Warning: no Python interpreter found; skipping DB refresh."
+  echo "             Run manually: python3 pipeline/refresh_local_full_db.py"
+  exit 0
+fi
+
+"$PYTHON" "$REPO_ROOT/pipeline/refresh_local_full_db.py"

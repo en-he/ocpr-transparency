@@ -169,6 +169,7 @@ jobs:
               --notes "Automated full SQLite database for OCPR Transparency."
 
           gh release upload "$FULL_DB_RELEASE_TAG" "data/db/$FULL_DB_RELEASE_ASSET" --clobber
+          gh release edit "$FULL_DB_RELEASE_TAG" --draft=false
 
       # ── Commit changes ───────────────────────────────────────────────
       - name: Commit updated data

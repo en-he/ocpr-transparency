@@ -39,22 +39,28 @@ Acceptance criteria:
 
 ### Refresh local full DB from the latest published release asset
 
+Status:
+Completed locally on April 7, 2026 and ready to commit.
+
 Problem:
 The canonical full database will live on GitHub as the `data-latest` release asset, while the uncompressed working DB remains local-only. After automated syncs run on GitHub, a local developer currently has to refresh the local full DB manually.
 
 Goal:
 Provide a one-command way to pull the latest published full DB and refresh the local uncompressed copy.
 
-Proposed implementation:
+Implemented locally:
 
 1. Add a helper script such as `pipeline/refresh_local_full_db.py`.
 2. Download `contratos-full.db.gz` from the `data-latest` release asset.
 3. Verify checksum when `site/data-manifest.json` provides one.
 4. Decompress into `data/db/contratos.db`.
 5. Optionally keep a backup of the previous local DB before replacement.
+6. Support `--no-backup` and `--skip-checksum` for the two expected local edge cases.
+7. Provide an optional repo-local `.githooks/post-merge` hook that can auto-run the helper after merge-based `git pull` when data files changed.
+8. Ignore local-only SQLite sidecars and backup artifacts such as `data/db/contratos.db-shm`, `data/db/contratos.db-wal`, and `data/db/contratos.db.bak`.
 
 Acceptance criteria:
 
 - Running the helper updates the local `data/db/contratos.db` to the latest published dataset.
 - The helper fails clearly if the release asset is unavailable or the checksum does not match.
-- The workflow remains one-way by default: GitHub updates do not overwrite local data unless the helper is run explicitly.
+- The default workflow remains one-way: GitHub updates do not overwrite local data unless the helper is run explicitly or the optional hook is intentionally enabled with `git config core.hooksPath .githooks`.
