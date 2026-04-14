@@ -357,7 +357,7 @@ function renderResults(rows) {
 
     for (const r of rows) {
         const tr = document.createElement("tr");
-        const parentUrl = buildContractUrl(r.id);
+        const parentUrl = buildFamilyDetailUrlForRow(r);
         const amendCount =
             Number(r.family_size || 0) ||
             getAmendmentCount(r.contract_number, r.entity, r.contractor, r.id);
@@ -627,6 +627,9 @@ function getDetailedExportColumns(format) {
             { key: "valid_from", label: t("detail.validFrom"), formatter: formatDate },
             { key: "valid_to", label: t("detail.validTo"), formatter: formatDate },
             { key: "service_type", label: t("detail.serviceType") },
+            { key: "source_type", label: t("detail.sourceType") },
+            { key: "source_contract_id", label: t("detail.sourceContractId") },
+            { key: "source_url", label: t("detail.sourceUrl") },
         ];
     }
 
@@ -649,6 +652,9 @@ function getDetailedExportColumns(format) {
         { key: "pco_number", label: t("detail.pcoNumber") },
         { key: "cancelled", label: t("detail.cancelled") },
         { key: "document_url", label: "document_url" },
+        { key: "source_type", label: t("detail.sourceType") },
+        { key: "source_contract_id", label: t("detail.sourceContractId") },
+        { key: "source_url", label: t("detail.sourceUrl") },
     ];
 }
 

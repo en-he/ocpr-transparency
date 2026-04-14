@@ -2,20 +2,20 @@ name: Contract Sync
 
 on:
   schedule:
-    # Nightly delta sync — 2 AM AST (6 AM UTC)
-    - cron: '0 6 * * *'
-    # Weekly current-year rebuild — Sunday 3 AM AST (7 AM UTC)
+    # Weekly official bulk-CSV refresh — Sunday 3 AM AST (7 AM UTC)
     - cron: '0 7 * * 0'
+    # Monthly audit rebuild — 2nd day of month 4 AM AST (8 AM UTC)
+    - cron: '0 8 2 * *'
   workflow_dispatch:
     inputs:
       mode:
         description: 'Sync mode'
         required: true
-        default: 'delta'
+        default: 'weekly'
         type: choice
         options:
-          - delta
           - weekly
+          - monthly-audit
           - full-rebuild
 
 jobs:
@@ -29,13 +29,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r pipeline/requirements.txt
 
       - name: Hydrate full DB from release asset when needed
         id: hydrate
@@ -84,38 +86,42 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT
-          elif [ "$(date +%u)" = "7" ] && [ "${{ github.event.schedule }}" = "0 7 * * 0" ]; then
+          elif [ "${{ github.event.schedule }}" = "0 7 * * 0" ]; then
             echo "mode=weekly" >> $GITHUB_OUTPUT
           else
-            echo "mode=delta" >> $GITHUB_OUTPUT
+            echo "mode=monthly-audit" >> $GITHUB_OUTPUT
           fi
 
       - name: Compute sync stamp
         id: stamp
         run: echo "date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
-      # ── Delta sync (nightly) ─────────────────────────────────────────
-      - name: Delta sync — fetch new contracts
-        if: steps.mode.outputs.mode == 'delta' && steps.hydrate.outputs.bootstrap != 'true'
-        working-directory: pipeline
-        run: python monitor.py
-
-      # ── Weekly — refresh last confirmed live fiscal year ─────────────
-      - name: Weekly — refresh last confirmed live fiscal year
+      # ── Weekly — refresh newer official bulk CSV years ───────────────
+      - name: Weekly — refresh newer official bulk CSV years
         if: steps.mode.outputs.mode == 'weekly'
         working-directory: pipeline
-        run: python download.py --years 2022-2023 --force
+        run: python download.py --refresh-live --force
 
-      # ── Weekly — probe unresolved portal year without archive overwrite ──
-      - name: Weekly — probe unresolved portal year
+      - name: Weekly — detect raw CSV changes
+        id: weekly_raw_changes
         if: steps.mode.outputs.mode == 'weekly'
-        working-directory: pipeline
-        run: python download.py --years 2023-2024 --force
+        run: |
+          if [ -n "$(git status --porcelain -- data/raw)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Weekly — re-ingest
-        if: steps.mode.outputs.mode == 'weekly'
+      - name: Weekly — reset and re-ingest tracked sources
+        if: steps.mode.outputs.mode == 'weekly' && steps.weekly_raw_changes.outputs.changed == 'true'
         working-directory: pipeline
-        run: python ingest.py
+        run: python ingest.py --reset
+
+      # ── Monthly audit rebuild ────────────────────────────────────────
+      - name: Monthly audit — reset and ingest tracked sources
+        if: steps.mode.outputs.mode == 'monthly-audit'
+        working-directory: pipeline
+        run: python ingest.py --reset
 
       # ── Full rebuild (manual) ────────────────────────────────────────
       - name: Full rebuild — download all years
@@ -138,7 +144,9 @@ jobs:
           fi
           echo "after_hash=$after_hash" >> $GITHUB_OUTPUT
 
-          if [ "${{ steps.mode.outputs.mode }}" != "delta" ]; then
+          if [ "${{ steps.mode.outputs.mode }}" = "monthly-audit" ]; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.mode.outputs.mode }}" = "full-rebuild" ]; then
             echo "rebuild=true" >> $GITHUB_OUTPUT
           elif [ "${{ steps.hydrate.outputs.bootstrap }}" = "true" ]; then
             echo "rebuild=true" >> $GITHUB_OUTPUT

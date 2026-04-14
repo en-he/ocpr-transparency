@@ -7,8 +7,10 @@ Creates:
     - site/data-manifest.json      (artifact metadata for the frontend)
 """
 import argparse
+import csv
 import hashlib
 import json
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -16,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import DB_PATH, REPO_ROOT
-from ingest import parse_date
+from contract_utils import parse_date, register_sqlite_functions
 
 
 DEFAULT_REPO_RAW_BASE = "https://github.com/en-he/ocpr-transparency/raw/main"
@@ -24,6 +26,9 @@ DEFAULT_FULL_DOWNLOAD_URL = (
     "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz"
 )
 DEFAULT_BROWSER_MAX_PART_BYTES = 95 * 1024 * 1024
+DEFAULT_RECOVERY_TARGETS_CSV = REPO_ROOT / "data" / "recovery" / "live_recovery_targets.csv"
+DEFAULT_RAW_DATA_DIR = REPO_ROOT / "data" / "raw"
+RAW_CSV_PATTERN = re.compile(r"^contratos_(\d{4}-\d{4})\.csv$")
 
 BROWSER_COLUMNS = [
     "id",
@@ -45,23 +50,35 @@ BROWSER_COLUMNS = [
     "cancelled",
     "document_url",
     "fiscal_year",
+    "source_type",
+    "source_url",
+    "source_contract_id",
 ]
 
 
 def contractor_family_expr(alias: str = "c") -> str:
     col = f"{alias}.contractor"
-    return (
-        "TRIM("
-        "REPLACE("
-        "REPLACE("
-        "REPLACE("
-        "REPLACE("
-        f"REPLACE(UPPER(COALESCE({col}, '')), '.', ''), ',', ''),"
-        "';', ''),"
-        "':', ''),"
-        "CHAR(0), '')"
-        ")"
-    )
+    return f"normalize_contractor_family({col})"
+
+
+def fiscal_year_sort_key(value: str) -> tuple[int, int]:
+    match = re.match(r"^(\d{4})-(\d{4})$", str(value or "").strip())
+    if not match:
+        return (-1, -1)
+    return (int(match.group(1)), int(match.group(2)))
+
+
+def discover_archived_csv_fiscal_years(raw_data_dir: Path) -> list[str]:
+    fiscal_years: list[str] = []
+    if not raw_data_dir.exists():
+        return fiscal_years
+
+    for path in raw_data_dir.iterdir():
+        match = RAW_CSV_PATTERN.match(path.name)
+        if match:
+            fiscal_years.append(match.group(1))
+
+    return sorted(set(fiscal_years), key=fiscal_year_sort_key, reverse=True)
 
 
 def sha256_file(path: Path) -> str:
@@ -202,7 +219,10 @@ def create_browser_schema(conn: sqlite3.Connection):
             pco_number          TEXT,
             cancelled           INTEGER DEFAULT 0,
             document_url        TEXT,
-            fiscal_year         TEXT
+            fiscal_year         TEXT,
+            source_type         TEXT,
+            source_url          TEXT,
+            source_contract_id  TEXT
         );
 
         CREATE INDEX idx_browser_entity       ON contracts(entity);
@@ -267,8 +287,9 @@ def build_browser_db(source_db: Path, browser_db: Path):
             id, contract_number, entity, entity_number, contractor, amendment,
             service_category, service_type, amount, amount_receivable,
             award_date, valid_from, valid_to, procurement_method, fund_type,
-            pco_number, cancelled, document_url, fiscal_year
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            pco_number, cancelled, document_url, fiscal_year,
+            source_type, source_url, source_contract_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
     cur = src.execute(select_sql)
@@ -299,6 +320,9 @@ def build_browser_db(source_db: Path, browser_db: Path):
                 row["cancelled"],
                 normalize_text(row["document_url"]),
                 normalize_text(row["fiscal_year"]),
+                normalize_text(row["source_type"]),
+                normalize_text(row["source_url"]),
+                normalize_text(row["source_contract_id"]),
             ))
 
         dst.executemany(insert_sql, batch)
@@ -313,13 +337,13 @@ def build_browser_db(source_db: Path, browser_db: Path):
     assert_db_path(browser_db, "browser DB file")
 
 
-def collect_stats(browser_db: Path) -> dict:
+def collect_stats(browser_db: Path, archived_csv_fiscal_years: list[str] | None = None) -> dict:
     conn = sqlite3.connect(f"file:{browser_db}?mode=ro", uri=True)
     row_count = conn.execute("SELECT COUNT(*) FROM contracts").fetchone()[0]
     total_amount = conn.execute(
         "SELECT COALESCE(SUM(amount), 0) FROM contracts WHERE amount IS NOT NULL"
     ).fetchone()[0]
-    fiscal_years = [
+    fiscal_years = archived_csv_fiscal_years or [
         row[0] for row in conn.execute(
             "SELECT DISTINCT fiscal_year FROM contracts WHERE fiscal_year IS NOT NULL ORDER BY fiscal_year DESC"
         ).fetchall()
@@ -329,12 +353,14 @@ def collect_stats(browser_db: Path) -> dict:
         "row_count": row_count,
         "total_amount": total_amount,
         "fiscal_years": fiscal_years,
+        "archived_csv_fiscal_years": fiscal_years,
     }
 
 
-def collect_dashboard(browser_db: Path) -> dict:
+def collect_dashboard(browser_db: Path, archived_csv_fiscal_years: list[str] | None = None) -> dict:
     conn = sqlite3.connect(f"file:{browser_db}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
+    register_sqlite_functions(conn)
 
     family_expr = contractor_family_expr("c")
     family_cte = f"""
@@ -367,6 +393,13 @@ def collect_dashboard(browser_db: Path) -> dict:
         )
     """
 
+    dashboard_filter_sql = ""
+    dashboard_params: list[str] = []
+    if archived_csv_fiscal_years:
+        placeholders = ", ".join("?" for _ in archived_csv_fiscal_years)
+        dashboard_filter_sql = f" AND fiscal_year IN ({placeholders})"
+        dashboard_params.extend(archived_csv_fiscal_years)
+
     top_contractors = [
         {
             "name": row["name"],
@@ -382,10 +415,12 @@ def collect_dashboard(browser_db: Path) -> dict:
                 FROM families
                 WHERE contractor_family IS NOT NULL
                   AND contractor_family != ''
+                  {dashboard_filter_sql}
                 GROUP BY contractor_family
                 ORDER BY total_amount DESC, family_count DESC, name ASC
                 LIMIT 5
-            """
+            """,
+            dashboard_params,
         ).fetchall()
     ]
 
@@ -404,10 +439,12 @@ def collect_dashboard(browser_db: Path) -> dict:
                 FROM families
                 WHERE entity IS NOT NULL
                   AND TRIM(entity) != ''
+                  {dashboard_filter_sql}
                 GROUP BY entity
                 ORDER BY total_amount DESC, family_count DESC, name ASC
                 LIMIT 5
-            """
+            """,
+            dashboard_params,
         ).fetchall()
     ]
 
@@ -426,9 +463,11 @@ def collect_dashboard(browser_db: Path) -> dict:
                 FROM families
                 WHERE fiscal_year IS NOT NULL
                   AND TRIM(fiscal_year) != ''
+                  {dashboard_filter_sql}
                 GROUP BY fiscal_year
                 ORDER BY fiscal_year ASC
-            """
+            """,
+            dashboard_params,
         ).fetchall()
     ]
 
@@ -440,6 +479,31 @@ def collect_dashboard(browser_db: Path) -> dict:
     }
 
 
+def load_recovery_targets(recovery_targets_csv: Path) -> list[dict]:
+    if not recovery_targets_csv.exists():
+        return []
+
+    targets: list[dict] = []
+    with open(recovery_targets_csv, "r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            status = normalize_text(row.get("status"))
+            if status == "pending":
+                continue
+            targets.append({
+                "contract_number": normalize_text(row.get("contract_number")),
+                "entity": normalize_text(row.get("entity")),
+                "contractor": normalize_text(row.get("contractor")),
+                "recovery_batch": normalize_text(row.get("recovery_batch")),
+                "lookup_mode": normalize_text(row.get("lookup_mode")),
+                "source_url": normalize_text(row.get("source_url")),
+                "status": status,
+                "notes": normalize_text(row.get("notes")),
+                "last_checked_at": normalize_text(row.get("last_checked_at")),
+            })
+    return targets
+
+
 def write_manifest(
     manifest_path: Path,
     browser_download: dict,
@@ -448,6 +512,7 @@ def write_manifest(
     full_download_url: str,
     stats: dict,
     dashboard: dict,
+    recovery_targets: list[dict],
 ):
     now = datetime.now(timezone.utc).isoformat()
     manifest = {
@@ -455,8 +520,10 @@ def write_manifest(
         "row_count": stats["row_count"],
         "total_amount": stats["total_amount"],
         "fiscal_years": stats["fiscal_years"],
+        "archived_csv_fiscal_years": stats["archived_csv_fiscal_years"],
         "dashboard": dashboard,
         "raw_csv_base_url": f"{repo_raw_base}/data/raw/",
+        "recovery_targets": recovery_targets,
         "browser_db": browser_download,
         "full_download_db": {
             "url": full_download_url,
@@ -478,6 +545,8 @@ def main():
     parser.add_argument("--repo-raw-base", default=DEFAULT_REPO_RAW_BASE)
     parser.add_argument("--full-download-url", default=DEFAULT_FULL_DOWNLOAD_URL)
     parser.add_argument("--browser-max-part-bytes", type=int, default=DEFAULT_BROWSER_MAX_PART_BYTES)
+    parser.add_argument("--recovery-targets-csv", default=str(DEFAULT_RECOVERY_TARGETS_CSV))
+    parser.add_argument("--raw-data-dir", default=str(DEFAULT_RAW_DATA_DIR))
     parser.add_argument("--normalize-source-db", action="store_true")
     args = parser.parse_args()
 
@@ -486,6 +555,8 @@ def main():
     browser_gz = Path(args.browser_gz)
     full_gz = Path(args.full_gz)
     manifest = Path(args.manifest)
+    recovery_targets_csv = Path(args.recovery_targets_csv)
+    raw_data_dir = Path(args.raw_data_dir)
 
     if args.normalize_source_db:
         print(f"Normalizing dates in source DB -> {source_db}")
@@ -503,8 +574,10 @@ def main():
     gzip_file(browser_db, browser_gz)
     browser_download = prepare_browser_download(browser_gz, args.browser_max_part_bytes)
 
-    stats = collect_stats(browser_db)
-    dashboard = collect_dashboard(browser_db)
+    archived_csv_fiscal_years = discover_archived_csv_fiscal_years(raw_data_dir)
+    stats = collect_stats(browser_db, archived_csv_fiscal_years)
+    dashboard = collect_dashboard(browser_db, archived_csv_fiscal_years)
+    recovery_targets = load_recovery_targets(recovery_targets_csv)
     print(f"Writing manifest -> {manifest}")
     write_manifest(
         manifest,
@@ -514,6 +587,7 @@ def main():
         args.full_download_url,
         stats,
         dashboard,
+        recovery_targets,
     )
 
     if browser_db.exists():

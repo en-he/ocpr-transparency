@@ -17,12 +17,14 @@ const DEFAULT_MANIFEST = {
     row_count: null,
     total_amount: null,
     fiscal_years: [],
+    archived_csv_fiscal_years: [],
     dashboard: {
         top_contractors: [],
         top_entities: [],
         yearly_spending: [],
     },
     raw_csv_base_url: "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/",
+    recovery_targets: [],
     browser_db: {
         url: "contratos.db.gz",
         parts: null,
@@ -61,6 +63,12 @@ async function loadManifest() {
                     ? loaded.dashboard.yearly_spending
                     : DEFAULT_MANIFEST.dashboard.yearly_spending,
             },
+            archived_csv_fiscal_years: Array.isArray(loaded.archived_csv_fiscal_years)
+                ? loaded.archived_csv_fiscal_years
+                : DEFAULT_MANIFEST.archived_csv_fiscal_years,
+            recovery_targets: Array.isArray(loaded.recovery_targets)
+                ? loaded.recovery_targets
+                : DEFAULT_MANIFEST.recovery_targets,
             browser_db: {
                 ...DEFAULT_MANIFEST.browser_db,
                 ...(loaded.browser_db || {}),
@@ -110,6 +118,7 @@ async function initDB(onStatus) {
 
     onStatus("Opening database...");
     _db = new SQL.Database(dbBytes);
+    registerSqlHelpers(_db);
     _db.run("PRAGMA cache_size = -32000");
 }
 
@@ -254,6 +263,7 @@ const CONTRACTOR_ALIAS_PATTERNS = [
     /\bDIVISION\s+OF\b.*$/u,
     /\bD\s*B\s*A\b.*$/u,
     /\bA\s*K\s*A\b.*$/u,
+    /\bH\s*N\s*C\b.*$/u,
 ];
 
 const CONTRACTOR_STOPWORDS = new Set([
@@ -270,6 +280,7 @@ const CONTRACTOR_STOPWORDS = new Set([
     "CO",
     "COMPANY",
     "PSC",
+    "CSP",
     "PC",
     "SE",
     "SC",
@@ -277,13 +288,72 @@ const CONTRACTOR_STOPWORDS = new Set([
     "USA",
     "THE",
     "OF",
+    "FOR",
     "DE",
     "DEL",
     "LA",
     "LAS",
     "LOS",
+    "EL",
+    "PARA",
     "Y",
     "AND",
+    "ING",
+    "INGENIERO",
+]);
+
+const CONTRACTOR_COMPACT_SUFFIXES = [
+    "INCORPORATED",
+    "CORPORATION",
+    "COMPANY",
+    "LIMITED",
+    "LLLP",
+    "LLC",
+    "LLP",
+    "CORP",
+    "LTD",
+    "PSC",
+    "CSP",
+    "INC",
+];
+
+const CONTRACTOR_SPACED_SUFFIX_PATTERNS = [
+    [/\bL\s+L\s+L\s+P\b/gu, "LLLP"],
+    [/\bL\s+L\s+C\b/gu, "LLC"],
+    [/\bL\s+L\s+P\b/gu, "LLP"],
+    [/\bP\s+S\s+C\b/gu, "PSC"],
+    [/\bC\s+S\s+P\b/gu, "CSP"],
+    [/\bP\s+C\b/gu, "PC"],
+    [/\bS\s+C\b/gu, "SC"],
+    [/\bS\s+E\b/gu, "SE"],
+];
+
+const LEADING_CONTRACTOR_TITLE_PATTERN = /^(?:ING|INGENIERO)\b\s*/u;
+
+const CONTRACTOR_FAMILY_OVERRIDES = new Map([
+    ["AUTORIDADF FINANCIAMIENTO INFRAESTRU", "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO"],
+    ["MAGLEZ ENGINEERINGS CONTRACTORS", "MAGLEZ ENGINEERING CONTRACTORS"],
+    ["CONSTRUCCIONES VIVI AGREDADO", "CONSTRUCCIONES VIVI AGREGADOS"],
+    ["CONSTRUCCIONES VIVI AGREGADO", "CONSTRUCCIONES VIVI AGREGADOS"],
+    ["CONSTRUCCIONES VIVI AGRAGADOS", "CONSTRUCCIONES VIVI AGREGADOS"],
+    ["BERMUDEZLONGODIAZ MASSO", "BERMUDEZ LONGO DIAZ MASSO"],
+    ["DESING BUILD", "DESIGN BUILD"],
+    ["JOSEPH HARRISON FLORESDBAHARISON CONSULTING", "JOSEPH HARRISON FLORES"],
+    ["MUNICIPIO VIEQUES CCD", "MUNICIPIO VIEQUES"],
+    ["MUNICIPIO SAN LOENZO", "MUNICIPIO SAN LORENZO"],
+    ["AUTORIDAD FINANCIAMIENTO INFRAESTRUC", "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO"],
+    ["J F BUILDING LEASE MAINTENANCE", "JF BUILDING LEASE MAINTENANCE"],
+    ["ISIDRO M MARTINEZ GILORMINI", "MARTINEZ GILORMINI ISIDRO M"],
+    ["ADMINISTRACION COMPENSACIONES POR ACCIDENTES", "ADMINISTRACION COMPENSACIONES POR ACCIDENTES AUTOMOVILES"],
+    ["CANCIO NADAL RIVERA", "CANCIONADAL RIVERA"],
+    ["AQUINO CORDOVA ALFARO", "AQUINO CORDOVAALFARO"],
+    ["RICHARD SANTOS GARCIA MA", "RICHARD SANTOS GARCIAMA"],
+    ["UNIVERSITY PUERTO RICO PARKING SYSTEM", "UNIVERSIDA PUERTO RICO PARKING SYSTEM"],
+    ["NAIOSCALY CRUZ PONCE", "CRUZ PONCE NAIOSCALY"],
+    ["GIOVANY RIVERA CARRERO", "RIVERA CARRERO GIOVANY"],
+    ["A1 GENERATOR SERVICES", "AI GENERATOR SERVICES"],
+    ["T P CONSULTING", "QUANTUM HEALTH CONSULTING"],
+    ["INTEGRA", "INTEGRA DESIGN GROUP"],
 ]);
 
 const CONTRACTOR_SQL_CLEANUPS = [
@@ -297,6 +367,8 @@ const CONTRACTOR_SQL_CLEANUPS = [
     ["'/'", "' '"],
     ["'-'", "' '"],
 ];
+
+let _hasNormalizeContractorFamilySqlFunction = false;
 
 
 function applySqlReplacements(expr, replacements) {
@@ -313,8 +385,22 @@ function normalizeContractorFamily(value) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[\u0000.,;:()/-]/g, " ")
-        .toUpperCase()
-        .replace(/\bP\s*R\b/g, "PUERTO RICO")
+        .replace(/&/g, " ")
+        .toUpperCase();
+
+    for (const [pattern, replacement] of CONTRACTOR_SPACED_SUFFIX_PATTERNS) {
+        normalized = normalized.replace(pattern, replacement);
+    }
+
+    for (const suffix of CONTRACTOR_COMPACT_SUFFIXES) {
+        normalized = normalized.replace(
+            new RegExp(`([A-Z0-9])${suffix}\\b`, "gu"),
+            `$1 ${suffix}`
+        );
+    }
+
+    normalized = normalized
+        .replace(/\bP\s*R\b/gu, "PUERTO RICO")
         .replace(/\s+/g, " ")
         .trim();
 
@@ -322,11 +408,29 @@ function normalizeContractorFamily(value) {
         normalized = normalized.replace(pattern, "").trim();
     }
 
+    normalized = normalized.replace(LEADING_CONTRACTOR_TITLE_PATTERN, "").trim();
+
     const tokens = normalized
         .split(" ")
         .filter(token => token && !CONTRACTOR_STOPWORDS.has(token));
 
-    return tokens.join(" ").trim();
+    const family = tokens.join(" ").trim();
+    return CONTRACTOR_FAMILY_OVERRIDES.get(family) || family;
+}
+
+function registerSqlHelpers(db) {
+    _hasNormalizeContractorFamilySqlFunction = false;
+
+    if (!db) return;
+
+    const registrar = typeof db.create_function === "function"
+        ? db.create_function.bind(db)
+        : (typeof db.createFunction === "function" ? db.createFunction.bind(db) : null);
+
+    if (!registrar) return;
+
+    registrar("normalize_contractor_family", normalizeContractorFamily);
+    _hasNormalizeContractorFamilySqlFunction = true;
 }
 
 function normalizeAmendmentValue(value) {
@@ -369,13 +473,71 @@ function buildContractUrl(contractId, backRef = getSearchStateReference()) {
     return `contract.html?${params.toString()}`;
 }
 
+function buildFamilyContractUrl(contractNumber, entity, contractor, backRef = getSearchStateReference()) {
+    const params = new URLSearchParams();
+    params.set("contract_number", contractNumber || "");
+    params.set("entity", entity || "");
+    params.set("contractor", contractor || "");
+
+    const normalizedBackRef = String(backRef || "").replace(/^#/, "");
+    if (normalizedBackRef) {
+        params.set("back", normalizedBackRef);
+    }
+
+    return `contract.html?${params.toString()}`;
+}
+
 function buildSearchUrl(backRef = getSearchStateReference()) {
     const normalizedBackRef = String(backRef || "").replace(/^#/, "");
     return normalizedBackRef ? `index.html#${normalizedBackRef}` : "index.html";
 }
 
+function getRecoveryTargets() {
+    return Array.isArray(getManifest().recovery_targets)
+        ? getManifest().recovery_targets
+        : [];
+}
+
+function normalizeRecoveryStatus(value) {
+    return String(value || "").trim().toLowerCase();
+}
+
+function getRecoveryTarget(contractNumber, entity, contractor) {
+    const normalizedContractNumber = normalizeLookupValue(contractNumber);
+    const normalizedEntity = normalizeLookupValue(entity);
+    const normalizedContractorFamily = normalizeContractorFamily(contractor);
+
+    if (!normalizedContractNumber || !normalizedEntity) {
+        return null;
+    }
+
+    return getRecoveryTargets().find(target => (
+        normalizeLookupValue(target.contract_number) === normalizedContractNumber &&
+        normalizeLookupValue(target.entity) === normalizedEntity &&
+        (
+            !normalizedContractorFamily ||
+            normalizeContractorFamily(target.contractor) === normalizedContractorFamily
+        )
+    )) || null;
+}
+
+function buildFamilyDetailUrlForRow(row, backRef = getSearchStateReference()) {
+    const recoveryTarget = getRecoveryTarget(row.contract_number, row.entity, row.contractor);
+    if (
+        Number(row.family_has_original || 0) !== 1 &&
+        recoveryTarget &&
+        normalizeRecoveryStatus(recoveryTarget.status) === "unrecoverable"
+    ) {
+        return buildFamilyContractUrl(row.contract_number, row.entity, row.contractor, backRef);
+    }
+    return buildContractUrl(row.id, backRef);
+}
+
 function contractorFamilyExpr(alias = "c") {
     const col = `${alias}.contractor`;
+    if (_hasNormalizeContractorFamilySqlFunction) {
+        return `normalize_contractor_family(${col})`;
+    }
     const cleaned = applySqlReplacements(
         `UPPER(COALESCE(${col}, ''))`,
         CONTRACTOR_SQL_CLEANUPS
@@ -821,7 +983,10 @@ function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir =
             pco_number,
             cancelled,
             document_url,
-            fiscal_year
+            fiscal_year,
+            source_type,
+            source_url,
+            source_contract_id
         FROM filtered
         ORDER BY ${sortExpr} ${sortDir} NULLS LAST, id ${sortDir}
         LIMIT ${limit} OFFSET ${offset}`;
@@ -1096,6 +1261,78 @@ function getContractById(contractId) {
     return query("SELECT * FROM contracts WHERE id = ?", [contractId])[0] || null;
 }
 
+function buildUnrecoverablePlaceholderContract(contractNumber, entity, contractor, familyRows = [], recoveryTarget = null) {
+    const firstFamilyRow = familyRows[0] || {};
+    return {
+        id: null,
+        contract_number: contractNumber || firstFamilyRow.contract_number || null,
+        entity: recoveryTarget?.entity || entity || firstFamilyRow.entity || null,
+        entity_number: null,
+        contractor: recoveryTarget?.contractor || contractor || firstFamilyRow.contractor || null,
+        amendment: "",
+        service_category: null,
+        service_type: null,
+        amount: null,
+        amount_receivable: null,
+        award_date: null,
+        valid_from: null,
+        valid_to: null,
+        procurement_method: null,
+        fund_type: null,
+        pco_number: null,
+        cancelled: 0,
+        document_url: null,
+        fiscal_year: null,
+        source_type: null,
+        source_url: recoveryTarget?.source_url || null,
+        source_contract_id: null,
+        recovery_status: recoveryTarget?.status || null,
+        recovery_notes: recoveryTarget?.notes || null,
+        recovery_lookup_mode: recoveryTarget?.lookup_mode || null,
+        is_placeholder_original: true,
+    };
+}
+
+function resolveContractFamilyDetail(contractNumber, entity, contractor) {
+    const familyRows = getContractFamilyRows(contractNumber, entity, contractor);
+    const recoveryTarget = getRecoveryTarget(contractNumber, entity, contractor);
+    const originalRow = familyRows.find(row => isOriginalAmendment(row.amendment)) || null;
+
+    if (originalRow) {
+        return {
+            contract: originalRow,
+            familyRows,
+            recoveryTarget,
+            isPlaceholder: false,
+        };
+    }
+
+    if (
+        recoveryTarget &&
+        normalizeRecoveryStatus(recoveryTarget.status) === "unrecoverable"
+    ) {
+        return {
+            contract: buildUnrecoverablePlaceholderContract(
+                contractNumber,
+                entity,
+                contractor,
+                familyRows,
+                recoveryTarget
+            ),
+            familyRows,
+            recoveryTarget,
+            isPlaceholder: true,
+        };
+    }
+
+    return {
+        contract: familyRows[0] || null,
+        familyRows,
+        recoveryTarget,
+        isPlaceholder: false,
+    };
+}
+
 function getContractFamilyRows(contractNumber, entity, contractor) {
     if (!contractNumber || !entity || !contractor) return [];
 
@@ -1139,6 +1376,17 @@ function getStats() {
     const amount = manifest.total_amount != null
         ? manifest.total_amount
         : (queryScalar("SELECT SUM(amount) FROM contracts WHERE amount IS NOT NULL") || 0);
+    const archivedYears = Array.isArray(manifest.archived_csv_fiscal_years) && manifest.archived_csv_fiscal_years.length
+        ? manifest.archived_csv_fiscal_years
+        : (Array.isArray(manifest.fiscal_years) ? manifest.fiscal_years : []);
+    if (archivedYears.length) {
+        return {
+            total,
+            amount,
+            minYear: archivedYears[archivedYears.length - 1],
+            maxYear: archivedYears[0],
+        };
+    }
     const years = query(
         "SELECT MIN(fiscal_year) AS min_fy, MAX(fiscal_year) AS max_fy FROM contracts"
     )[0];

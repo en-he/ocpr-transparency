@@ -8,23 +8,66 @@ them.
 Usage:
     python pipeline/download.py
     python pipeline/download.py --years 2022-2023 2023-2024
+    python pipeline/download.py --refresh-live
     python pipeline/download.py --force
 """
 import argparse
+import re
 import time
+from datetime import date
 from pathlib import Path
 
 import requests
 
 from config import (
-    ALL_FISCAL_YEARS,
     ARCHIVED_ONLY_FISCAL_YEARS,
     BASE_URL,
+    BULK_CSV_START_YEAR,
     DOWNLOAD_PATH,
     HEADERS,
     KNOWN_LIVE_404_YEARS,
     RAW_DIR,
+    bulk_csv_years_through_current,
+    current_fiscal_year,
+    format_fiscal_year,
+    parse_fiscal_year,
 )
+
+
+FISCAL_YEAR_FILENAME_PATTERN = re.compile(r"^contratos_(\d{4}-\d{4})\.csv$")
+
+
+def discover_local_raw_fiscal_years(out_dir: Path) -> list[str]:
+    fiscal_years: list[str] = []
+    for csv_path in sorted(out_dir.glob("contratos_*.csv")):
+        match = FISCAL_YEAR_FILENAME_PATTERN.match(csv_path.name)
+        if match:
+            fiscal_years.append(match.group(1))
+    return sorted(set(fiscal_years), key=parse_fiscal_year, reverse=True)
+
+
+def discover_live_refresh_years(out_dir: Path, *, today: date | None = None) -> list[str]:
+    local_fiscal_years = discover_local_raw_fiscal_years(out_dir)
+    current_start_year, _ = parse_fiscal_year(current_fiscal_year(today))
+
+    refreshable_local_years = [
+        fiscal_year
+        for fiscal_year in local_fiscal_years
+        if fiscal_year not in ARCHIVED_ONLY_FISCAL_YEARS
+    ]
+
+    if refreshable_local_years:
+        start_year, _ = parse_fiscal_year(refreshable_local_years[0])
+    else:
+        start_year = BULK_CSV_START_YEAR
+
+    if start_year > current_start_year:
+        return []
+
+    return [
+        format_fiscal_year(start_year)
+        for start_year in range(start_year, current_start_year + 1)
+    ]
 
 
 def download_year(year: str, out_dir: Path, force: bool = False) -> bool:
@@ -79,8 +122,13 @@ def download_year(year: str, out_dir: Path, force: bool = False) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Download OCPR fiscal year CSVs")
     parser.add_argument(
-        "--years", nargs="*", default=ALL_FISCAL_YEARS,
-        help="Fiscal years to download (default: all)",
+        "--years", nargs="*",
+        help="Fiscal years to download (default: every bulk CSV year from 2010-2011 through the current fiscal year)",
+    )
+    parser.add_argument(
+        "--refresh-live",
+        action="store_true",
+        help="Only probe fiscal years newer than the newest locally preserved raw CSV",
     )
     parser.add_argument("--out-dir", default=str(RAW_DIR))
     parser.add_argument("--force", action="store_true", help="Re-download existing files")
@@ -90,10 +138,24 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\nDownloading {len(args.years)} fiscal year(s) -> {out_dir}\n")
+    if args.years and args.refresh_live:
+        parser.error("--years and --refresh-live cannot be used together")
+
+    if args.years:
+        years = args.years
+    elif args.refresh_live:
+        years = discover_live_refresh_years(out_dir)
+    else:
+        years = bulk_csv_years_through_current()
+
+    if not years:
+        print(f"\nNo new live fiscal years to probe in {out_dir}.\n")
+        return
+
+    print(f"\nDownloading {len(years)} fiscal year(s) -> {out_dir}\n")
 
     ok = err = skip = 0
-    for i, year in enumerate(args.years):
+    for i, year in enumerate(years):
         out_path = out_dir / f"contratos_{year}.csv"
         existed = out_path.exists() and not args.force
 
@@ -106,7 +168,7 @@ def main():
         else:
             err += 1
 
-        if i < len(args.years) - 1 and not existed:
+        if i < len(years) - 1 and not existed:
             time.sleep(args.delay)
 
     print(f"\nDone. {ok} downloaded, {skip} skipped, {err} errors.")

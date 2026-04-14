@@ -1,0 +1,51 @@
+{
+  "draw": 1,
+  "recordsTotal": 2,
+  "recordsFiltered": 2,
+  "data": [
+    {
+      "EntityId": 3136,
+      "EntityName": "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
+      "ContractId": 5248440,
+      "ContractNumber": "2022-000019",
+      "Amendment": null,
+      "DateOfGrant": "/Date(1647993600000)/",
+      "EffectiveDateFrom": "/Date(1647993600000)/",
+      "EffectiveDateTo": "/Date(1656547200000)/",
+      "Service": "SERVICIOS DE INGENIERÍA",
+      "ServiceGroup": "SERVICIOS PROFESIONALES",
+      "CancellationDate": null,
+      "AmountToPay": 16200.0,
+      "AmountToReceive": 0.0,
+      "HasAmendments": true,
+      "DocumentWithoutSocialSecurityId": "fixture-document-a",
+      "Contractors": [
+        {
+          "Name": "IEMES, PSC"
+        }
+      ]
+    },
+    {
+      "EntityId": 3136,
+      "EntityName": "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
+      "ContractId": 5248441,
+      "ContractNumber": "2022-000019",
+      "Amendment": null,
+      "DateOfGrant": "/Date(1647993600000)/",
+      "EffectiveDateFrom": "/Date(1647993600000)/",
+      "EffectiveDateTo": "/Date(1656547200000)/",
+      "Service": "SERVICIOS DE INGENIERÍA",
+      "ServiceGroup": "SERVICIOS PROFESIONALES",
+      "CancellationDate": null,
+      "AmountToPay": 16200.0,
+      "AmountToReceive": 0.0,
+      "HasAmendments": true,
+      "DocumentWithoutSocialSecurityId": "fixture-document-b",
+      "Contractors": [
+        {
+          "Name": "IEMES, PSC"
+        }
+      ]
+    }
+  ]
+}

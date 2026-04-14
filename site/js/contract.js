@@ -51,18 +51,49 @@ function setField(id, val) {
     document.getElementById(id).textContent = val || "-";
 }
 
+function setLinkField(id, url) {
+    const link = document.getElementById(id);
+    if (!link) return;
+    if (url) {
+        link.href = url;
+        link.textContent = url;
+        link.style.pointerEvents = "";
+    } else {
+        link.removeAttribute("href");
+        link.textContent = "-";
+        link.style.pointerEvents = "none";
+    }
+}
+
+function formatSourceType(value) {
+    if (!value) return "-";
+    const key = `detail.sourceType.${value}`;
+    const translated = t(key);
+    return translated === key ? value : translated;
+}
+
+function formatRecoveryStatus(value) {
+    if (!value) return "-";
+    const key = `detail.recoveryStatus.${value}`;
+    const translated = t(key);
+    return translated === key ? value : translated;
+}
+
 async function initDetail() {
     try {
         initLang();
 
         const params = new URLSearchParams(window.location.search);
-        const contractId = parseInt(params.get("id"));
+        const contractId = parseInt(params.get("id"), 10);
+        const familyContractNumber = (params.get("contract_number") || "").trim();
+        const familyEntity = (params.get("entity") || "").trim();
+        const familyContractor = (params.get("contractor") || "").trim();
         const backLink = document.getElementById("back-to-search");
         if (backLink) {
             backLink.href = buildSearchUrl();
         }
 
-        if (!contractId) {
+        if (!contractId && (!familyContractNumber || !familyEntity || !familyContractor)) {
             document.getElementById("loading").style.display = "none";
             document.getElementById("contract-not-found").style.display = "";
             return;
@@ -72,13 +103,42 @@ async function initDetail() {
             document.getElementById("loading-status").textContent = msg;
         });
 
-        const contract = getContractById(contractId);
+        let contract = null;
+        let recoveryTarget = null;
+
+        if (contractId) {
+            contract = getContractById(contractId);
+            if (contract) {
+                recoveryTarget = getRecoveryTarget(
+                    contract.contract_number,
+                    contract.entity,
+                    contract.contractor
+                );
+            }
+        } else {
+            const resolved = resolveContractFamilyDetail(
+                familyContractNumber,
+                familyEntity,
+                familyContractor
+            );
+            contract = resolved.contract;
+            recoveryTarget = resolved.recoveryTarget;
+        }
 
         document.getElementById("loading").style.display = "none";
 
         if (!contract) {
             document.getElementById("contract-not-found").style.display = "";
             return;
+        }
+
+        if (recoveryTarget) {
+            contract = {
+                ...contract,
+                recovery_status: contract.recovery_status || recoveryTarget.status || null,
+                recovery_notes: contract.recovery_notes || recoveryTarget.notes || null,
+                recovery_lookup_mode: contract.recovery_lookup_mode || recoveryTarget.lookup_mode || null,
+            };
         }
 
         renderContract(contract);
@@ -138,6 +198,11 @@ function renderContract(c) {
     setField("d-service-type", c.service_type);
     setField("d-procurement-method", c.procurement_method);
     setField("d-pco-number", c.pco_number);
+    setField("d-source-type", formatSourceType(c.source_type));
+    setField("d-source-contract-id", c.source_contract_id);
+    setLinkField("d-source-url", c.source_url);
+    setField("d-recovery-status", formatRecoveryStatus(c.recovery_status));
+    setField("d-recovery-notes", c.recovery_notes);
 
     // Page title
     document.title = `${c.contract_number || "Contrato"} — ${c.entity || "OCPR"}`;

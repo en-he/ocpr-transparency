@@ -463,7 +463,9 @@ function populateDownloads() {
 
     const manifest = getManifest();
     const rawCsvBase = manifest.raw_csv_base_url || "https://github.com/en-he/ocpr-transparency/raw/main/data/raw/";
-    const fiscalYears = manifest.fiscal_years && manifest.fiscal_years.length
+    const fiscalYears = manifest.archived_csv_fiscal_years && manifest.archived_csv_fiscal_years.length
+        ? manifest.archived_csv_fiscal_years
+        : manifest.fiscal_years && manifest.fiscal_years.length
         ? manifest.fiscal_years
         : getDistinct("fiscal_year").slice().reverse();
 

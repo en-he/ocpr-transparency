@@ -1,7 +1,12 @@
 """
 Shared configuration for the OCPR contract data pipeline.
 """
+from __future__ import annotations
+
+from datetime import date, datetime
 from pathlib import Path
+
+from contract_utils import PR_TIMEZONE
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -16,13 +21,7 @@ DOWNLOAD_PATH = "/contract/downloadfrequentsearchfiscalyeardocument"
 SEARCH_URL = f"{BASE_URL}/contract/search"
 
 # ── Fiscal years ───────────────────────────────────────────────────────────
-# All fiscal years listed in the public portal UI.
-ALL_FISCAL_YEARS = [
-    "2023-2024", "2022-2023", "2021-2022", "2020-2021",
-    "2019-2020", "2018-2019", "2017-2018", "2016-2017",
-    "2015-2016", "2014-2015", "2013-2014", "2012-2013",
-    "2011-2012", "2010-2011",
-]
+BULK_CSV_START_YEAR = 2010
 
 # These older exports were recovered from archive.org and are now preserved in-repo.
 ARCHIVED_ONLY_FISCAL_YEARS = {
@@ -34,6 +33,30 @@ ARCHIVED_ONLY_FISCAL_YEARS = {
 KNOWN_LIVE_404_YEARS = {
     "2023-2024",
 }
+
+
+def format_fiscal_year(start_year: int) -> str:
+    return f"{start_year:04d}-{start_year + 1:04d}"
+
+
+def parse_fiscal_year(value: str) -> tuple[int, int]:
+    start, end = value.split("-", 1)
+    return int(start), int(end)
+
+
+def current_fiscal_year(today: date | None = None) -> str:
+    if today is None:
+        today = datetime.now(PR_TIMEZONE).date()
+    start_year = today.year if today.month >= 7 else today.year - 1
+    return format_fiscal_year(start_year)
+
+
+def bulk_csv_years_through_current(today: date | None = None) -> list[str]:
+    current_start, _ = parse_fiscal_year(current_fiscal_year(today))
+    return [
+        format_fiscal_year(start_year)
+        for start_year in range(current_start, BULK_CSV_START_YEAR - 1, -1)
+    ]
 
 # ── HTTP ───────────────────────────────────────────────────────────────────
 HEADERS = {
