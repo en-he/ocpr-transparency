@@ -464,7 +464,9 @@ def validate_detail_match(target: RecoveryTarget, parsed: ParsedContractDetail) 
         return False, "detail page contract number does not match the recovery target"
     if normalize_entity_name(record.get("entity")) != normalize_entity_name(target.entity):
         return False, "detail page entity does not match the recovery target"
-    if not contractor_target_matches(target.contractor, parsed.contractor_names or [record.get("contractor") or ""]):
+    primary_contractor = record.get("contractor") or ""
+    contractor_candidates = [primary_contractor] if primary_contractor else (parsed.contractor_names or [""])
+    if not contractor_target_matches(target.contractor, contractor_candidates):
         return False, "detail page contractor family does not match the recovery target"
     if not record.get("award_date"):
         return False, "detail page is missing an award date"

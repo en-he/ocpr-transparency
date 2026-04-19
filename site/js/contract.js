@@ -132,7 +132,12 @@ async function initDetail() {
             return;
         }
 
-        if (recoveryTarget) {
+        const shouldMergeRecoveryTarget = recoveryTarget && (
+            !contract.is_placeholder_original ||
+            normalizeRecoveryStatus(recoveryTarget.status) !== "recovered"
+        );
+
+        if (shouldMergeRecoveryTarget) {
             contract = {
                 ...contract,
                 recovery_status: contract.recovery_status || recoveryTarget.status || null,

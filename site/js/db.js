@@ -449,7 +449,8 @@ function amendmentValueExpr(alias = "c") {
 
 function blankAmendmentExpr(alias = "c") {
     return `(REPLACE(COALESCE(HEX(${alias}.amendment), ''), '00', '') = ''
-        OR NULLIF(TRIM(COALESCE(${alias}.amendment, '')), '') IS NULL)`;
+        OR NULLIF(TRIM(COALESCE(${alias}.amendment, '')), '') IS NULL
+        OR UPPER(TRIM(COALESCE(${alias}.amendment, ''))) = 'ORIGINAL')`;
 }
 
 function getSearchStateReference() {
@@ -522,12 +523,12 @@ function getRecoveryTarget(contractNumber, entity, contractor) {
 }
 
 function buildFamilyDetailUrlForRow(row, backRef = getSearchStateReference()) {
-    const recoveryTarget = getRecoveryTarget(row.contract_number, row.entity, row.contractor);
-    if (
-        Number(row.family_has_original || 0) !== 1 &&
-        recoveryTarget &&
-        normalizeRecoveryStatus(recoveryTarget.status) === "unrecoverable"
-    ) {
+    const familySize = Number(row.family_size || 0);
+    const familyHasOriginal = row.family_has_original == null
+        ? null
+        : Number(row.family_has_original) === 1;
+
+    if (familySize > 1 || familyHasOriginal === false) {
         return buildFamilyContractUrl(row.contract_number, row.entity, row.contractor, backRef);
     }
     return buildContractUrl(row.id, backRef);
@@ -1003,14 +1004,15 @@ function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir =
 }
 
 function isOriginalAmendment(value) {
-    return normalizeAmendmentValue(value) === "";
+    const normalized = normalizeLookupValue(normalizeAmendmentValue(value));
+    return normalized === "" || normalized === "ORIGINAL";
 }
 
 function compareFamilyMembers(a, b) {
     const amendmentA = normalizeAmendmentValue(a.amendment);
     const amendmentB = normalizeAmendmentValue(b.amendment);
-    const originalA = amendmentA === "";
-    const originalB = amendmentB === "";
+    const originalA = isOriginalAmendment(amendmentA);
+    const originalB = isOriginalAmendment(amendmentB);
 
     if (originalA !== originalB) {
         return originalA ? -1 : 1;
@@ -1261,8 +1263,10 @@ function getContractById(contractId) {
     return query("SELECT * FROM contracts WHERE id = ?", [contractId])[0] || null;
 }
 
-function buildUnrecoverablePlaceholderContract(contractNumber, entity, contractor, familyRows = [], recoveryTarget = null) {
+function buildMissingOriginalPlaceholderContract(contractNumber, entity, contractor, familyRows = [], recoveryTarget = null) {
     const firstFamilyRow = familyRows[0] || {};
+    const recoveryStatus = normalizeRecoveryStatus(recoveryTarget?.status);
+    const showRecoveryMetadata = recoveryStatus && recoveryStatus !== "recovered";
     return {
         id: null,
         contract_number: contractNumber || firstFamilyRow.contract_number || null,
@@ -1286,9 +1290,9 @@ function buildUnrecoverablePlaceholderContract(contractNumber, entity, contracto
         source_type: null,
         source_url: recoveryTarget?.source_url || null,
         source_contract_id: null,
-        recovery_status: recoveryTarget?.status || null,
-        recovery_notes: recoveryTarget?.notes || null,
-        recovery_lookup_mode: recoveryTarget?.lookup_mode || null,
+        recovery_status: showRecoveryMetadata ? recoveryTarget?.status || null : null,
+        recovery_notes: showRecoveryMetadata ? recoveryTarget?.notes || null : null,
+        recovery_lookup_mode: showRecoveryMetadata ? recoveryTarget?.lookup_mode || null : null,
         is_placeholder_original: true,
     };
 }
@@ -1307,12 +1311,11 @@ function resolveContractFamilyDetail(contractNumber, entity, contractor) {
         };
     }
 
-    if (
-        recoveryTarget &&
-        normalizeRecoveryStatus(recoveryTarget.status) === "unrecoverable"
-    ) {
+    if (familyRows.length > 0) {
         return {
-            contract: buildUnrecoverablePlaceholderContract(
+            // Keep family navigation anchored on a synthetic parent header whenever
+            // the dataset only has amendment rows for this contract family.
+            contract: buildMissingOriginalPlaceholderContract(
                 contractNumber,
                 entity,
                 contractor,
@@ -1326,7 +1329,7 @@ function resolveContractFamilyDetail(contractNumber, entity, contractor) {
     }
 
     return {
-        contract: familyRows[0] || null,
+        contract: null,
         familyRows,
         recoveryTarget,
         isPlaceholder: false,
