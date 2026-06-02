@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-02T09:15:23.964922+00:00",
+  "generated_at": "2026-06-02T12:13:24.968631+00:00",
   "row_count": 1238597,
   "total_amount": 218078932732.11,
   "fiscal_years": [
@@ -131972,7 +131972,7 @@
     }
   ],
   "browser_db": {
-    "sha256": "22e031c507da7d03e25865bb5cea087fc95bc71f80815ac390050d382368a47c",
+    "sha256": "988beb7b92c5c3a43e4b1276676949ae54d69845e81d514e18b72165a84a49dc",
     "size_bytes": 114219736,
     "format": "sqlite+gzip",
     "parts": [
@@ -131982,8 +131982,8 @@
   },
   "full_download_db": {
     "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
-    "sha256": "c7665e2754db9925d174f11935f2879f842ad5e723810dda13ab3e665e8fec84",
-    "size_bytes": 184582039,
+    "sha256": "18d83b05d58982fe72da90812cb377fe1a50e497b89c120721bb7c886f55b0ae",
+    "size_bytes": 184584137,
     "format": "sqlite+gzip"
   }
 }
