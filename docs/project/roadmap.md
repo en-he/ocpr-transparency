@@ -4,21 +4,21 @@
 
 The project is archival-first. We stabilize evidence and reconciliation before optimizing queries or adding intelligence. A missing source snapshot is recorded as a coverage state; it is not a failure of a phase that certifies the snapshots that are available.
 
-## Phase 0 — Documentation authority and recovery preservation
+## Phase 0 — Repository and operating baseline
 
-**Status: In progress; not complete.** This bounded migration creates the maintained authority map and current/target documents while preserving historical planning and recovery evidence in ignored local records. Phase 0 remains open while documentation review, CI/test/build verification, deployment-freshness checks, and the maturity-gated cleanup decision are pending.
+**Status: Complete.** The repository now has a maintained public authority map, an explicit public/local documentation boundary, cross-platform portability controls, a read-only CI baseline, pre-side-effect sync validation, independently reproducible database/browser projections, representative browser certification, and a remotely observed sync-to-Pages freshness path. Imported recovery state was preserved under archival refs and a read-back-verified short-term backup before the isolated recovery checkout was retired under the approved maintenance gate.
 
 Exit criteria:
 
 - maintained documents label Current / Target / Not yet implemented without blurring them;
-- local historical Markdown body equality and SVG byte equality are mechanically verified;
-- the local recovery ledger's narrow scope is carried forward without turning it into a completeness claim;
-- the existing test/build/CI/deployment gaps are recorded and a green checkpoint is independently reviewed;
-- no stale recovery residue is deleted until the ignored local maintenance ledger's maturity gates pass and an explicit itemized approval is recorded.
+- local historical Markdown body equality and SVG byte equality were mechanically verified;
+- the recovery ledger's narrow scope is carried forward without turning it into a completeness claim;
+- tests, clean isolated rebuilds, browser behavior, CI, sync, release publication, and exact-revision Pages deployment were observed green;
+- recovery retirement occurred only after archival refs, an independent Git bundle, exact file manifests, restore/read-back checks, and explicit itemized approval.
 
 ## Phase 1 — Certify the available bulk archive
 
-**Status: Next certification gate; implementation exists but certification is not being claimed here.** Establish a reproducible inventory of preserved bulk files, their source channel, checksums, capture metadata, parser version, row counts, and rebuild inputs. The current available corpus is 13 preserved fiscal years, `2010-2011` through `2022-2023`; the two oldest are Archive.org recoveries.
+**Status: Next certification gate; implementation exists but Phase 1 certification is not yet claimed.** Establish a reproducible inventory of preserved bulk files, their source channel, checksums, capture metadata, parser version, row counts, and rebuild inputs. The current available corpus is 13 preserved fiscal years, `2010-2011` through `2022-2023`; the two oldest are Archive.org recoveries.
 
 A missing or unavailable official CSV year is an explicit coverage state. It does **not** fail Phase 1 certification of the years whose source bytes are available, and it must not be filled by assuming that live/recovered rows were once an official bulk export. Post-2023 bulk exports remain unavailable in the current preserved corpus.
 

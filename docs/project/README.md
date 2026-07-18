@@ -33,6 +33,7 @@ The current repository evidence supports these bounded statements:
 - The recovery ledger contains `11,983` targets (`7,177` recovered and `4,806` unrecoverable), but that ledger covers the defined multi-row missing-original backlog. A broader audit found `31,264` families without stored originals, including `26,209` single-row amendment-only families.
 - The public product is a static browser SQLite/sql.js application with downloadable artifacts. A hosted query API is a target, not the current backend.
 - Phase 2B enrichment and the document/OCR lane are not implemented. Scheduled live monitoring is disabled.
+- Phase 0 is complete: portability, public/local authority, CI, isolated rebuild/browser certification, automated Pages freshness, and maturity-gated recovery retirement were verified. Phase 1 bulk-archive certification is the next project gate.
 
 These are coverage and implementation snapshots, not claims that the registry, its history, or its contract families are complete.
 

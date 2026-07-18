@@ -6,11 +6,11 @@ OCPR Transparency is an archival-first civic-technology project that preserves a
 
 Before editing:
 
-1. For maintainer/recovery work on Denali, confirm the repository root is the canonical checkout named `ocpr-transparency/` with upstream remote `https://github.com/en-he/ocpr-transparency.git`; do not edit the sibling recovery checkout. Contributors may use forks or differently named clones and should verify their intended base/upstream instead.
+1. For maintainer/recovery work on Denali, confirm the repository root is the canonical checkout named `ocpr-transparency/` with upstream remote `https://github.com/en-he/ocpr-transparency.git`. Contributors may use forks or differently named clones and should verify their intended base/upstream instead.
 2. Read [`docs/project/README.md`](docs/project/README.md), then only the maintained document relevant to the task.
 3. If present locally, read `docs/local/current-cycle.local.md` for the exact active checkpoint and next action. It is intentionally ignored and may be absent from public clones.
 4. Run `git status --short --branch`, inspect recent commits, and explain any unexpected change before proceeding.
-5. Do not use any isolated recovery checkout for normal development. Recovery checkouts contain machine-local preservation residue and exist only for evidence retention and deferred cleanup.
+5. If an isolated recovery checkout or recovery backup exists, do not use it for normal development. It is retained evidence governed by the local maintenance ledger, not a second development tree.
 
 ## Documentation authority and privacy boundary
 
@@ -91,4 +91,4 @@ For data or artifact changes, also require:
 - `.mailmap` canonicalizes a historical maintainer identity non-destructively for display. It is not an instruction for contributor authorship. Do not rewrite published history, automation identities, tags, or archival refs without explicit approval and a coordinated migration plan.
 - Do not push, force-push, publish releases, enable live schedules, deploy hosted services, or delete recovery evidence without the applicable approval gate.
 - Generated database/artifact changes must not be mixed casually with source, schema, or documentation changes.
-- The stale worktree, branch, stash, LFS cache, snapshots, and other recovery residue are isolated outside the canonical checkout. Their cleanup is governed by the local maintenance ledger and explicit itemized approval.
+- Recovery checkouts, backups, stale worktrees, branches, stashes, LFS caches, snapshots, and other recovery residue stay outside the canonical checkout. Retention or cleanup is governed by the local maintenance ledger and explicit itemized approval.
