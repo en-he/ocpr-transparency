@@ -1,0 +1,61 @@
+* text=auto eol=lf
+
+# Reviewable source, documentation, workflows, and configuration use LF.
+*.py text eol=lf
+*.sh text eol=lf
+*.sql text eol=lf
+*.md text eol=lf
+*.rst text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+*.xml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.svg text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.github/workflows/** text eol=lf
+
+# Immutable evidence and generated artifacts stay byte-preserved.
+data/raw/*.csv -text -eol -diff
+data/raw/**/*.csv -text -eol -diff
+*.db -text -eol -diff
+*.db.bak -text -eol -diff
+*.db-wal -text -eol -diff
+*.db-shm -text -eol -diff
+*.db-journal -text -eol -diff
+*.db-* -text -eol -diff
+*.sqlite -text -eol -diff
+*.sqlite3 -text -eol -diff
+*.sqlite.bak -text -eol -diff
+*.sqlite3.bak -text -eol -diff
+*.sqlite-wal -text -eol -diff
+*.sqlite-shm -text -eol -diff
+*.sqlite-journal -text -eol -diff
+*.sqlite3-wal -text -eol -diff
+*.sqlite3-shm -text -eol -diff
+*.sqlite3-journal -text -eol -diff
+*.gz -text -eol -diff
+*.gz.part-* -text -eol -diff
+*.pdf -text -eol -diff
+
+# Common binary image formats are not text-normalized.
+*.png -text -eol -diff
+*.jpg -text -eol -diff
+*.jpeg -text -eol -diff
+*.gif -text -eol -diff
+*.webp -text -eol -diff
+*.bmp -text -eol -diff
+*.ico -text -eol -diff
+*.tif -text -eol -diff
+*.tiff -text -eol -diff
+*.avif -text -eol -diff
+*.heic -text -eol -diff
+*.heif -text -eol -diff

@@ -10,3 +10,24 @@ data/db/contratos-full.db.gz
 site/contratos.db
 .vscode/
 .DS_Store
+
+# macOS metadata and archive residue.
+._*
+.AppleDouble
+__MACOSX/
+
+# Machine-local Claude state/worktrees. Keep durable project documentation
+# outside these narrowly scoped local-state paths visible to Git.
+.claude/settings.local.json
+.claude/state/
+.claude/cache/
+.claude/worktrees/
+
+# Common editor-local state and backup files.
+/.idea/
+/.fleet/
+/.cursor/
+/.zed/
+*.swp
+*.swo
+*.swn
