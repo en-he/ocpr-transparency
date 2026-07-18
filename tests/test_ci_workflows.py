@@ -1,0 +1,156 @@
+import re
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
+BASELINE_COMMANDS = (
+    "python pipeline/check_repository_portability.py",
+    "python -m py_compile pipeline/*.py tests/*.py",
+    "python -m unittest discover -s tests",
+)
+SYNC_SIDE_EFFECT_STEPS = (
+    "Hydrate full DB from release asset when needed",
+    "Bootstrap full DB from archived CSVs",
+    "Weekly — refresh newer official bulk CSV years",
+    "Weekly — reset and re-ingest tracked sources",
+    "Monthly audit — reset and ingest tracked sources",
+    "Full rebuild — download all years",
+    "Full rebuild — reset and ingest",
+    "Build browser DB + manifest",
+    "Publish full DB release asset",
+    "Commit updated data",
+)
+
+
+def workflow_text(filename):
+    return (WORKFLOWS_DIR / filename).read_text(encoding="utf-8")
+
+
+def baseline_positions(workflow):
+    positions = [workflow.index(command) for command in BASELINE_COMMANDS]
+    if positions != sorted(positions):
+        raise AssertionError("baseline commands are not in the required order")
+    return positions
+
+
+def named_step_block(workflow, step_name):
+    match = re.search(
+        rf"(?m)^(?P<indent>\s*)- name:\s*{re.escape(step_name)}\s*$",
+        workflow,
+    )
+    if match is None:
+        raise AssertionError(f"step not found: {step_name}")
+
+    indent = match.group("indent")
+    next_step = re.search(
+        rf"(?m)^{re.escape(indent)}- (?:name:|uses:|run:)",
+        workflow[match.end() :],
+    )
+    end = match.end() + next_step.start() if next_step else len(workflow)
+    return workflow[match.start() : end]
+
+
+class CIWorkflowTests(unittest.TestCase):
+    def test_ci_workflow_has_pull_request_and_main_push_triggers(self):
+        ci = WORKFLOWS_DIR / "ci.yml"
+        self.assertTrue(ci.is_file())
+        workflow = ci.read_text(encoding="utf-8")
+        self.assertRegex(workflow, r"(?m)^[ \t]+pull_request:[ \t]*$")
+        self.assertRegex(workflow, r"(?m)^[ \t]+push:[ \t]*$")
+        self.assertRegex(
+            workflow,
+            r"(?ms)^[ \t]+push:[ \t]*\n.*?^[ \t]+branches:[ \t]*$.*?^[ \t]+-[ \t]*['\"]?main['\"]?[ \t]*$",
+        )
+
+    def test_ci_is_read_only_and_uses_portable_checkout_and_cached_python(self):
+        workflow = workflow_text("ci.yml")
+        permissions = re.search(
+            r"(?ms)^permissions:\s*\n(?P<body>(?:^[ \t]+[^\n]+\n?)+)",
+            workflow,
+        )
+        self.assertIsNotNone(permissions)
+        permission_lines = [
+            line.strip()
+            for line in permissions.group("body").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual(permission_lines, ["contents: read"])
+        self.assertRegex(
+            workflow,
+            r"(?ms)actions/checkout@v4.*?with:\s*\n\s+lfs:\s*false.*?persist-credentials:\s*false",
+        )
+        self.assertRegex(workflow, r"(?ms)actions/setup-python@v5.*?cache:\s*pip")
+        self.assertRegex(
+            workflow,
+            r"(?ms)actions/setup-python@v5.*?cache-dependency-path:\s*pipeline/requirements\.txt",
+        )
+
+    def test_both_workflows_install_requirements_and_share_ordered_baseline(self):
+        ci = workflow_text("ci.yml")
+        sync = workflow_text("sync.yml")
+        for workflow in (ci, sync):
+            self.assertRegex(workflow, r"python-version:\s*['\"]?3\.12['\"]?")
+            self.assertIn("pip install -r pipeline/requirements.txt", workflow)
+            positions = baseline_positions(workflow)
+            self.assertLess(
+                workflow.index("pip install -r pipeline/requirements.txt"),
+                min(positions),
+            )
+            for command in BASELINE_COMMANDS:
+                self.assertEqual(workflow.count(command), 1)
+
+        self.assertEqual(
+            [command for command in BASELINE_COMMANDS if command in ci],
+            [command for command in BASELINE_COMMANDS if command in sync],
+        )
+
+    def test_sync_baseline_precedes_all_current_side_effect_steps(self):
+        workflow = workflow_text("sync.yml")
+        positions = baseline_positions(workflow)
+        install_position = workflow.index("pip install -r pipeline/requirements.txt")
+
+        self.assertGreater(min(positions), install_position)
+        for step_name in SYNC_SIDE_EFFECT_STEPS:
+            self.assertLess(
+                max(positions),
+                workflow.index(f"- name: {step_name}"),
+                step_name,
+            )
+
+        validate_step = workflow.index("- name: Validate repository baseline")
+        first_side_effect = min(
+            workflow.index(f"- name: {step_name}")
+            for step_name in SYNC_SIDE_EFFECT_STEPS
+        )
+        self.assertLess(validate_step, first_side_effect)
+
+    def test_baseline_commands_are_not_continue_on_error(self):
+        for filename in ("ci.yml", "sync.yml"):
+            workflow = workflow_text(filename)
+            validate_step = named_step_block(workflow, "Validate repository baseline")
+            self.assertNotRegex(
+                validate_step,
+                r"(?m)^\s*continue-on-error:\s*",
+            )
+            for command in BASELINE_COMMANDS:
+                self.assertIn(command, validate_step)
+
+    def test_step_block_includes_controls_before_run(self):
+        workflow = """jobs:
+  baseline:
+    steps:
+      - name: Validate repository baseline
+        continue-on-error: true
+        run: |
+          python pipeline/check_repository_portability.py
+      - run: echo next
+"""
+        block = named_step_block(workflow, "Validate repository baseline")
+        self.assertIn("continue-on-error: true", block)
+        self.assertNotIn("echo next", block)
+
+
+if __name__ == "__main__":
+    unittest.main()

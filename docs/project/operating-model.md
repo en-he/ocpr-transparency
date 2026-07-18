@@ -17,7 +17,7 @@ The current site remains a static GitHub Pages/sql.js application. A hosted quer
 
 There is no scheduled nightly live monitor in the current operating model. `pipeline/monitor.py` and monitor-state support remain dormant/prototype capability. The current database has no `live_monitor` rows.
 
-The workflows do not currently run the repository's unittest suite as a CI gate. Local verification is therefore required before treating a data or documentation checkpoint as green.
+The current repository now defines a read-only PR/main CI baseline in `.github/workflows/ci.yml`. It runs the portability check, Python compilation check, and unittest discovery after installing the declared requirements. The scheduled/manual sync job runs the same checks immediately after dependency installation and before hydration, acquisition, database mutation, artifact or release publication, or auto-commit. This is a pre-publication validation gate; it does not resolve the separate Pages freshness/deployment gap described above.
 
 ## Current manual Phase 2A recovery
 

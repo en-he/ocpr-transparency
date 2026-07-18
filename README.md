@@ -36,6 +36,16 @@ python3 -m venv .venv
 .venv/bin/python pipeline/build_site_artifacts.py
 ```
 
+## Development verification
+
+From the repository root, run the local baseline used by the PR/main CI workflow and by sync before side effects:
+
+```bash
+.venv/bin/python pipeline/check_repository_portability.py
+.venv/bin/python -m py_compile pipeline/*.py tests/*.py
+.venv/bin/python -m unittest discover -s tests
+```
+
 ## Features
 
 - **Cross-entity search** — find a contractor across all government agencies
