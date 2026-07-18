@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     env:
       FULL_DB_RELEASE_TAG: data-latest
       FULL_DB_RELEASE_ASSET: contratos-full.db.gz
@@ -188,7 +189,15 @@ jobs:
 
       # ── Commit changes ───────────────────────────────────────────────
       - name: Commit updated data
+        id: auto_commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"
           file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"
+
+      - name: Dispatch Pages deployment
+        if: steps.auto_commit.outputs.changes_detected == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pages.yml --ref main

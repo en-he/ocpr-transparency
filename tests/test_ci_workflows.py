@@ -151,6 +151,55 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertIn("continue-on-error: true", block)
         self.assertNotIn("echo next", block)
 
+    def test_sync_permissions_are_exactly_contents_and_actions_write(self):
+        workflow = workflow_text("sync.yml")
+        permissions = re.search(
+            r"(?ms)^    permissions:\s*\n(?P<body>(?:^      [^\n]+\n?)+)",
+            workflow,
+        )
+        self.assertIsNotNone(permissions)
+        permission_lines = [
+            line.strip()
+            for line in permissions.group("body").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual(permission_lines, ["contents: write", "actions: write"])
+
+    def test_sync_auto_commit_keeps_contract_and_has_stable_id(self):
+        workflow = workflow_text("sync.yml")
+        auto_commit = named_step_block(workflow, "Commit updated data")
+        self.assertIn("id: auto_commit", auto_commit)
+        self.assertIn("uses: stefanzweifel/git-auto-commit-action@v5", auto_commit)
+        self.assertIn(
+            'commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"',
+            auto_commit,
+        )
+        self.assertIn(
+            'file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"',
+            auto_commit,
+        )
+
+    def test_sync_dispatches_pages_only_after_a_detected_auto_commit(self):
+        workflow = workflow_text("sync.yml")
+        auto_commit_start = workflow.index("- name: Commit updated data")
+        dispatch_start = workflow.index("- name: Dispatch Pages deployment")
+        self.assertGreater(dispatch_start, auto_commit_start)
+
+        dispatch = named_step_block(workflow, "Dispatch Pages deployment")
+        self.assertRegex(
+            dispatch,
+            r"(?m)^\s*if: steps\.auto_commit\.outputs\.changes_detected == 'true'\s*$",
+        )
+        self.assertRegex(
+            dispatch,
+            r"(?ms)^\s*env:\s*\n\s+GH_TOKEN:\s*\$\{\{ github\.token \}\}\s*$",
+        )
+        self.assertIn("gh workflow run pages.yml --ref main", dispatch)
+
+    def test_pages_workflow_retains_manual_dispatch_trigger(self):
+        pages = workflow_text("pages.yml")
+        self.assertRegex(pages, r"(?m)^  workflow_dispatch:\s*$")
+
 
 if __name__ == "__main__":
     unittest.main()
