@@ -61,7 +61,7 @@ Coverage must be reported on separate axes rather than compressed into one perce
 | Field | Which source fields are present, missing, or supplemented? | CSV fields are normalized; broad live detail enrichment (including procurement/fund fields) is not implemented. |
 | Document | Which linked documents are retained, parsed, and searchable? | No durable document/OCR/search lane yet. |
 | Reconciliation | Which links are deterministic, reviewed, uncertain, or conflicting? | Current recovery validation is scripted; human-reviewed confidence-scored entity resolution is future work. |
-| Freshness/operations | Which artifacts were rebuilt and deployed from which inputs? | Local/workflow manifests provide partial artifact provenance; CI tests and deployment freshness checks are incomplete. |
+| Freshness/operations | Which artifacts were rebuilt and deployed from which inputs? | Phase 0 CI, reproducible-build checks, exact-revision Pages deployment, and live-manifest freshness verification passed; provenance remains partial because artifacts are not yet linked to complete per-source evidence metadata. |
 
 ## Source/status semantics
 
