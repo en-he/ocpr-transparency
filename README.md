@@ -2,7 +2,9 @@
 
 Open-source tool for searching and analyzing Puerto Rico government contracts from the [Oficina del Contralor](https://consultacontratos.ocpr.gov.pr/).
 
-**1.23M+ contracts | $212B+ in government spending | 13 fiscal years (2010-2023)**
+**1.23M+ contract records in the current snapshot | 13 preserved fiscal years (2010-2023)**
+
+Documentation: [project authority map](docs/project/README.md)
 
 ## Quick Start
 
@@ -20,17 +22,18 @@ The site loads a SQLite database in your browser via WebAssembly — no backend 
 ### Build the database from scratch
 
 ```bash
-pip install requests
+python3 -m venv .venv
+.venv/bin/python -m pip install -r pipeline/requirements.txt
 
 # Refresh currently available OCPR CSVs
 # Older missing years preserved in data/raw stay in place
-python3 pipeline/download.py
+.venv/bin/python pipeline/download.py
 
-# Ingest into SQLite with full-text search
-python3 pipeline/ingest.py
+# Delete/recreate the SQLite DB, then ingest with full-text search
+.venv/bin/python pipeline/ingest.py --reset
 
 # Build the browser DB, full downloadable DB, and manifest
-python3 pipeline/build_site_artifacts.py
+.venv/bin/python pipeline/build_site_artifacts.py
 ```
 
 ## Features
@@ -51,7 +54,7 @@ pipeline/          Python data pipeline
   config.py        Constants, column mappings, OCPR URLs
   download.py      Bulk CSV downloader with archive-safe refreshes
   ingest.py        CSV → SQLite with FTS5 full-text search
-  monitor.py       Tier 2: nightly delta sync from OCPR search
+  monitor.py       Deferred live-monitor prototype (scheduled monitoring disabled)
 
 site/              Static search UI (sql.js / WebAssembly)
   index.html       SPA shell (Spanish)
@@ -70,18 +73,17 @@ site/
 The full downloadable SQLite DB is published as a GitHub Release asset rather than stored in the repo. When the browser DB grows too large for GitHub's single-file limit, the site build automatically splits it into `contratos.db.gz.part-*` chunks and the manifest tells the frontend how to reassemble them. This keeps GitHub Pages and clones working without Git LFS.
 
 ## Data Source
+Structured contract data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal-year CSVs are preserved when the official bulk endpoint serves them; the two oldest preserved files, `2010-2011` and `2011-2012`, were recovered from Archive.org. The integrity of the source data remains the responsibility of the entities that granted the contracts, as stated by OCPR.
 
-All data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal year CSV exports are downloaded via their bulk download endpoint when the official portal still serves them. The integrity of the data is the responsibility of the entities that granted the contracts, as stated by OCPR.
-
-Because the official portal no longer serves some older fiscal-year exports, this repo now preserves archive.org-recovered copies for `2010-2011` and `2011-2012` in `data/raw/`. As of April 4, 2026, `2023-2024` still appears in the official UI but no official bulk CSV has been recovered.
+The current preserved bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
 
 ## Known Data Gaps
 
 Some contract families appear in the bulk CSV exports only as amendments, even when the live OCPR website still shows an original parent contract. Examples already confirmed in this repo include `2022-000019` (`IEMES PSC`) and `2008-000669` (`IEMS & M H, INC.`).
 
-Separately, the official portal still advertises fiscal year `2023-2024`, but that bulk export remains unavailable from the official record and has not yet been recovered into this repo.
+Post-2023 official bulk exports are not currently preserved; live-registry records and bulk-publication coverage are tracked as separate evidence states.
 
-The current site handles those families with a synthetic parent header so users are not shown a misleading amendment as the top-level contract. A future Tier 2 recovery task will query the live site to backfill missing original contracts with explicit provenance. The concrete design is tracked in `docs/backlog.md`.
+The current site handles those families with a synthetic parent/family view so users are not shown a misleading amendment as the top-level contract. The tracked Phase 2A recovery ledger contains `11,983` targets (`7,177` recovered and `4,806` unrecoverable) for its defined multi-row missing-original scope. A broader audit found `31,264` families without stored originals, including `26,209` single-row amendment-only families; these are coverage states, not a completeness claim. The maintained interpretation is in [`docs/project/data-provenance.md`](docs/project/data-provenance.md).
 
 ### Available fields
 
@@ -90,7 +92,7 @@ The current site handles those families with a synthetic parent header so users 
 | contract_number | Contract identifier |
 | entity | Government agency |
 | contractor | Contractor name |
-| amount | Contract value (USD) |
+| amount | Reported registered contract amount (not verified payments) |
 | award_date | Date contract was granted |
 | valid_from / valid_to | Contract validity period |
 | service_category | Category of service |
@@ -101,11 +103,13 @@ The current site handles those families with a synthetic parent header so users 
 
 ## Automated Sync
 
-GitHub Actions supports two scheduled syncs plus a manual full rebuild:
+GitHub Actions currently supports a weekly official bulk refresh, a monthly audit rebuild, and a manual full rebuild:
 
-- **Nightly** — delta sync via `monitor.py` (new contracts since last run)
-- **Weekly** (Sunday) — refresh the last confirmed live fiscal year (`2022-2023`) and separately probe unresolved `2023-2024`
-- **Manual full rebuild** — reprocess all preserved CSVs on demand
+- **Weekly** (Sunday) — refresh the newest already-preserved live bulk year and probe newer fiscal years
+- **Monthly** (day 2) — reset/rebuild from tracked sources and republish the full database artifact as an audit pass
+- **Manual full rebuild** — reprocess all available bulk sources on demand
+
+Scheduled live monitoring is disabled. The `monitor.py` code and monitor-state path are retained as deferred capability, not as an active nightly service.
 
 The workflow commits the browser DB artifact chunks and tracked metadata to the repo, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
 

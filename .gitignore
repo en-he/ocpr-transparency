@@ -19,9 +19,15 @@ __MACOSX/
 # Machine-local Claude state/worktrees. Keep durable project documentation
 # outside these narrowly scoped local-state paths visible to Git.
 .claude/settings.local.json
+.claude/launch.json
 .claude/state/
 .claude/cache/
 .claude/worktrees/
+
+# Denali-local planning, execution, recovery, and maintenance records.
+# Durable public architecture and provenance belong under docs/project/.
+docs/local/
+.hermes/
 
 # Common editor-local state and backup files.
 /.idea/
