@@ -165,6 +165,33 @@ class CIWorkflowTests(unittest.TestCase):
         ]
         self.assertEqual(permission_lines, ["contents: write", "actions: write"])
 
+    def test_sync_is_main_only_serialized_and_checks_out_latest_main(self):
+        workflow = workflow_text("sync.yml")
+        self.assertRegex(
+            workflow,
+            r"(?ms)^concurrency:\s*\n"
+            r"  group:\s*contract-sync\s*\n"
+            r"  cancel-in-progress:\s*false\s*$",
+        )
+
+        sync_header = workflow[
+            workflow.index("  sync:") : workflow.index("    steps:")
+        ]
+        self.assertRegex(
+            sync_header,
+            r"(?m)^    if:\s*github\.ref == 'refs/heads/main'\s*$",
+        )
+
+        checkout = re.search(
+            r"(?ms)^\s*- uses: actions/checkout@v4\s*\n"
+            r"\s+with:\s*\n(?P<body>(?:\s+[^\n]+\n?)+?)"
+            r"(?=\s+- (?:uses:|name:|run:))",
+            workflow,
+        )
+        self.assertIsNotNone(checkout)
+        self.assertRegex(checkout.group("body"), r"(?m)^\s+ref:\s*main\s*$")
+        self.assertRegex(checkout.group("body"), r"(?m)^\s+lfs:\s*false\s*$")
+
     def test_sync_auto_commit_keeps_contract_and_has_stable_id(self):
         workflow = workflow_text("sync.yml")
         auto_commit = named_step_block(workflow, "Commit updated data")
@@ -194,7 +221,13 @@ class CIWorkflowTests(unittest.TestCase):
             dispatch,
             r"(?ms)^\s*env:\s*\n\s+GH_TOKEN:\s*\$\{\{ github\.token \}\}\s*$",
         )
-        self.assertIn("gh workflow run pages.yml --ref main", dispatch)
+        command = "gh workflow run pages.yml --ref main"
+        self.assertEqual(workflow.count(command), 1)
+        self.assertIn("for attempt in 1 2 3; do", dispatch)
+        self.assertIn(f"if {command}; then", dispatch)
+        self.assertIn('sleep "$((attempt * 10))"', dispatch)
+        self.assertIn("exit 1", dispatch)
+        self.assertEqual(workflow[dispatch_start:].strip(), dispatch.strip())
 
     def test_pages_workflow_retains_manual_dispatch_trigger(self):
         pages = workflow_text("pages.yml")

@@ -18,8 +18,13 @@ on:
           - monthly-audit
           - full-rebuild
 
+concurrency:
+  group: contract-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,6 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           lfs: false
 
       - uses: actions/setup-python@v5
@@ -200,4 +206,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run pages.yml --ref main
+          for attempt in 1 2 3; do
+            if gh workflow run pages.yml --ref main; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "Pages dispatch attempt $attempt failed; retrying." >&2
+              sleep "$((attempt * 10))"
+            fi
+          done
+
+          echo "Pages dispatch failed after 3 attempts; dispatch pages.yml on main manually." >&2
+          exit 1
