@@ -1,6 +1,6 @@
 # Bulk source discovery and immutable capture contract
 
-**Status:** Current Milestone A release-candidate contract. The implementation modules, offline fixtures, security regressions, and workflow integration named below are present in this checkout; remote release verification remains pending.
+**Status:** Current Phase 1 source-discovery and immutable-capture contract. The implementation modules, offline fixtures, security regressions, workflow integration, and remote release verification named below are complete.
 
 This document freezes the boundary for finding official bulk CSV releases and preserving them without replacing evidence. It is deliberately narrower than a crawler: it probes the registry page, the known bulk-download pattern, and a bounded fiscal-year window. It must not turn search, documents, email, or spreadsheet export into an acquisition lane.
 

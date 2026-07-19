@@ -1,6 +1,6 @@
 # Bulk archive certification contract
 
-**Status:** Current Milestone A release-candidate contract. `pipeline/bulk_manifest.py`, `pipeline/certify_bulk.py`, the fixtures under `tests/fixtures/bulk/`, and `tests/test_bulk_contracts.py` implement and verify the independent parser layer. `pipeline/generate_bulk_certification.py` produces the tracked 13-snapshot manifest and reports, while the bounded discovery/capture and workflow gates prevent uncertified source bytes from entering publication. See [`roadmap.md`](roadmap.md) Phase 1 and [`data-provenance.md`](data-provenance.md) for the surrounding evidence model.
+**Status:** Current Phase 1 certification contract. `pipeline/bulk_manifest.py`, `pipeline/certify_bulk.py`, the fixtures under `tests/fixtures/bulk/`, and `tests/test_bulk_contracts.py` implement and verify the independent parser layer. `pipeline/generate_bulk_certification.py` produces the tracked 13-snapshot manifest and reports, while the bounded discovery/capture and workflow gates prevent uncertified source bytes from entering publication. See [`roadmap.md`](roadmap.md) Phase 1 and [`data-provenance.md`](data-provenance.md) for the surrounding evidence model.
 
 Nothing in this document changes current ingestion behavior (`pipeline/ingest.py`, `pipeline/contract_utils.py`). It defines a separate, additive certification pass over the preserved bulk CSVs.
 
