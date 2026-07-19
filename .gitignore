@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 data/pdfs/
+data/quarantine/
 data/db/contratos.db
 data/db/contratos.db.bak
 data/db/contratos.db-*

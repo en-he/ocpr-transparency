@@ -8,7 +8,7 @@ The project is archival-first civic tech: preserve what was obtained, record how
 
 ### Acquisition
 
-- **Bulk lane — Current:** `pipeline/download.py` preserves fiscal-year CSVs in `data/raw/`. The current preserved set has 13 years, `2010-2011` through `2022-2023`. The two oldest files were recovered from Archive.org; newer preserved files are the available OCPR bulk corpus. A portal-listed post-2023 year is not treated as an available CSV unless the bytes are actually recovered and preserved.
+- **Bulk lane — Current:** `pipeline/discover_bulk_sources.py` performs bounded official-source discovery; `pipeline/capture_bulk_snapshot.py` streams responses into quarantine, validates and fully certifies them, retains accepted bytes content-addressed, and exposes explicit promotion; `pipeline/download.py` integrates that sequence for sync. `data/raw/` remains the active compatibility view. The current certified set has 13 years, `2010-2011` through `2022-2023`, with deterministic reports under `data/certification/`. The two oldest files are exact-hash Archive.org recoveries. Unavailable post-2023 years remain explicit states rather than synthetic snapshots.
 - **Live search/API and detail lane — Current but manual:** `pipeline/live_recovery.py` and `pipeline/recover_live_parents.py` can query the live registry, parse search results and detail HTML, and write tracked Phase 2A recovery CSV output. Detail HTML is currently fetched for parsing; a durable raw-response archive is **not yet implemented**.
 - **Scheduled live monitor — Not current operation:** `pipeline/monitor.py` exists and has state/provenance support, but the scheduled job is disabled. The current database has no `live_monitor` rows.
 - **Document lane — Not yet implemented:** downloaded-document preservation, document metadata, OCR, and document search are future work. Documents remain a separate evidence lane and are not contract rows.
@@ -71,7 +71,7 @@ The diagram is a target flow. In the current checkout, the bulk and manual recov
 
 **Target:** Every acquisition stores the original bytes (or a content-addressed immutable object) with source channel, request/response metadata, UTC capture time, SHA-256, and retention identity. A later parser correction adds a new observation; it does not overwrite the source bytes.
 
-**Current gap:** raw CSV files and tracked recovery CSVs are preserved, and generated DB artifacts carry checksums in the manifest, but there is no unified evidence store for raw live JSON, detail HTML, and documents with one consistent metadata envelope.
+**Current gap:** the bulk lane now has exact certification reports, bounded capture quarantine, and content-addressed future-version retention, while raw CSV and recovery outputs remain preserved. There is still no unified evidence store or append-only observation model spanning raw live JSON, detail HTML, documents, and every normalization/reconciliation event.
 
 ### Observations
 

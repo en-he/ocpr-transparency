@@ -1,0 +1,436 @@
+{
+  "archive_url": null,
+  "byte_length": 24180201,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 5,
+  "encoding": "latin-1",
+  "fiscal_year": "2015-2016",
+  "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
+  "header_profile": "v3",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 30
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00021",
+        "B",
+        "06-29-2016",
+        "07-01-2016",
+        "12-31-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f0beccd38637ff02d334b0b57b59ad6f5673f2485ace513934078c2ac233833c",
+      "reason": "shifted_row",
+      "row_number": 9054
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "30000.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "7b7b56306f3b995d21e83c00dd03d58655499485923b834e7900f3aff318cd6d",
+      "reason": "shifted_row",
+      "row_number": 9055
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00021",
+        "A",
+        "12-30-2015",
+        "01-01-2016",
+        "06-30-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "27aa21db03179fdf7f0297aa9e5580551795327960d67b76e16f59fd2981c392",
+      "reason": "shifted_row",
+      "row_number": 9056
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "30000.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "7b7b56306f3b995d21e83c00dd03d58655499485923b834e7900f3aff318cd6d",
+      "reason": "shifted_row",
+      "row_number": 9057
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00022",
+        "B",
+        "06-29-2016",
+        "07-01-2016",
+        "12-31-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a97d8a6715a892a2e16fdac7ae532bb7897c3d48fb6d1c8187dbb888d798dec9",
+      "reason": "shifted_row",
+      "row_number": 9058
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "32500.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "1a1f085d46164502e08215fae36878476c4fa1bd62c54386027abf5e7ba86d48",
+      "reason": "shifted_row",
+      "row_number": 9059
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00022",
+        "A",
+        "12-30-2015",
+        "01-01-2016",
+        "06-30-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "4c6f0ad91eacdab8af3061d05b12612d9d50e896861b81cbf0244fcfa0da2263",
+      "reason": "shifted_row",
+      "row_number": 9060
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "32500.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "1a1f085d46164502e08215fae36878476c4fa1bd62c54386027abf5e7ba86d48",
+      "reason": "shifted_row",
+      "row_number": 9061
+    },
+    {
+      "raw_fields": [
+        "4044",
+        "Municipio de las Piedras",
+        "2016-000140",
+        "\u0000",
+        "02-18-2016",
+        "03-01-2016",
+        "06-30-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2d330e18f8eae7cd33e1781cd6070db8b48f8b62e51d28d983b299022ecac36b",
+      "reason": "shifted_row",
+      "row_number": 34147
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "2800.00",
+        "0.00",
+        "SYNERGY MECHANICAL & ELECTRICAL SERVICES"
+      ],
+      "raw_record_sha256": "a79f414efd1761aae83be2e9af64908514de1ad1789540d0d8832fdd77c2b673",
+      "reason": "shifted_row",
+      "row_number": 34148
+    },
+    {
+      "raw_fields": [
+        "3052",
+        "Recinto Universitario de Mayagüez de la Universidad de Puerto Rico",
+        "2016-000366",
+        "\u0000",
+        "02-01-2016",
+        "02-01-2016",
+        "10-31-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "50711722ba67a70fa58912b6c74b738d9204de2447182f4aa5ef974ea7a587ca",
+      "reason": "shifted_row",
+      "row_number": 53570
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "98550.00",
+        "0.00",
+        "PUCHO POOL CENTER INC."
+      ],
+      "raw_record_sha256": "ea7d9ee3146d5afd7936af02cc128af1bbdee6ab00e342808413d54292a17cf7",
+      "reason": "shifted_row",
+      "row_number": 53571
+    },
+    {
+      "raw_fields": [
+        "3052",
+        "Recinto Universitario de Mayagüez de la Universidad de Puerto Rico",
+        "2016-000366",
+        "A",
+        "04-07-2016",
+        "04-07-2016",
+        "10-31-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "d262f3b30fc1e8badabcd318ede7dab1f82fada06ab936f20855e9d592852ade",
+      "reason": "shifted_row",
+      "row_number": 53572
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "PUCHO POOL CENTER INC."
+      ],
+      "raw_record_sha256": "96a92609feec91ce1da19a532b7f0cd74c2d554e1079e51a7df2a8f3507d05e8",
+      "reason": "shifted_row",
+      "row_number": 53573
+    },
+    {
+      "raw_fields": [
+        "4032",
+        "Municipio de Guaynabo",
+        "2016-000472",
+        "A",
+        "05-10-2016",
+        "05-10-2016",
+        "11-09-2017",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "bb993cde323324673adf3092830b3780ff568c50f04be313af29183f0b3469a9",
+      "reason": "shifted_row",
+      "row_number": 59037
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "20000.00",
+        "0.00",
+        "OPTIMUS CONTRACTORS CORP."
+      ],
+      "raw_record_sha256": "3f758b1138518d4352bd095086edcf3f8c4a4e857d90496df6379b63dd27e9a0",
+      "reason": "shifted_row",
+      "row_number": 59038
+    },
+    {
+      "raw_fields": [
+        "3180",
+        "Compañía de Fomento Industrial de Puerto Rico",
+        "2016-000494",
+        "\u0000",
+        "12-01-2015",
+        "12-01-2015",
+        "12-30-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "ebf8224507dc3316f6da800a295db7d52b0f33aae5cb1b2736b40b3e38490f72",
+      "reason": "shifted_row",
+      "row_number": 60020
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "11785.00",
+        "0.00",
+        "G.C. COMPANY CORP."
+      ],
+      "raw_record_sha256": "66be5e7ac46fda6bef5f267c4d053992129c51c3faf56de6e3c7213b7d08e0e5",
+      "reason": "shifted_row",
+      "row_number": 60021
+    },
+    {
+      "raw_fields": [
+        "3051",
+        "Recinto de Río Piedras de la Universidad de Puerto Rico",
+        "2016-C00426",
+        "\u0000",
+        "10-21-2015",
+        "10-21-2015",
+        "11-21-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "4605f867ea37d3df6daa93ef3e6d5de8356e4b69a9b3efa92f2a82b7d82a01b9",
+      "reason": "shifted_row",
+      "row_number": 96929
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "19250.00",
+        "0.00",
+        "CARIBBEAN HVAC SOLUTIONS INC"
+      ],
+      "raw_record_sha256": "32f32556bdb4fb970651e4bb91efad64955a985cb417ce2ae8b6f43d78109fda",
+      "reason": "shifted_row",
+      "row_number": 96930
+    },
+    {
+      "raw_fields": [
+        "3051",
+        "Recinto de Río Piedras de la Universidad de Puerto Rico",
+        "2016-C00441",
+        "\u0000",
+        "10-22-2015",
+        "10-22-2015",
+        "11-06-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "bfa1149a334dbf5f3259284c8fe64a06a192e0b1e14711147f432dbde0e1a4e6",
+      "reason": "shifted_row",
+      "row_number": 96945
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "29975.00",
+        "0.00",
+        "A & GS CONTRACTORS INC"
+      ],
+      "raw_record_sha256": "b87e441573c7660fa1bb2b75ed404428d759f35acb5d006f5eda21a82c53b139",
+      "reason": "shifted_row",
+      "row_number": 96946
+    },
+    {
+      "raw_fields": [
+        "3145",
+        "Autoridad de Edificios Públicos",
+        "2016-S00039",
+        "\u0000",
+        "10-01-2015",
+        "10-01-2015",
+        "06-30-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "61142dc07d2c85b2d90ce9c794476f817521716135c560a1b39ebd6415d5b943",
+      "reason": "shifted_row",
+      "row_number": 107557
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "17300.00",
+        "0.00",
+        "JOSÉ CANDELARIA MUÑOZ"
+      ],
+      "raw_record_sha256": "9e224fd387cad6b5b0df6e3c63970bf069c6ca07edb7aa46f8aad03910707d85",
+      "reason": "shifted_row",
+      "row_number": 107558
+    },
+    {
+      "raw_fields": [
+        "2301",
+        "Tribunal Supremo de Puerto Rico",
+        "2017-000010",
+        "\u0000",
+        "06-27-2016",
+        "07-01-2016",
+        "06-30-2017",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "b51a40ef897350993d7443ef124547f04c8f80220a553663bfab6998fb0b3a9b",
+      "reason": "shifted_row",
+      "row_number": 111583
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "26340.00",
+        "0.00",
+        "GC COMPANY CORP."
+      ],
+      "raw_record_sha256": "e6b05dab3fd40414682568387d34e174458bc3bee33f02e2703765b0c330f689",
+      "reason": "shifted_row",
+      "row_number": 111584
+    },
+    {
+      "raw_fields": [
+        "4030",
+        "Municipio de Guayama",
+        "2017-000040",
+        "\u0000",
+        "06-29-2016",
+        "07-01-2016",
+        "06-30-2017",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "7a9e9036d27b3d2f2de61556d3927ad67c56a1da51055546ad3e9a57cc4f1de8",
+      "reason": "shifted_row",
+      "row_number": 112960
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "13500.00",
+        "0.00",
+        "MARIA DE LOURDES MARRERO FELIX DBA LOURDES MARRE"
+      ],
+      "raw_record_sha256": "dbe4cfcadb6d8b9b52aa1ed72627986f31a4e1915df7ae2dcb098c9ddab8ab1d",
+      "reason": "shifted_row",
+      "row_number": 112961
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2017-000106",
+        "\u0000",
+        "06-13-2016",
+        "07-01-2016",
+        "12-31-2016",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "58aa46342fd3bb6f6c2d3da0ca42ac17432a8e6bd8332860bb903b5ab9934a38",
+      "reason": "shifted_row",
+      "row_number": 114238
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "37650.00",
+        "0.00",
+        "ALEXI J. GARCIA ORTIZ"
+      ],
+      "raw_record_sha256": "568654ae0ec796270f2fcad86eabc45a500c5a027fcd2f70ea167d082430ea99",
+      "reason": "shifted_row",
+      "row_number": 114239
+    }
+  ],
+  "report_hash": "30b6ff18c12d3e6337da66aed4841bfa6185c4cc51430bea6e4104eebc89b46f",
+  "rows_certified": 117164,
+  "rows_quarantined": 30,
+  "rows_total": 117194,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "2affe725d784b35f5d3859a79b626612e1e02fc6abc40658fbc637aa62464785",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2015-2016.csv",
+  "source_unique_contribution_count": 117159,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2015-2016",
+  "verdict": "certified_with_quarantine"
+}

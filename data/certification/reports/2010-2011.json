@@ -1,0 +1,791 @@
+{
+  "archive_url": "https://web.archive.org/web/20210421010733id_/https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2010-2011",
+  "byte_length": 23496736,
+  "capture_time": "2026-04-04T20:51:08-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 23,
+  "encoding": "latin-1",
+  "fiscal_year": "2010-2011",
+  "header_fingerprint": "d847faf65f7039b2d01951082646a956db6bab2f555dc885e556ec2340ffcee5",
+  "header_profile": "v1",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 38
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000035",
+        "\u0000",
+        "07-12-2010",
+        "07-12-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"SUPER ASPHALT PAVEMENT, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "c2516d6d4795c08a4c97ce8704a5fb8a03cab79098170b641e2a8fbd502c3b9c",
+      "reason": "shifted_row",
+      "row_number": 20765
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000048",
+        "\u0000",
+        "07-08-2010",
+        "07-08-2010",
+        "06-30-2011",
+        "OFRECER EQUIPO EN ALQUILER",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "100.00",
+        "\"JUNER RENTAL EQUIPMENT, INC.",
+        ""
+      ],
+      "raw_record_sha256": "d75db1616e199686d75cbaf92f0f40e24f2901a908cbde5c5004e58cf4d25bf5",
+      "reason": "shifted_row",
+      "row_number": 23780
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000048",
+        "A",
+        "06-21-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "OFRECER EQUIPO EN ALQUILER",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "100.00",
+        "\"JUNER RENTAL EQUIPMENT, INC.",
+        ""
+      ],
+      "raw_record_sha256": "70d6b576be3011ece83a2c1341bb446998b03a08ea8ff78e718c34ffa500339f",
+      "reason": "shifted_row",
+      "row_number": 23781
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000067",
+        "A",
+        "12-30-2010",
+        "01-01-2011",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1902.00",
+        "\"GUAYNABO DESTAPE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "4de59ff36967d86ecca211a377976ccfbcf862b5d1bdac0ec0375aa85726ec72",
+      "reason": "shifted_row",
+      "row_number": 27342
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000067",
+        "\u0000",
+        "07-08-2010",
+        "07-08-2010",
+        "12-31-2010",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1902.00",
+        "\"GUAYNABO DESTAPE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "06746ae4ee43a81dd6e0831e46cedb9eb8aaa7552f2eff470adde69e2285175d",
+      "reason": "shifted_row",
+      "row_number": 27343
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000074",
+        "\u0000",
+        "07-09-2010",
+        "07-09-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"KRYONYX CORP.",
+        ""
+      ],
+      "raw_record_sha256": "014aa3864cb3b760c5f26bc20b6409ff84bbc646ccd6e2a3d3d9131a3d97e504",
+      "reason": "shifted_row",
+      "row_number": 28640
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000084",
+        "\u0000",
+        "07-16-2010",
+        "07-16-2010",
+        "06-30-2011",
+        "CONSTRUCCIÓN Y REPARACIÓN DE ESTRUCTURAS",
+        "CONSTRUCCION Y REPARACION DE ESTRUCTURAS",
+        "\u0000",
+        "6060.00",
+        "\"ORNAMENTACION QUINTANA, INC.",
+        ""
+      ],
+      "raw_record_sha256": "0da2ae3f07ef33a61c841062b0e24bd8de5fb690af8fbb939da28df36ad02b8a",
+      "reason": "shifted_row",
+      "row_number": 30271
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000149",
+        "\u0000",
+        "07-28-2010",
+        "07-28-2010",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "e39c67ad382169475fee07a4e7997f33b82444a8b2ffb03457236541fa513141",
+      "reason": "shifted_row",
+      "row_number": 39957
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000150",
+        "\u0000",
+        "07-28-2010",
+        "07-28-2010",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "97fe0ee0dc6f8131533b2c9f53a6da469929ddec6a16b4b65122edf8d70ffd4f",
+      "reason": "shifted_row",
+      "row_number": 40118
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000150",
+        "A",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "ab08d2f04d9a01ab1b2b5c3207529f8d9c75b16f1e584db99973dbe38aaf7b2b",
+      "reason": "shifted_row",
+      "row_number": 40119
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000155",
+        "\u0000",
+        "07-28-2010",
+        "07-28-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"NIBA INTERNATIONAL, CORP",
+        ""
+      ],
+      "raw_record_sha256": "26aa9dba5bd6101952d359262b0edfe09a67259556eedb4355752675e2373469",
+      "reason": "shifted_row",
+      "row_number": 40681
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000156",
+        "\u0000",
+        "07-28-2010",
+        "07-28-2010",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "0d9332e9fc2e31fbd532755c02fb6c1db46e48af7db5c5d16c6fd2243a52624f",
+      "reason": "shifted_row",
+      "row_number": 40891
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000158",
+        "\u0000",
+        "07-30-2010",
+        "07-30-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"CITY STATIONERY, INC.",
+        ""
+      ],
+      "raw_record_sha256": "f15a235fc2151a13e9d8b74c471addd1390526d002f8f1e3e01a86beded3bd40",
+      "reason": "shifted_row",
+      "row_number": 41153
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000159",
+        "\u0000",
+        "07-28-2010",
+        "07-28-2010",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "a66860f6da4263c5d4eea6f1e0b837e312440d817879043dae00ba6f60da545d",
+      "reason": "shifted_row",
+      "row_number": 41234
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000179",
+        "\u0000",
+        "07-30-2010",
+        "08-01-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"GUARAGUAO TRUCK SALE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "6a6357367edd76c9f45548b640a17cd3596a13da1fc2c674e712820e73ee7656",
+      "reason": "shifted_row",
+      "row_number": 43784
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000179",
+        "A",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"GUARAGUAO TRUCK SALE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "0ad9902e774de386b0c60ca4d7b42112c9d46f78ea9dbbe3e0bb3921ad0e2047",
+      "reason": "shifted_row",
+      "row_number": 43785
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000185",
+        "\u0000",
+        "07-30-2010",
+        "07-30-2010",
+        "06-30-2011",
+        "COMPRA DE EQUIPO Y VEHÍCULOS",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "100.00",
+        "\"KRYONYX CORP.",
+        ""
+      ],
+      "raw_record_sha256": "a41a1f30e8aee37d597356e2937ad1bef3dc975159315ff2e17ad6d300927759",
+      "reason": "shifted_row",
+      "row_number": 44410
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000210",
+        "A",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "12a7134bed057c7a5a269210634a54b0a4e6d82df898db63981d32e5b5f32499",
+      "reason": "shifted_row",
+      "row_number": 47484
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000210",
+        "\u0000",
+        "08-16-2010",
+        "08-16-2010",
+        "06-30-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "9af77bb891abc3c94cf2ff114660c7f7f65e73a6dcaff9c8df99f5fa2b0822a5",
+      "reason": "shifted_row",
+      "row_number": 47485
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000256",
+        "\u0000",
+        "08-16-2010",
+        "08-16-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"CAMERA - MUNDI, INC.",
+        ""
+      ],
+      "raw_record_sha256": "81a9027ddc70c57d00aeafdbdb04e42ee049f924677ddb5e833b7508af89ebad",
+      "reason": "shifted_row",
+      "row_number": 52377
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000273",
+        "\u0000",
+        "08-30-2010",
+        "09-01-2010",
+        "06-30-2011",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"JUAN SUAREZ, INC.",
+        ""
+      ],
+      "raw_record_sha256": "d8882480fd249ab925dc281a3fb46eb76064bcf4381eaf7d3005038c6458950a",
+      "reason": "shifted_row",
+      "row_number": 53885
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000405",
+        "\u0000",
+        "10-11-2010",
+        "10-11-2010",
+        "02-09-2011",
+        "COMPRA DE EQUIPO Y VEHÍCULOS",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "340000.00",
+        "\"CCS CARIBBEAN COMMUNICATIONS SOLUTIONS, INC.",
+        ""
+      ],
+      "raw_record_sha256": "fdeab52d571b708a1f59386281f037f6c2f6832eed67747dfd618d4adc3e2573",
+      "reason": "shifted_row",
+      "row_number": 63473
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000405",
+        "A",
+        "12-10-2010",
+        "12-10-2010",
+        "02-09-2011",
+        "COMPRA DE EQUIPO Y VEHÍCULOS",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "0.00",
+        "\"CCS CARIBBEAN COMMUNICATIONS SOLUTIONS, INC.",
+        ""
+      ],
+      "raw_record_sha256": "8a7f418b15fd6a999ea8fc917f6550c4c1aa0a7758b996d79e3d44f6aff07925",
+      "reason": "shifted_row",
+      "row_number": 63474
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000841",
+        "\u0000",
+        "03-31-2011",
+        "04-01-2011",
+        "06-30-2011",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "12000.00",
+        "\"GARUFA CORP.",
+        ""
+      ],
+      "raw_record_sha256": "979f288ce72bf04c2cd429016684f395853ad98449f1d8650ca2e0a8d1873bd7",
+      "reason": "shifted_row",
+      "row_number": 81830
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000841",
+        "A",
+        "04-13-2011",
+        "04-13-2011",
+        "06-30-2011",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "0.00",
+        "\"GARUFA CORP.",
+        ""
+      ],
+      "raw_record_sha256": "6a32d732b38a652a3e8b8924ae4953bfbb77cf5250c898fd90f6cb97b377a582",
+      "reason": "shifted_row",
+      "row_number": 81831
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000841",
+        "C",
+        "06-29-2011",
+        "07-01-2011",
+        "12-31-2011",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "20000.00",
+        "\"GARUFA CORP.",
+        ""
+      ],
+      "raw_record_sha256": "3dca39f26b507d9c16b181e8453580d67ccfdff4bb7463565dd930221d171f3b",
+      "reason": "shifted_row",
+      "row_number": 81832
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000841",
+        "B",
+        "05-10-2011",
+        "05-10-2011",
+        "06-30-2011",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "10000.00",
+        "\"GARUFA CORP.",
+        ""
+      ],
+      "raw_record_sha256": "d2d957c87094f94f6ab5acc34176648387ebc7910ee2ca703426b6524a694d5b",
+      "reason": "shifted_row",
+      "row_number": 81833
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001060",
+        "\u0000",
+        "06-09-2011",
+        "06-10-2011",
+        "09-07-2011",
+        "ACUERDOS NO FINANCIEROS",
+        "ACUERDOS FINANCIEROS Y NO FINANCIEROS",
+        "\u0000",
+        "0.00",
+        "\"CCS CARIBBEAN COMMUNICATIONS SOLUTIONS, INC.",
+        ""
+      ],
+      "raw_record_sha256": "c14ed230b3a8e5df7b2ad2d64835598a85487b2e9b59430fe8a50c49c7076fa1",
+      "reason": "shifted_row",
+      "row_number": 87174
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001078",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"NIBA INTERNATIONAL, CORP",
+        ""
+      ],
+      "raw_record_sha256": "f18ba18ce5a4e90faece839f5f70b853dcd12e32f87a8ef5bab47ec345fc556e",
+      "reason": "shifted_row",
+      "row_number": 87580
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001079",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"NIBA INTERNATIONAL, CORP",
+        ""
+      ],
+      "raw_record_sha256": "3ad02479881529fe5eaf98b744a45cef2b57408e5565417a14fca78b806cdab9",
+      "reason": "shifted_row",
+      "row_number": 87593
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001081",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"NIBA INTERNATIONAL, CORP",
+        ""
+      ],
+      "raw_record_sha256": "2ce6a812d68f049c9cf6adf5832cfef17e7da9f360c2813f76717d506a209ab1",
+      "reason": "shifted_row",
+      "row_number": 87632
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001082",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"NIBA INTERNATIONAL, CORP",
+        ""
+      ],
+      "raw_record_sha256": "7ddd644887e73b3f1f0e12a397024399f79c175e671bee36a0f8cbd9df23be68",
+      "reason": "shifted_row",
+      "row_number": 87664
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001091",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"GUARAGUAO TRUCK SALE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "b8e0fa76be2314059e3bcc599141a7138b8cdaff301085435e32af2f691946a3",
+      "reason": "shifted_row",
+      "row_number": 87854
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001104",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"CAMERA - MUNDI, INC.",
+        ""
+      ],
+      "raw_record_sha256": "077da6f8680ba53950662560d560369f89875e6488c22886471f804ef354ade0",
+      "reason": "shifted_row",
+      "row_number": 88114
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001113",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"UMECO, INC.",
+        ""
+      ],
+      "raw_record_sha256": "55ea78d3b31b5136d1acd1d93309c4b0902cc76ba06b9dd96252a8a81d2ef17d",
+      "reason": "shifted_row",
+      "row_number": 88280
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001122",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"UMECO, INC.",
+        ""
+      ],
+      "raw_record_sha256": "1690ad027edf01c8ecf54a963b02773786cdebdc6a5bc347f256dd80aadef3b1",
+      "reason": "shifted_row",
+      "row_number": 88449
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001123",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"CASA JUPITERINC.",
+        ""
+      ],
+      "raw_record_sha256": "e8d7c8c4445d7f7ddb0b87391ca81b8e337ba61ead608d66e67ffe68d5f520ed",
+      "reason": "shifted_row",
+      "row_number": 88459
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001135",
+        "\u0000",
+        "06-30-2011",
+        "07-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"JUAN SUAREZ, INC.",
+        ""
+      ],
+      "raw_record_sha256": "d6a7db8691e3b1f8fa8b1c4e3cc98ec52307ff3512fa465baa4a12d629fce171",
+      "reason": "shifted_row",
+      "row_number": 88692
+    }
+  ],
+  "report_hash": "c871d45894e9afd93bcc0e0d74cc27b37789fa117df51e372f67d3e0f3273698",
+  "rows_certified": 115527,
+  "rows_quarantined": 38,
+  "rows_total": 115565,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "cf2f0a8b5087a29d19c82573ade675a66931e063b73ca9a9a843cb89c5aefec9",
+  "source_channel": "archive_bulk",
+  "source_file": "data/raw/contratos_2010-2011.csv",
+  "source_unique_contribution_count": 115504,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2010-2011",
+  "verdict": "certified_with_quarantine"
+}

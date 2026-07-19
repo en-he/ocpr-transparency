@@ -52,6 +52,7 @@ jobs:
           python pipeline/check_repository_portability.py
           python -m py_compile pipeline/*.py tests/*.py
           python -m unittest discover -s tests
+          python pipeline/generate_bulk_certification.py --check
 
       - name: Hydrate full DB from release asset when needed
         id: hydrate
@@ -111,10 +112,16 @@ jobs:
         run: echo "date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
       # ── Weekly — refresh newer official bulk CSV years ───────────────
-      - name: Weekly — refresh newer official bulk CSV years
+      - name: Weekly — bounded discovery, capture, and promotion
         if: steps.mode.outputs.mode == 'weekly'
         working-directory: pipeline
         run: python download.py --refresh-live --force
+
+      - name: Weekly — certify promoted snapshots
+        if: steps.mode.outputs.mode == 'weekly'
+        run: |
+          python pipeline/generate_bulk_certification.py
+          python pipeline/generate_bulk_certification.py --check
 
       - name: Weekly — detect raw CSV changes
         id: weekly_raw_changes
@@ -138,15 +145,39 @@ jobs:
         run: python ingest.py --reset
 
       # ── Full rebuild (manual) ────────────────────────────────────────
-      - name: Full rebuild — download all years
+      - name: Full rebuild — bounded discovery, capture, and promotion
         if: steps.mode.outputs.mode == 'full-rebuild'
         working-directory: pipeline
         run: python download.py --force
+
+      - name: Full rebuild — certify promoted snapshots
+        if: steps.mode.outputs.mode == 'full-rebuild'
+        run: |
+          python pipeline/generate_bulk_certification.py
+          python pipeline/generate_bulk_certification.py --check
 
       - name: Full rebuild — reset and ingest
         if: steps.mode.outputs.mode == 'full-rebuild'
         working-directory: pipeline
         run: python ingest.py --reset
+
+      - name: Validate post-sync publication gate
+        run: |
+          python pipeline/generate_bulk_certification.py --check
+          python -m unittest discover -s tests
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+
+          database = Path("data/db/contratos.db")
+          if not database.is_file():
+              raise SystemExit("publication gate: full database is missing")
+          with sqlite3.connect(database) as connection:
+              result = connection.execute("PRAGMA integrity_check").fetchone()
+          if result != ("ok",):
+              raise SystemExit(f"publication gate: SQLite integrity failed: {result!r}")
+          print("publication gate: certification, tests, and SQLite integrity passed")
+          PY
 
       - name: Detect whether browser artifacts need rebuild
         id: artifacts
@@ -199,7 +230,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"
-          file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"
+          file_pattern: "data/raw/ data/evidence/bulk/ data/certification/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"
 
       - name: Dispatch Pages deployment
         if: steps.auto_commit.outputs.changes_detected == 'true'
@@ -219,3 +250,14 @@ jobs:
 
           echo "Pages dispatch failed after 3 attempts; dispatch pages.yml on main manually." >&2
           exit 1
+
+      - name: Retain failed capture diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bulk-capture-diagnostics-${{ github.run_id }}
+          path: |
+            data/quarantine/bulk
+            data/evidence/bulk
+          if-no-files-found: ignore
+          retention-days: 14

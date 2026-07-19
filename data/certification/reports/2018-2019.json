@@ -1,0 +1,679 @@
+{
+  "archive_url": null,
+  "byte_length": 20925326,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 17,
+  "encoding": "latin-1",
+  "fiscal_year": "2018-2019",
+  "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
+  "header_profile": "v3",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 48
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2017-001831",
+        "E",
+        "10-02-2018",
+        "10-02-2018",
+        "12-31-2018",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "c2dd8dbc9f849c81192a00e3674a7400e2064f59d409a66badec77fc5f8defc0",
+      "reason": "shifted_row",
+      "row_number": 3218
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "14c7c40795fee1974464e9a6b2d72e3ed04b300eb1a390b81491586139a61870",
+      "reason": "shifted_row",
+      "row_number": 3219
+    },
+    {
+      "raw_fields": [
+        "3159",
+        "Autoridad del Distrito del Centro de Convenciones de Puerto Rico",
+        "2019-000010",
+        "A",
+        "11-09-2018",
+        "11-09-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "0a1adde8c438d6c2425164f54b0fcb21cda46b6dbd8893bb7a8b53e577e54567",
+      "reason": "shifted_row",
+      "row_number": 12120
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "15000.00",
+        "0.00",
+        "SYNERGY M & E SERVICES INC"
+      ],
+      "raw_record_sha256": "1b4eef6a3e6ef3d0007774999214b71d4f2b2d9c6e63627b34cd2b22ea433d05",
+      "reason": "shifted_row",
+      "row_number": 12121
+    },
+    {
+      "raw_fields": [
+        "4054",
+        "Municipio de Naranjito",
+        "2019-000044",
+        "\u0000",
+        "07-03-2018",
+        "07-03-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2b3989549f7ceb2c91badbbb0c04b4c29d009adaa7752817f160878a310e2808",
+      "reason": "shifted_row",
+      "row_number": 19209
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "24000.00",
+        "0.00",
+        "AHS CONSTRUCTION & RENT LLC"
+      ],
+      "raw_record_sha256": "9070dabddb06215bfc66234aab2a0c84c3e39de17421c46cdebd499421fddea2",
+      "reason": "shifted_row",
+      "row_number": 19210
+    },
+    {
+      "raw_fields": [
+        "4033",
+        "Municipio de Gurabo",
+        "2019-000054",
+        "\u0000",
+        "07-02-2018",
+        "07-02-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "e6019cde46342fe2cc28db0a8b8f8b53d9e8792924f493cd9da83815b2c1c9ce",
+      "reason": "shifted_row",
+      "row_number": 21182
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "15360.00",
+        "0.00",
+        "JONATHAN PEREZ MONTANEZ"
+      ],
+      "raw_record_sha256": "567771c7a410c20326f2b8382d8276b22d9d3b5bf86ed0bbac52c82410775241",
+      "reason": "shifted_row",
+      "row_number": 21183
+    },
+    {
+      "raw_fields": [
+        "4017",
+        "Municipio de Cataño",
+        "2019-000070",
+        "\u0000",
+        "07-19-2018",
+        "07-19-2018",
+        "12-31-2018",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "da58dbd831e03b655fdb1e68e92062ecaa96454e21e67ed9138b4d6756004a6a",
+      "reason": "shifted_row",
+      "row_number": 24076
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "4200.00",
+        "0.00",
+        "JJ Aquarium (José Reyes)"
+      ],
+      "raw_record_sha256": "d2f0378e84998e6f5b0244e2dcc600ac0cdd3cc10af8ec6b9d993aac2279d679",
+      "reason": "shifted_row",
+      "row_number": 24077
+    },
+    {
+      "raw_fields": [
+        "4017",
+        "Municipio de Cataño",
+        "2019-000070",
+        "A",
+        "12-27-2018",
+        "01-02-2019",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "0d421be969d3cd9829d71ecba8f6236b9f1b1451349f8a5dab9ffd6d101fbf24",
+      "reason": "shifted_row",
+      "row_number": 24081
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "4200.00",
+        "0.00",
+        "JJ Aquarium (José Reyes)"
+      ],
+      "raw_record_sha256": "d2f0378e84998e6f5b0244e2dcc600ac0cdd3cc10af8ec6b9d993aac2279d679",
+      "reason": "shifted_row",
+      "row_number": 24082
+    },
+    {
+      "raw_fields": [
+        "4030",
+        "Municipio de Guayama",
+        "2019-000078",
+        "\u0000",
+        "07-23-2018",
+        "07-23-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "003ee14478f59c2d851ed52fbaeee6279732a183bf72d4c297beef9f85eb2761",
+      "reason": "shifted_row",
+      "row_number": 25514
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "18000.00",
+        "0.00",
+        "RAMON SOLIVAN  GONZALEZ DBA SES PEST CONTROL AND"
+      ],
+      "raw_record_sha256": "cc347854a59143f1fb54c85a2fe4d9c29129799d984d47ad6d652f1fd28ab207",
+      "reason": "shifted_row",
+      "row_number": 25515
+    },
+    {
+      "raw_fields": [
+        "1437",
+        "Oficina del Gobernador",
+        "2019-000105",
+        "\u0000",
+        "01-09-2019",
+        "01-09-2019",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "7a0c8c6b297beb2d48b63f0d6b1b02071c1cd9406a9bfa03d915f5fff52db08b",
+      "reason": "shifted_row",
+      "row_number": 30312
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "5880.00",
+        "0.00",
+        "CEL FIRE EXTINGUISHERS & MORE INC."
+      ],
+      "raw_record_sha256": "55e1931b8f72700078827110dec09711864125d2bfe94d98bfaf0d29ae833c00",
+      "reason": "shifted_row",
+      "row_number": 30313
+    },
+    {
+      "raw_fields": [
+        "2160",
+        "Administración de Servicios Médicos de Puerto Rico",
+        "2019-000194",
+        "\u0000",
+        "07-01-2018",
+        "07-01-2018",
+        "09-30-2018",
+        "SERVICIOS DE RADIOTERAPIA"
+      ],
+      "raw_record_sha256": "67a4ec33203834f6f947ccafb5104b14b295c8be18956958bce2dc65a0896f1a",
+      "reason": "shifted_row",
+      "row_number": 41944
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "112050.00",
+        "0.00",
+        "GRUPO RADIOTERAPIA DE CENTRO MÉDICO"
+      ],
+      "raw_record_sha256": "5dff0fab0e5b09e8e2d9522339a8abec17dc97a6815260764ea910266349f3f7",
+      "reason": "shifted_row",
+      "row_number": 41945
+    },
+    {
+      "raw_fields": [
+        "2160",
+        "Administración de Servicios Médicos de Puerto Rico",
+        "2019-000194",
+        "A",
+        "09-28-2018",
+        "10-01-2018",
+        "12-31-2018",
+        "SERVICIOS DE RADIOTERAPIA"
+      ],
+      "raw_record_sha256": "4f3cce552bae1bd8c5c7c4d07402e343252800d5391692f13e24af3efeee8d6f",
+      "reason": "shifted_row",
+      "row_number": 41947
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "236550.00",
+        "0.00",
+        "GRUPO RADIOTERAPIA DE CENTRO MÉDICO"
+      ],
+      "raw_record_sha256": "564f260c5a6762a5b681f6cec9a0b10a2812a84ba87590528257211abf3be8d1",
+      "reason": "shifted_row",
+      "row_number": 41948
+    },
+    {
+      "raw_fields": [
+        "2160",
+        "Administración de Servicios Médicos de Puerto Rico",
+        "2019-000194",
+        "B",
+        "12-31-2018",
+        "01-01-2019",
+        "06-30-2019",
+        "SERVICIOS DE RADIOTERAPIA"
+      ],
+      "raw_record_sha256": "ba3a29e9d1b346b28c654adc18516eb9943cfb13b8e1f0da5bc7c6748c80f247",
+      "reason": "shifted_row",
+      "row_number": 41949
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS RELACIONADOS CON LA SALUD",
+        "\u0000",
+        "136950.00",
+        "0.00",
+        "GRUPO RADIOTERAPIA DE CENTRO MÉDICO"
+      ],
+      "raw_record_sha256": "6e6181ca51b76d2408641350c0af9f6a74b1b3c35ccd5950e8e0dc22c91e911d",
+      "reason": "shifted_row",
+      "row_number": 41950
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-000392",
+        "A",
+        "12-21-2018",
+        "01-01-2019",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2a9a4763dadb6ad26d3d04e9963571edfb697ab7f998a7b50caa92defbc79038",
+      "reason": "shifted_row",
+      "row_number": 56095
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "9600.00",
+        "0.00",
+        "ALEXI J. GARCÍA ORTÍZ DBA PILOT SWIMMING POOL SERV"
+      ],
+      "raw_record_sha256": "6deb31a1cbafc031dd1e8e70e86f26a409ceb993b4a428e2262c90a36f16c1f5",
+      "reason": "shifted_row",
+      "row_number": 56096
+    },
+    {
+      "raw_fields": [
+        "4013",
+        "Municipio de Caguas",
+        "2019-000410",
+        "\u0000",
+        "07-09-2018",
+        "07-09-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "6b91b020b2b7c976b4380552c5964b6368f39d3f7f5feabd0d171d28fd7c5d89",
+      "reason": "shifted_row",
+      "row_number": 56951
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "14147.21",
+        "0.00",
+        "CARRILLO RAMOS JAVIER LUIS/DBA EMPRESAS CARRILLO"
+      ],
+      "raw_record_sha256": "65a18c01c24f3a15a013325a693ab9c30e7077dd5941d2308ad939c0603e894b",
+      "reason": "shifted_row",
+      "row_number": 56952
+    },
+    {
+      "raw_fields": [
+        "4026",
+        "Municipio de Dorado",
+        "2019-000539",
+        "\u0000",
+        "03-29-2019",
+        "04-01-2019",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "61e2d58b84f416bc23396e8d53d30d163ccc1894b4575a2f34b7cca9cff8dda9",
+      "reason": "shifted_row",
+      "row_number": 61875
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "4500.00",
+        "0.00",
+        "CLEARWATER POOL & SPA INC."
+      ],
+      "raw_record_sha256": "f57b853e78307ab86109d705e50c49db02dfe07e7deceae6d685f5025761031e",
+      "reason": "shifted_row",
+      "row_number": 61876
+    },
+    {
+      "raw_fields": [
+        "4036",
+        "Municipio de Humacao",
+        "2019-000824",
+        "\u0000",
+        "05-08-2019",
+        "05-08-2019",
+        "04-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "7f97ef040a1ad7af913d033b6e15fa97d4f5d8105b336dc0022a83ba3c6425ed",
+      "reason": "shifted_row",
+      "row_number": 68364
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "20400.00",
+        "0.00",
+        "CARRILLO RAMOS JAVIER"
+      ],
+      "raw_record_sha256": "bf06d163b6fca4af251b7f4e81bf86eda76fd4e78f7e93f6d7ac8ea7d882acf1",
+      "reason": "shifted_row",
+      "row_number": 68365
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-000920",
+        "\u0000",
+        "08-01-2018",
+        "08-01-2018",
+        "06-30-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2bca168556161b391702cae235ae4c78571721c49736372a44d5be0f059a858b",
+      "reason": "shifted_row",
+      "row_number": 69555
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "99000.00",
+        "0.00",
+        "AQUATIC CONTROL INC."
+      ],
+      "raw_record_sha256": "0be94996e77ae77ed6dd1a3df03a07eb5daf50440a4fecdcb4688c7ab93966da",
+      "reason": "shifted_row",
+      "row_number": 69556
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-B00009",
+        "A",
+        "02-27-2019",
+        "02-27-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "bac7bbe2b700b55678befab83568ec57bd2604f6b5dc685d71fb5dcdf625043c",
+      "reason": "shifted_row",
+      "row_number": 81514
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "10000.00",
+        "0.00",
+        "MANUEL COLÓN ELECTRICAL CORP."
+      ],
+      "raw_record_sha256": "52307bc7ddab57b62fff2f867c1bc35972e33b7880c4afeb20e6e9de210ebae0",
+      "reason": "shifted_row",
+      "row_number": 81515
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-B00009",
+        "\u0000",
+        "10-15-2018",
+        "10-15-2018",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "c7d4ac060d1be24b5de7b880beaabf7382c595e75998c23babf1f32aefea751d",
+      "reason": "shifted_row",
+      "row_number": 81516
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "68600.00",
+        "0.00",
+        "MANUEL COLÓN ELECTRICAL CORP."
+      ],
+      "raw_record_sha256": "9574b35953821a3f4713a5ee220c21a8d28d9ecf0d083e495fbf192b500d469d",
+      "reason": "shifted_row",
+      "row_number": 81517
+    },
+    {
+      "raw_fields": [
+        "3045",
+        "Administración de Terrenos de Puerto Rico",
+        "2020-000012",
+        "\u0000",
+        "06-27-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "347716e35dc0049b1fa7ef86035fdfa6f8cd31f72d2cd7823727667c768c51f4",
+      "reason": "shifted_row",
+      "row_number": 96352
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1620.00",
+        "0.00",
+        "Universal Equipment Sales & Services Corp."
+      ],
+      "raw_record_sha256": "ee7b048db3d0e8013de86489477c28b5dab67def766c063c54a0405be1b2d6f2",
+      "reason": "shifted_row",
+      "row_number": 96353
+    },
+    {
+      "raw_fields": [
+        "3159",
+        "Autoridad del Distrito del Centro de Convenciones de Puerto Rico",
+        "2020-000013",
+        "\u0000",
+        "06-28-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "981eff261c54ecb163336466579d4b9c1a3d7bc1339ca94691c9568c798de441",
+      "reason": "shifted_row",
+      "row_number": 96407
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "163229.00",
+        "0.00",
+        "SYNERGY M & E SERVICES INC"
+      ],
+      "raw_record_sha256": "1bafb3837a2c49a8bbc0ff5d274fac8cf7c4a1a37c3a7a83099a2e9996184aed",
+      "reason": "shifted_row",
+      "row_number": 96408
+    },
+    {
+      "raw_fields": [
+        "2300",
+        "Oficina de Administración de los Tribunales",
+        "2020-000022",
+        "\u0000",
+        "06-18-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f86d756076bbd22628b71eda93936610f7498ac606e000928930e413e9916019",
+      "reason": "shifted_row",
+      "row_number": 96869
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "42600.00",
+        "0.00",
+        "GC COMPANY CORP."
+      ],
+      "raw_record_sha256": "b1f7054ad892811dfe1aa76680dfaafe5b00b6490e792ff6792e7002d99742c4",
+      "reason": "shifted_row",
+      "row_number": 96870
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2020-000116",
+        "\u0000",
+        "06-18-2019",
+        "07-01-2019",
+        "12-31-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "5ca20817d04b2f604b19945fb3a11bbafcdefa09413a08d7d34fbb20b5b8a36a",
+      "reason": "shifted_row",
+      "row_number": 98735
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "08-03-2019",
+        "9600.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "a78f25a82643a5de6a9ba988bba35e79b4168e1db168f9ff029bb383a5a4d74a",
+      "reason": "shifted_row",
+      "row_number": 98736
+    },
+    {
+      "raw_fields": [
+        "4016",
+        "Municipio de Carolina",
+        "2020-000333",
+        "\u0000",
+        "06-26-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a8ccd53b9fd4257e30ff70a32d6802797bf9d03582a88759964c60d4beaec1cc",
+      "reason": "shifted_row",
+      "row_number": 99583
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "248100.00",
+        "0.00",
+        "MARIA DE LOURDES MARRERO FELIX"
+      ],
+      "raw_record_sha256": "a1563f80b715e1870e55db3208196368d471dec896f02b2690ec259aeb728e52",
+      "reason": "shifted_row",
+      "row_number": 99584
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2020-000347",
+        "\u0000",
+        "06-26-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2ba5895260053814103631434dc0a46af2c9b9ef1944222a0f39c4332993f74c",
+      "reason": "shifted_row",
+      "row_number": 99622
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "66500.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "2e211710bb2ac235c9b3cac9632a52ee6489bca01f24548962e75d72031a5f58",
+      "reason": "shifted_row",
+      "row_number": 99623
+    }
+  ],
+  "report_hash": "9c5eaef8c99cb920dee265b8c4deb8c0a980c3c72d56d8a82ace38e206edecaa",
+  "rows_certified": 100708,
+  "rows_quarantined": 48,
+  "rows_total": 100756,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "e89371de16d3dbc54e196e41f42ed5e0980ebd8eac3680769655daccc7468b23",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2018-2019.csv",
+  "source_unique_contribution_count": 100691,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2018-2019",
+  "verdict": "certified_with_quarantine"
+}

@@ -33,3 +33,4 @@ jobs:
           python pipeline/check_repository_portability.py
           python -m py_compile pipeline/*.py tests/*.py
           python -m unittest discover -s tests
+          python pipeline/generate_bulk_certification.py --check

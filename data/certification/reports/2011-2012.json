@@ -1,0 +1,271 @@
+{
+  "archive_url": "https://web.archive.org/web/20210421010725id_/https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2011-2012",
+  "byte_length": 24480664,
+  "capture_time": "2026-04-04T20:51:08-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 1,
+  "encoding": "latin-1",
+  "fiscal_year": "2011-2012",
+  "header_fingerprint": "d847faf65f7039b2d01951082646a956db6bab2f555dc885e556ec2340ffcee5",
+  "header_profile": "v1",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 12
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000048",
+        "C",
+        "02-10-2012",
+        "02-10-2012",
+        "06-30-2012",
+        "OFRECER EQUIPO EN ALQUILER",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "20000.00",
+        "\"JUNER RENTAL EQUIPMENT, INC.",
+        ""
+      ],
+      "raw_record_sha256": "9cef63a14d1d88f49e409ef5163cf28df9dd0276f934e89fd7c2a8d4ee05f864",
+      "reason": "shifted_row",
+      "row_number": 4475
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-000048",
+        "B",
+        "08-15-2011",
+        "08-15-2011",
+        "06-30-2012",
+        "OFRECER EQUIPO EN ALQUILER",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHICULOS Y OTROS",
+        "\u0000",
+        "5000.00",
+        "\"JUNER RENTAL EQUIPMENT, INC.",
+        ""
+      ],
+      "raw_record_sha256": "efe2acca9e650aedb230fc2a50be4a230e64d8383c8643f038d30940b8f01170",
+      "reason": "shifted_row",
+      "row_number": 4476
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2011-001060",
+        "A",
+        "09-07-2011",
+        "09-08-2011",
+        "10-08-2011",
+        "ACUERDOS NO FINANCIEROS",
+        "ACUERDOS FINANCIEROS Y NO FINANCIEROS",
+        "\u0000",
+        "0.00",
+        "\"CCS CARIBBEAN COMMUNICATIONS SOLUTIONS, INC.",
+        ""
+      ],
+      "raw_record_sha256": "1be256f022da8ff62b5e975e1a307c1346ca1453d628388038a421668f505a8c",
+      "reason": "shifted_row",
+      "row_number": 9379
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000024",
+        "\u0000",
+        "07-14-2011",
+        "07-14-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"MD TRADING CORPORATION",
+        ""
+      ],
+      "raw_record_sha256": "127a51bce300339cd3459a8f2a95b15d4289d384e6c1249988d5b2d0d87664ba",
+      "reason": "shifted_row",
+      "row_number": 18217
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000056",
+        "\u0000",
+        "07-14-2011",
+        "07-14-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"TECNO-LITE DE PUERTO RICO, INC.",
+        ""
+      ],
+      "raw_record_sha256": "fabc249825ffe6a0b91f8ec89ea7b7c17e326b017c1c8b83b1615351bcd5b747",
+      "reason": "shifted_row",
+      "row_number": 25328
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000059",
+        "\u0000",
+        "07-14-2011",
+        "07-14-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"A. GARCÍA & CO., INC.",
+        ""
+      ],
+      "raw_record_sha256": "cb0fbb193e97a201e643e5bc7c0a89c1c3c131d3ffa1aef2f6cf37f35967bc48",
+      "reason": "shifted_row",
+      "row_number": 25935
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000060",
+        "\u0000",
+        "07-14-2011",
+        "07-14-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"MAXIMA INTERNATIONAL TRADE CORPORATION",
+        ""
+      ],
+      "raw_record_sha256": "a113caa8afc0fed55970d7820eb79b0c64b9f1ee2418dae6cbc3ffc74b910429",
+      "reason": "shifted_row",
+      "row_number": 26172
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000070",
+        "\u0000",
+        "07-14-2011",
+        "07-14-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"LANCO MANUFACTURING CORPORATION",
+        ""
+      ],
+      "raw_record_sha256": "eb64bdf6201e74851917d202d4ad02e2e5120ccb844ec01daf0007e6457b1d68",
+      "reason": "shifted_row",
+      "row_number": 28063
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000078",
+        "\u0000",
+        "07-21-2011",
+        "07-21-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "200.00",
+        "\"F. BARAGAÑO PHARMACEUTICAL, INC.",
+        ""
+      ],
+      "raw_record_sha256": "3e71af4c6e9fb24a0547501af4daa5739339f46a6648edd32e3368db9f2aa49e",
+      "reason": "shifted_row",
+      "row_number": 29519
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000109",
+        "\u0000",
+        "08-01-2011",
+        "08-01-2011",
+        "06-30-2012",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"CCS CARIBBEAN COMMUNICATIONS SOLUTIONS, INC.",
+        ""
+      ],
+      "raw_record_sha256": "8262791060b971299c057cffd2d93e97d5b6e16162b3e551c719c68bfcae3f0a",
+      "reason": "shifted_row",
+      "row_number": 34517
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000117",
+        "\u0000",
+        "08-01-2011",
+        "08-01-2011",
+        "12-31-2011",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "2922.00",
+        "\"GUAYNABO DESTAPE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "a5f1c799d0a0da04f8590ecc07472c670b9cc02ece15b5ae58d06c60fd12334e",
+      "reason": "shifted_row",
+      "row_number": 35772
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2012-000657",
+        "\u0000",
+        "02-07-2012",
+        "02-07-2012",
+        "06-30-2012",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "2922.00",
+        "\"GUAYNABO DESTAPE, INC.",
+        ""
+      ],
+      "raw_record_sha256": "a6b66a3d52edbc8bb425aef35284ebf76242ec587fcd7a1051952db0e2b6b661",
+      "reason": "shifted_row",
+      "row_number": 77505
+    }
+  ],
+  "report_hash": "a83d0ab599d8a950d0b9fb936908b51f8163759b7e9de59a65bbd07b6d368ccf",
+  "rows_certified": 120552,
+  "rows_quarantined": 12,
+  "rows_total": 120564,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "87ff62c73ed3e6f745118a6e8cf147b7f997731706404fd7a62d650733bcefc1",
+  "source_channel": "archive_bulk",
+  "source_file": "data/raw/contratos_2011-2012.csv",
+  "source_unique_contribution_count": 120551,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2011-2012",
+  "verdict": "certified_with_quarantine"
+}

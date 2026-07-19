@@ -18,11 +18,11 @@ Exit criteria:
 
 ## Phase 1 — Certify the available bulk archive
 
-**Status: Next certification gate; implementation exists but Phase 1 certification is not yet claimed.** Establish a reproducible inventory of preserved bulk files, their source channel, checksums, capture metadata, parser version, row counts, and rebuild inputs. The current available corpus is 13 preserved fiscal years, `2010-2011` through `2022-2023`; the two oldest are Archive.org recoveries.
+**Status: Release candidate; local certification and workflow gates pass, while immutable-revision CI/Pages verification remains required before completion is claimed.** The repository now contains a reproducible inventory and one independent report for each of 13 preserved fiscal years, `2010-2011` through `2022-2023`. The evidence records source channel, source/capture metadata, exact SHA-256 and byte size, parser/rule versions, row outcomes, duplicate accounting, canonical contribution, and a source-row reconciliation for every current canonical exclusion. The two oldest snapshots link to exact-hash Archive.org captures.
 
-A missing or unavailable official CSV year is an explicit coverage state. It does **not** fail Phase 1 certification of the years whose source bytes are available, and it must not be filled by assuming that live/recovered rows were once an official bulk export. Post-2023 bulk exports remain unavailable in the current preserved corpus.
+A missing or unavailable official CSV year is an explicit coverage state. It does **not** fail certification of the years whose source bytes are available, and it is not filled by assuming that live/recovered rows were once an official bulk export. Bounded official-source discovery currently confirms the preserved `2022-2023` bytes are unchanged; `2023-2024` is listed but unavailable, and later bounded candidates are unavailable.
 
-Phase 1 also hardens the archive-facing contract: public year lists derive from preserved raw CSVs, normalized/canonical projections retain source links, and generated artifacts carry reproducible build metadata and checksums.
+The archive-facing contract now fails closed on unknown source profiles and unsupported records, quarantines invalid or suspicious future responses before validation, retains accepted changed bytes content-addressed, requires explicit promotion, and gates ingest/publication/Pages on deterministic certification. Phase 1 becomes complete only after the exact release-candidate revision passes independent review, GitHub CI, Pages deployment, and deployed-manifest freshness verification.
 
 ## Phase 2 — Live reconciliation and enrichment
 

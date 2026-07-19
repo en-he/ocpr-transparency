@@ -20,6 +20,8 @@ When a local historical claim and current code disagree, retain the local source
 - [`architecture.md`](architecture.md) — current architecture, target evidence flow, boundaries, and explicit non-implementation statements.
 - [`data-provenance.md`](data-provenance.md) — evidence layers, coverage axes, source/status semantics, amount semantics, and known gaps.
 - [`operating-model.md`](operating-model.md) — actual weekly/monthly operation, manual recovery, green checkpoints, and deferred cleanup policy.
+- [`bulk-certification.md`](bulk-certification.md) — exact snapshot certification, parser outcomes, deterministic reports, and canonical-exclusion reconciliation.
+- [`bulk-source-discovery.md`](bulk-source-discovery.md) — bounded official-source discovery, streamed quarantine capture, immutable version retention, and explicit promotion.
 - [`roadmap.md`](roadmap.md) — Phase 0 onward, dependencies, gates, and the downstream/optional position of RAG.
 
 The ignored local companion records are indexed from `docs/local/README.local.md` when they exist. Public contributors must not need those files to understand or build the project.

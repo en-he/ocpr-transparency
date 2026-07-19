@@ -1,0 +1,112 @@
+{
+  "archive_url": null,
+  "byte_length": 23199216,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 1,
+  "encoding": "latin-1",
+  "fiscal_year": "2014-2015",
+  "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
+  "header_profile": "v3",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 6
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-000384",
+        "\u0000",
+        "07-01-2014",
+        "07-01-2014",
+        "06-30-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "124c1e2f62203328e849bf4cef36f20c019de1e27df597206d20c4791b0f629a",
+      "reason": "shifted_row",
+      "row_number": 56848
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "57000.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "e80cda658b02ff59ade283e9ae35368e7e12252a710365815a8755b847eb5bb1",
+      "reason": "shifted_row",
+      "row_number": 56849
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00021",
+        "\u0000",
+        "08-11-2014",
+        "09-01-2014",
+        "12-31-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "33657ee2bce9d580d954d1e741b164a01b455317a8dc81564bb41c377ecc9fe4",
+      "reason": "shifted_row",
+      "row_number": 96287
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "30000.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "7b7b56306f3b995d21e83c00dd03d58655499485923b834e7900f3aff318cd6d",
+      "reason": "shifted_row",
+      "row_number": 96288
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2015-B00022",
+        "\u0000",
+        "08-11-2014",
+        "09-01-2014",
+        "12-31-2015",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "2ca5d1fe41a65f89d80e1978bb91b67cb44fd2722cb469b2563e38c71bf39fbb",
+      "reason": "shifted_row",
+      "row_number": 96289
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "32500.00",
+        "0.00",
+        "DBA ASSOCIATES INC."
+      ],
+      "raw_record_sha256": "1a1f085d46164502e08215fae36878476c4fa1bd62c54386027abf5e7ba86d48",
+      "reason": "shifted_row",
+      "row_number": 96290
+    }
+  ],
+  "report_hash": "44821419ba3decafa9a481c7fd1c46167c1919f5da57c7496ee10fa135f73e67",
+  "rows_certified": 113529,
+  "rows_quarantined": 6,
+  "rows_total": 113535,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "c177d2df2c6a0d93033d6d9f1efbb2e14cecd2f77d0b0c870ea02c24bd159990",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2014-2015.csv",
+  "source_unique_contribution_count": 113528,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2014-2015",
+  "verdict": "certified_with_quarantine"
+}

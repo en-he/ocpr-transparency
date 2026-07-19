@@ -13,8 +13,8 @@ A canonical row is never a substitute for the evidence that produced it. Current
 
 | Layer | Meaning | Current implementation | Target preservation contract |
 |---|---|---|---|
-| Official bulk CSV | Bytes downloaded from an OCPR bulk-CSV endpoint while that endpoint served the file. | Preserved under `data/raw/`; these files define public bulk-archive coverage. | Keep original bytes, URL/parameters, retrieval time, HTTP metadata, SHA-256, file size, and source availability result. |
-| Archive.org recovered bulk | A bulk CSV recovered from an Archive.org capture because the live portal no longer served the older export. | `2010-2011` and `2011-2012` are preserved in `data/raw/` and are labeled as recovered archive copies. | Store capture URL/timestamp and retrieval checksum alongside the original bytes; never relabel it as a live OCPR download. |
+| Official bulk CSV | Bytes downloaded from an OCPR bulk-CSV endpoint while that endpoint served the file. | Thirteen active snapshots are preserved under `data/raw/`; exact per-file reports and the aggregate manifest are under `data/certification/`. Future accepted versions are first retained content-addressed under `data/evidence/bulk/`. | Keep original bytes, URL/parameters, retrieval time, HTTP metadata, SHA-256, file size, and source availability result. |
+| Archive.org recovered bulk | A bulk CSV recovered from an Archive.org capture because the live portal no longer served the older export. | `2010-2011` and `2011-2012` are preserved in `data/raw/`, labeled `archive_bulk`, and linked to exact Wayback `id_` captures whose fetched bytes match their report hashes. | Store capture URL/timestamp and retrieval checksum alongside the original bytes; never relabel it as a live OCPR download. |
 | Live search/API | Search-result JSON or equivalent response from the live OCPR registry. | Used by the manual recovery client and dormant monitor; raw response retention is **not yet implemented**. | Preserve the exact response bytes, endpoint/query/page, response status/content type, UTC capture time, and SHA-256. |
 | Detail HTML | A contract/family detail-page response used to extract fields or establish a source link. | Fetched transiently by recovery/monitor parsing; `source_url` may survive in a normalized row, but raw HTML retention is **not yet implemented**. | Preserve exact HTML bytes and request metadata, with parser version and extraction warnings in later observations. |
 | Documents | Downloaded contracts, amendments, attachments, or other linked files. | Document acquisition, retention, OCR, and document search are **not yet implemented**. | Keep original bytes, media type, source URL, capture metadata, checksum, and a stable document ID separate from contract records. |
@@ -23,7 +23,7 @@ A canonical row is never a substitute for the evidence that produced it. Current
 
 ## Current inventory and bounded counts
 
-- Preserved bulk files cover 13 fiscal years, `2010-2011` through `2022-2023`. Post-2023 bulk exports are currently unavailable in the preserved corpus. A missing year is an unavailable-source state, not evidence of zero contracts.
+- The certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`: 1,232,110 physical source records, 1,231,603 structurally certified records, 507 retained `shifted_row` quarantines, and 521 exact within-snapshot source duplicates. The current canonical bulk projection contains 1,231,508 rows; all 602 canonical `row_hash` exclusions are separately traceable to excluded and first-seen source coordinates. These three discrepancy dimensions overlap and must not be added together. Post-2023 bulk exports are currently unavailable. A missing year is an unavailable-source state, not evidence of zero contracts.
 - The canonical DB contains `1,238,597` rows: `1,231,508` `csv` rows plus `7,089` `live_recovery` rows. There are no `live_monitor` rows in the current baseline.
 - The tracked Phase 2A recovery ledger has `11,983` targets: `7,177` recovered and `4,806` unrecoverable. The recovered-target count is not identical to the number of stored recovered rows because some outcomes resolve idempotently against an existing/recovered row.
 - The ledger's scope is the multi-row missing-original backlog it tracked. A broader audit found `31,264` families without stored originals, including `26,209` single-row amendment-only families. Those are unresolved coverage/review states, not proof that all families should or can be recovered.
@@ -47,7 +47,7 @@ Every future acquisition should retain, at minimum:
 
 A checksum identifies bytes; it does not prove that the source is official, complete, current, or semantically correct. Timestamps identify capture/build events; they do not turn a live snapshot into a historical archive without retention of the bytes.
 
-The current build manifest already records generated time, row counts, artifact sizes, and SHA-256 values for the browser/full DB artifacts. That is useful artifact provenance, but it is not yet a substitute for per-source evidence metadata.
+The browser/full database build manifest records generated time, row counts, artifact sizes, and SHA-256 values. Separately, `data/certification/bulk-manifest.json` and its 13 per-snapshot reports provide deterministic source-level hashes, sizes, source/capture metadata, parser/rule versions, row outcomes, and canonical-exclusion reconciliation. Future accepted network captures add exact response metadata sidecars beside content-addressed evidence objects before the active compatibility view can change.
 
 ## Coverage axes
 

@@ -85,7 +85,7 @@ The full downloadable SQLite DB is published as a GitHub Release asset rather th
 ## Data Source
 Structured contract data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal-year CSVs are preserved when the official bulk endpoint serves them; the two oldest preserved files, `2010-2011` and `2011-2012`, were recovered from Archive.org. The integrity of the source data remains the responsibility of the entities that granted the contracts, as stated by OCPR.
 
-The current preserved bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
+The current certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`, with 1,232,110 physical source records. Exact source hashes, per-file outcomes, 507 retained parser quarantines, 521 within-snapshot exact duplicates, and all 602 current canonical exclusions are documented in [`docs/project/bulk-certification.md`](docs/project/bulk-certification.md) and `data/certification/`. These measures describe different, overlapping audit dimensions. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
 
 ## Known Data Gaps
 
@@ -115,9 +115,9 @@ The current site handles those families with a synthetic parent/family view so u
 
 GitHub Actions currently supports a weekly official bulk refresh, a monthly audit rebuild, and a manual full rebuild:
 
-- **Weekly** (Sunday) — refresh the newest already-preserved live bulk year and probe newer fiscal years
-- **Monthly** (day 2) — reset/rebuild from tracked sources and republish the full database artifact as an audit pass
-- **Manual full rebuild** — reprocess all available bulk sources on demand
+- **Weekly** (Sunday) — perform bounded official-source discovery, quarantine and fully certify changed bytes, preserve immutable versions, and promote only exact accepted evidence
+- **Monthly** (day 2) — reset/rebuild from already certified tracked sources and republish the full database artifact as an audit pass
+- **Manual full rebuild** — re-evaluate available sources through the same certification gate and rebuild on demand
 
 Scheduled live monitoring is disabled. The `monitor.py` code and monitor-state path are retained as deferred capability, not as an active nightly service.
 

@@ -9,14 +9,15 @@ BASELINE_COMMANDS = (
     "python pipeline/check_repository_portability.py",
     "python -m py_compile pipeline/*.py tests/*.py",
     "python -m unittest discover -s tests",
+    "python pipeline/generate_bulk_certification.py --check",
 )
 SYNC_SIDE_EFFECT_STEPS = (
     "Hydrate full DB from release asset when needed",
     "Bootstrap full DB from archived CSVs",
-    "Weekly — refresh newer official bulk CSV years",
+    "Weekly — bounded discovery, capture, and promotion",
     "Weekly — reset and re-ingest tracked sources",
     "Monthly audit — reset and ingest tracked sources",
-    "Full rebuild — download all years",
+    "Full rebuild — bounded discovery, capture, and promotion",
     "Full rebuild — reset and ingest",
     "Build browser DB + manifest",
     "Publish full DB release asset",
@@ -99,7 +100,7 @@ class CIWorkflowTests(unittest.TestCase):
                 min(positions),
             )
             for command in BASELINE_COMMANDS:
-                self.assertEqual(workflow.count(command), 1)
+                self.assertEqual(named_step_block(workflow, "Validate repository baseline").count(command), 1)
 
         self.assertEqual(
             [command for command in BASELINE_COMMANDS if command in ci],
@@ -202,7 +203,7 @@ class CIWorkflowTests(unittest.TestCase):
             auto_commit,
         )
         self.assertIn(
-            'file_pattern: "data/raw/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"',
+            'file_pattern: "data/raw/ data/evidence/bulk/ data/certification/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"',
             auto_commit,
         )
 
@@ -227,7 +228,54 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertIn(f"if {command}; then", dispatch)
         self.assertIn('sleep "$((attempt * 10))"', dispatch)
         self.assertIn("exit 1", dispatch)
-        self.assertEqual(workflow[dispatch_start:].strip(), dispatch.strip())
+
+    def test_sync_certifies_each_source_mutation_before_ingest_and_publication(self):
+        workflow = workflow_text("sync.yml")
+        weekly_download = workflow.index("- name: Weekly — bounded discovery, capture, and promotion")
+        weekly_certify = workflow.index("- name: Weekly — certify promoted snapshots")
+        weekly_ingest = workflow.index("- name: Weekly — reset and re-ingest tracked sources")
+        full_download = workflow.index("- name: Full rebuild — bounded discovery, capture, and promotion")
+        full_certify = workflow.index("- name: Full rebuild — certify promoted snapshots")
+        full_ingest = workflow.index("- name: Full rebuild — reset and ingest")
+        post_gate = workflow.index("- name: Validate post-sync publication gate")
+        build = workflow.index("- name: Build browser DB + manifest")
+        publish = workflow.index("- name: Publish full DB release asset")
+        commit = workflow.index("- name: Commit updated data")
+
+        self.assertLess(weekly_download, weekly_certify)
+        self.assertLess(weekly_certify, weekly_ingest)
+        self.assertLess(full_download, full_certify)
+        self.assertLess(full_certify, full_ingest)
+        self.assertLess(max(weekly_ingest, full_ingest), post_gate)
+        self.assertLess(post_gate, min(build, publish, commit))
+        for step_name in (
+            "Weekly — certify promoted snapshots",
+            "Full rebuild — certify promoted snapshots",
+            "Validate post-sync publication gate",
+        ):
+            block = named_step_block(workflow, step_name)
+            self.assertIn("python pipeline/generate_bulk_certification.py --check", block)
+            self.assertNotIn("continue-on-error", block)
+
+    def test_sync_retains_failed_capture_diagnostics_without_publishing(self):
+        workflow = workflow_text("sync.yml")
+        upload = named_step_block(workflow, "Retain failed capture diagnostics")
+        self.assertRegex(upload, r"(?m)^\s*if:\s*failure\(\)\s*$")
+        self.assertIn("actions/upload-artifact@v4", upload)
+        self.assertIn("data/quarantine/bulk", upload)
+        self.assertIn("data/evidence/bulk", upload)
+        self.assertGreater(
+            workflow.index("- name: Retain failed capture diagnostics"),
+            workflow.index("- name: Dispatch Pages deployment"),
+        )
+
+    def test_pages_recertifies_repository_before_upload_and_deploy(self):
+        pages = workflow_text("pages.yml")
+        check = pages.index("python pipeline/generate_bulk_certification.py --check")
+        upload = pages.index("uses: actions/upload-pages-artifact@v4")
+        deploy = pages.index("uses: actions/deploy-pages@v4")
+        self.assertLess(check, upload)
+        self.assertLess(upload, deploy)
 
     def test_pages_workflow_retains_manual_dispatch_trigger(self):
         pages = workflow_text("pages.yml")

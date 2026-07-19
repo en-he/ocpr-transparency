@@ -1,0 +1,436 @@
+{
+  "archive_url": null,
+  "byte_length": 5306166,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 249,
+  "encoding": "latin-1",
+  "fiscal_year": "2021-2022",
+  "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
+  "header_profile": "v3",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 30
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-B00009",
+        "E",
+        "11-18-2021",
+        "11-18-2021",
+        "12-31-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "785c72680b4e2f60af22e1821658d840fcb4aa5d9ff0412f027e22e0ab2b02f2",
+      "reason": "shifted_row",
+      "row_number": 2054
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "MANUEL COLÓN ELECTRICAL CORP."
+      ],
+      "raw_record_sha256": "9bd6325511c531f5af0590c8af41973eea27db0ed22e6d8754e97941f09a49c2",
+      "reason": "shifted_row",
+      "row_number": 2055
+    },
+    {
+      "raw_fields": [
+        "4032",
+        "Municipio de Guaynabo",
+        "2021-000770",
+        "A",
+        "04-28-2022",
+        "04-28-2022",
+        "06-09-2023",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "e472324b0357f753cf440ae2a3af9fd2e2b4ccbb9fb09c09f6a870794e011b12",
+      "reason": "shifted_row",
+      "row_number": 8537
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "10000.00",
+        "0.00",
+        "OPTIMUS ENGINEERS & CONTRACTORS CORP."
+      ],
+      "raw_record_sha256": "cfca8a31481442f5fda2066bf5962b7cfedfb6ce6916bc94f6b7da8e3b0bfff0",
+      "reason": "shifted_row",
+      "row_number": 8538
+    },
+    {
+      "raw_fields": [
+        "4032",
+        "Municipio de Guaynabo",
+        "2021-000770",
+        "B",
+        "05-26-2022",
+        "05-26-2022",
+        "06-09-2023",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "1b1830d2914cc079ebf97e39b4a4d0fdb0a2848123ac86468d6d397790329467",
+      "reason": "shifted_row",
+      "row_number": 8539
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "7800.00",
+        "0.00",
+        "OPTIMUS ENGINEERS & CONTRACTORS CORP."
+      ],
+      "raw_record_sha256": "4d4cddd60777d872079f09170f8a0f3e394676acf2b23cb3461d7d4823b2cc6c",
+      "reason": "shifted_row",
+      "row_number": 8540
+    },
+    {
+      "raw_fields": [
+        "3159",
+        "Autoridad del Distrito del Centro de Convenciones de Puerto Rico",
+        "2022-000014",
+        "B",
+        "06-24-2022",
+        "06-24-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "efbec6a64b284701b1a466b88881ac5fde7e619d23b32ce3cdddf9130a702397",
+      "reason": "shifted_row",
+      "row_number": 11889
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "3000.00",
+        "0.00",
+        "SYNERGY M & E SERVICES INC"
+      ],
+      "raw_record_sha256": "ad75b054ac60f90b95344c3d6317a04404f22ed3f8e7f4072559b323af966743",
+      "reason": "shifted_row",
+      "row_number": 11890
+    },
+    {
+      "raw_fields": [
+        "3159",
+        "Autoridad del Distrito del Centro de Convenciones de Puerto Rico",
+        "2022-000014",
+        "A",
+        "09-01-2021",
+        "09-01-2021",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "eb44de8ab5c12240229f5ac71a04c6f05bfb802a0ef33ecd137cd534b9b883c8",
+      "reason": "shifted_row",
+      "row_number": 11898
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "6800.00",
+        "0.00",
+        "SYNERGY M & E SERVICES INC"
+      ],
+      "raw_record_sha256": "61206f5b19e0b9220e147444d28315082a3c03db7905ece28f69893d26ff13ae",
+      "reason": "shifted_row",
+      "row_number": 11899
+    },
+    {
+      "raw_fields": [
+        "4066",
+        "Municipio de San Lorenzo",
+        "2022-000062",
+        "A",
+        "12-22-2021",
+        "12-22-2021",
+        "03-31-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "38a280852ed27b0579b8ef72289898e6d68bdd91acbf788e8e7d56b83f5718fc",
+      "reason": "shifted_row",
+      "row_number": 14837
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "12000.00",
+        "0.00",
+        "JOSUE ANZUETA GONZALEZ"
+      ],
+      "raw_record_sha256": "7ca0e75c7f8489b9d275e8877cc81a78f932d1010d75b64e20be1bd5e184bc47",
+      "reason": "shifted_row",
+      "row_number": 14838
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2022-000089",
+        "C",
+        "04-19-2022",
+        "04-19-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "64a7d6d9678d85be5d8ef1d9607b57882a0304e804ef943a0a81d3ad11a903da",
+      "reason": "shifted_row",
+      "row_number": 15915
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "A&D MULTI SERVICE AND DEVELOPMENT INC."
+      ],
+      "raw_record_sha256": "3d0d9d1f63f7d140d5730e94861449546ab4d1db2c9de840658a25d0032e13d8",
+      "reason": "shifted_row",
+      "row_number": 15916
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2022-000089",
+        "B",
+        "12-13-2021",
+        "01-01-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "81161489d4b95fab405e82c3045e008d7c19661b95173cf7b468e0bb052f3bf4",
+      "reason": "shifted_row",
+      "row_number": 15943
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "13200.00",
+        "0.00",
+        "A&D MULTI SERVICE AND DEVELOPMENT INC."
+      ],
+      "raw_record_sha256": "583931c7ef6beb4c1a897ae3cf62c5ea531ef4f28c6377fe2ecbd8aae72a9b0f",
+      "reason": "shifted_row",
+      "row_number": 15944
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2022-000089",
+        "A",
+        "10-04-2021",
+        "10-04-2021",
+        "12-31-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "9018b2f204caea87fc78a03a71b2eda60f2180a9d179013ba6e286b836326cfc",
+      "reason": "shifted_row",
+      "row_number": 15945
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1150.00",
+        "0.00",
+        "A&D MULTI SERVICE AND DEVELOPMENT INC."
+      ],
+      "raw_record_sha256": "914e22a31e2c6fd73509305e016ac674de44ed002b7a4857596ab13342b51756",
+      "reason": "shifted_row",
+      "row_number": 15946
+    },
+    {
+      "raw_fields": [
+        "4016",
+        "Municipio de Carolina",
+        "2022-000117",
+        "A",
+        "04-27-2022",
+        "05-01-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "e2e67862636185c6f9f74b4be4eaca4766be9a8a4abedc2abb0376ee0eff135e",
+      "reason": "shifted_row",
+      "row_number": 16895
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "41500.00",
+        "0.00",
+        "MARÍA DE LOURDES MARRERO FÈLIX"
+      ],
+      "raw_record_sha256": "09fbeee095dcfabd9b1c485a75d113d94f4db408132f49f6e1adfc3681a59483",
+      "reason": "shifted_row",
+      "row_number": 16896
+    },
+    {
+      "raw_fields": [
+        "4069",
+        "Municipio de Toa Alta",
+        "2022-000119",
+        "B",
+        "06-30-2022",
+        "06-30-2022",
+        "09-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "86461a9739ee534342554b71e429bc9c8a44348fd063b8d2ee2728e8d80f532d",
+      "reason": "shifted_row",
+      "row_number": 16939
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "5550.00",
+        "0.00",
+        "OMAR J.QUEVEDO APONTE"
+      ],
+      "raw_record_sha256": "c60c7d7029c2b9fa42c71a979f214eb8493a61834e2d0e55504735ff4b3ce584",
+      "reason": "shifted_row",
+      "row_number": 16940
+    },
+    {
+      "raw_fields": [
+        "4069",
+        "Municipio de Toa Alta",
+        "2022-000119",
+        "A",
+        "10-15-2021",
+        "10-15-2021",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f49530c545b423ff2da4749cf90dc2cf3d63f681ac82dfecc2a314a8494e666e",
+      "reason": "shifted_row",
+      "row_number": 16942
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "2250.00",
+        "0.00",
+        "OMAR J.QUEVEDO APONTE"
+      ],
+      "raw_record_sha256": "d8f197a07f2857451c8e90537c93dc8c80dd3e019a95267564e8934baad8d914",
+      "reason": "shifted_row",
+      "row_number": 16943
+    },
+    {
+      "raw_fields": [
+        "4026",
+        "Municipio de Dorado",
+        "2022-000198",
+        "A",
+        "01-28-2022",
+        "02-01-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "6932a5a747339f0b4d4b86c73d5b69216bfdf95f347b3eb7701688d5574bc55e",
+      "reason": "shifted_row",
+      "row_number": 18969
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "19000.00",
+        "0.00",
+        "CLEARWATER POOL & SPA INC."
+      ],
+      "raw_record_sha256": "4eb37589ad7bb16d50f741026088498d70e260cf968f7edeb9d8035710559aca",
+      "reason": "shifted_row",
+      "row_number": 18970
+    },
+    {
+      "raw_fields": [
+        "4036",
+        "Municipio de Humacao",
+        "2022-000447",
+        "B",
+        "02-25-2022",
+        "02-28-2022",
+        "06-30-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "34f48d51345fb429b8a71d0d85178797af1e654d6d351145140535706dde9ed9",
+      "reason": "shifted_row",
+      "row_number": 21489
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "6800.00",
+        "0.00",
+        "JAVIER L. CARRILLO RAMOS"
+      ],
+      "raw_record_sha256": "6c2fdaaf16361f3debff4e948b18ac3d369a851282b0a13390a873fe0f4aa6a9",
+      "reason": "shifted_row",
+      "row_number": 21490
+    },
+    {
+      "raw_fields": [
+        "4036",
+        "Municipio de Humacao",
+        "2022-000447",
+        "A",
+        "11-18-2021",
+        "11-18-2021",
+        "02-27-2022",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "6679c8f6ae9610e519a0d2e7c697e4ae36fa1991f2510726b1018f39b2e41bdc",
+      "reason": "shifted_row",
+      "row_number": 21494
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "JAVIER L. CARRILLO RAMOS"
+      ],
+      "raw_record_sha256": "528a8b5cd9cce10286b2121e3372c299bbec140ad3eb613cca1ae9d2091cf505",
+      "reason": "shifted_row",
+      "row_number": 21495
+    }
+  ],
+  "report_hash": "bd0eb8c67bdb7caa55bff921456594c7918d1420981070f13a8bde10e8041494",
+  "rows_certified": 25554,
+  "rows_quarantined": 30,
+  "rows_total": 25584,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "472b7e3b55b9dc02dd2b755b0b3ecfbb855465104cf4b0aea7dc50eab97fdcec",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2021-2022.csv",
+  "source_unique_contribution_count": 25305,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2021-2022",
+  "verdict": "certified_with_quarantine"
+}

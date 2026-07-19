@@ -12,12 +12,17 @@ from contract_utils import PR_TIMEZONE
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 RAW_DIR    = REPO_ROOT / "data" / "raw"
+QUARANTINE_DIR = REPO_ROOT / "data" / "quarantine" / "bulk"
+EVIDENCE_DIR = REPO_ROOT / "data" / "evidence" / "bulk"
 DB_PATH    = REPO_ROOT / "data" / "db" / "contratos.db"
 STATE_FILE = REPO_ROOT / "data" / "db" / "monitor_state.json"
 
 # ── OCPR endpoints ─────────────────────────────────────────────────────────
 BASE_URL = "https://consultacontratos.ocpr.gov.pr"
+REGISTRY_URL = f"{BASE_URL}/"
 DOWNLOAD_PATH = "/contract/downloadfrequentsearchfiscalyeardocument"
+ALLOWED_SOURCE_HOSTS = frozenset({"consultacontratos.ocpr.gov.pr"})
+MAX_BULK_BYTES = 50_000_000
 SEARCH_URL = f"{BASE_URL}/contract/search"
 
 # ── Fiscal years ───────────────────────────────────────────────────────────

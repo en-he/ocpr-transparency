@@ -12,21 +12,33 @@ Usage:
     python pipeline/download.py --force
 """
 import argparse
+import hashlib
 import re
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import requests
 
+from capture_bulk_snapshot import (
+    capture_bulk_snapshot,
+    promote_bulk_snapshot,
+    retain_existing_bulk_snapshot,
+)
+from discover_bulk_sources import SourceObservation, discover_bulk_sources
+
 from config import (
     ARCHIVED_ONLY_FISCAL_YEARS,
+    ALLOWED_SOURCE_HOSTS,
     BASE_URL,
     BULK_CSV_START_YEAR,
     DOWNLOAD_PATH,
+    EVIDENCE_DIR,
     HEADERS,
-    KNOWN_LIVE_404_YEARS,
+    MAX_BULK_BYTES,
+    QUARANTINE_DIR,
     RAW_DIR,
+    REGISTRY_URL,
     bulk_csv_years_through_current,
     current_fiscal_year,
     format_fiscal_year,
@@ -70,53 +82,129 @@ def discover_live_refresh_years(out_dir: Path, *, today: date | None = None) -> 
     ]
 
 
-def download_year(year: str, out_dir: Path, force: bool = False) -> bool:
-    """Download a single fiscal year CSV. Returns True on success."""
-    out_path = out_dir / f"contratos_{year}.csv"
-    tmp_path = out_dir / f"contratos_{year}.csv.part"
+def _requests_get(url: str, *, method: str = "GET", **kwargs):
+    if method.upper() != "GET":
+        raise ValueError("bulk source transport is GET-only")
+    return requests.get(url, **kwargs)
 
-    if out_path.exists() and not force:
-        print(f"  [skip] {year} already exists ({out_path.stat().st_size / 1024:.1f} KB)")
-        return True
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _has_symlink_component(path: Path) -> bool:
+    absolute = path if path.is_absolute() else Path.cwd() / path
+    current = Path(absolute.anchor)
+    for component in absolute.parts[1:]:
+        current /= component
+        if current.is_symlink():
+            return True
+    return False
+
+
+def download_year(
+    year: str,
+    out_dir: Path,
+    force: bool = False,
+    *,
+    observation: SourceObservation | None = None,
+    http_get=_requests_get,
+    quarantine_dir: Path = QUARANTINE_DIR,
+    evidence_dir: Path = EVIDENCE_DIR,
+    captured_at: str | None = None,
+    max_bytes: int = MAX_BULK_BYTES,
+) -> bool:
+    """Capture and explicitly promote one independently discovered CSV."""
+    del force  # Hash identity, not a force flag, controls replacement.
+    out_path = out_dir / f"contratos_{year}.csv"
+    if _has_symlink_component(out_path):
+        print(f"  [hold] {year} active path contains a symlink")
+        return False
 
     if year in ARCHIVED_ONLY_FISCAL_YEARS:
         if out_path.exists():
-            print(f"  [keep] {year} preserved archived copy retained ({out_path.stat().st_size / 1024:.1f} KB)")
+            print(f"  [keep] {year} preserved archived copy retained")
             return True
-        print(f"  [warn] {year} is archive-only and missing locally; live portal copy is unavailable")
+        print(f"  [warn] {year} is archive-only and missing locally")
         return False
 
-    url = f"{BASE_URL}{DOWNLOAD_PATH}?q={year}"
-    if year in KNOWN_LIVE_404_YEARS:
-        print(f"  [probe] {year} is still listed in the portal UI but currently unresolved in the official record")
-    print(f"  [fetch] {year} <- {url}")
+    if observation is None or observation.fiscal_year != year:
+        print(f"  [hold] {year} has no bounded discovery observation")
+        return False
+    if observation.review_required or not observation.eligible:
+        if observation.status in {"listed_but_404", "unavailable"}:
+            print(f"  [none] {year} {observation.status}; active evidence unchanged")
+            return True
+        print(f"  [hold] {year} {observation.status}: {observation.reason}")
+        return False
+    if not observation.sha256:
+        print(f"  [hold] {year} eligible observation has no source hash")
+        return False
 
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=120, stream=True)
-        resp.raise_for_status()
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        total = 0
-        if tmp_path.exists():
-            tmp_path.unlink()
-        with open(tmp_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=65536):
-                f.write(chunk)
-                total += len(chunk)
-        tmp_path.replace(out_path)
-
-        print(f"  [ok]   {year} -> {out_path} ({total / 1024:.1f} KB)")
+    if out_path.is_file() and _sha256_file(out_path) == observation.sha256:
+        print(f"  [same] {year} exact source hash already active")
         return True
 
-    except (requests.RequestException, OSError) as e:
-        print(f"  [err]  {year} failed: {e}")
-        if tmp_path.exists():
-            tmp_path.unlink()
-        if out_path.exists():
-            print(f"  [keep] {year} left existing local copy in place")
-        elif year in KNOWN_LIVE_404_YEARS:
-            print(f"  [note] {year} remains absent locally until an official bulk CSV is recovered")
+    print(f"  [capture] {year} <- {observation.requested_url}")
+    response = None
+    try:
+        response = http_get(
+            observation.requested_url,
+            method="GET",
+            headers=dict(HEADERS),
+            timeout=120,
+            allow_redirects=False,
+            stream=True,
+        )
+        result = capture_bulk_snapshot(
+            response=response,
+            fiscal_year=year,
+            source_url=observation.requested_url,
+            quarantine_dir=quarantine_dir,
+            evidence_dir=evidence_dir,
+            active_view=out_path,
+            allowed_hosts=ALLOWED_SOURCE_HOSTS,
+            captured_at=captured_at
+            or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            max_bytes=max_bytes,
+        )
+    except (requests.RequestException, OSError, ValueError) as exc:
+        print(f"  [err]  {year} capture failed: {exc}")
         return False
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
+    if result.status not in {"captured", "unchanged"} or result.evidence_path is None:
+        print(f"  [hold] {year} {result.status}: {result.reason}")
+        return False
+    if result.sha256 != observation.sha256:
+        print(f"  [hold] {year} changed between discovery and capture")
+        return False
+
+    try:
+        if out_path.is_file():
+            retain_existing_bulk_snapshot(
+                source_path=out_path,
+                evidence_dir=evidence_dir,
+                fiscal_year=year,
+                max_bytes=max_bytes,
+            )
+        promote_bulk_snapshot(evidence_path=result.evidence_path, active_view=out_path)
+    except (OSError, ValueError) as exc:
+        print(f"  [err]  {year} promotion failed: {exc}")
+        return False
+    if _sha256_file(out_path) != observation.sha256:
+        print(f"  [err]  {year} promoted bytes failed hash verification")
+        return False
+
+    print(f"  [ok]   {year} promoted certified evidence {observation.sha256}")
+    return True
 
 
 def main():
@@ -131,7 +219,11 @@ def main():
         help="Only probe fiscal years newer than the newest locally preserved raw CSV",
     )
     parser.add_argument("--out-dir", default=str(RAW_DIR))
-    parser.add_argument("--force", action="store_true", help="Re-download existing files")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-evaluate discovered sources; identical hashes remain no-ops",
+    )
     parser.add_argument("--delay", type=float, default=1.5, help="Seconds between requests")
     args = parser.parse_args()
 
@@ -152,26 +244,60 @@ def main():
         print(f"\nNo new live fiscal years to probe in {out_dir}.\n")
         return
 
-    print(f"\nDownloading {len(years)} fiscal year(s) -> {out_dir}\n")
+    print(f"\nDiscovering bounded official sources for {len(years)} fiscal year(s)\n")
+    local_live_years = [
+        year
+        for year in discover_local_raw_fiscal_years(out_dir)
+        if year not in ARCHIVED_ONLY_FISCAL_YEARS
+    ]
+    newest_certified = local_live_years[0] if local_live_years else None
+    report = discover_bulk_sources(
+        registry_url=REGISTRY_URL,
+        newest_certified_year=newest_certified,
+        current_fiscal_year=current_fiscal_year(),
+        http_get=_requests_get,
+        allowed_hosts=ALLOWED_SOURCE_HOSTS,
+        bulk_url_template=f"{BASE_URL}{DOWNLOAD_PATH}?q={{fiscal_year}}",
+        adjacent_newer_years=1,
+        max_bytes=MAX_BULK_BYTES,
+    )
+    observations = {item.fiscal_year: item for item in report.observations}
 
-    ok = err = skip = 0
+    promoted = err = unchanged = 0
     for i, year in enumerate(years):
         out_path = out_dir / f"contratos_{year}.csv"
-        existed = out_path.exists() and not args.force
-
-        success = download_year(year, out_dir, force=args.force)
-
-        if existed and success:
-            skip += 1
-        elif success:
-            ok += 1
+        safe_active = out_path.is_file() and not _has_symlink_component(out_path)
+        before_hash = _sha256_file(out_path) if safe_active else None
+        observation = observations.get(year)
+        if observation is None and safe_active:
+            print(f"  [keep] {year} outside bounded refresh window; certified active retained")
+            success = True
         else:
-            err += 1
+            success = download_year(
+                year,
+                out_dir,
+                force=args.force,
+                observation=observation,
+            )
+        after_safe = out_path.is_file() and not _has_symlink_component(out_path)
+        after_hash = _sha256_file(out_path) if after_safe else None
 
-        if i < len(years) - 1 and not existed:
+        if not success:
+            err += 1
+        elif before_hash == after_hash:
+            unchanged += 1
+        else:
+            promoted += 1
+
+        if i < len(years) - 1:
             time.sleep(args.delay)
 
-    print(f"\nDone. {ok} downloaded, {skip} skipped, {err} errors.")
+    print(
+        f"\nDone. {promoted} promoted, {unchanged} unchanged/unavailable, "
+        f"{err} held or failed."
+    )
+    if err:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

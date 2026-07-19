@@ -1,0 +1,1030 @@
+{
+  "archive_url": null,
+  "byte_length": 18110017,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 22,
+  "encoding": "latin-1",
+  "fiscal_year": "2019-2020",
+  "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
+  "header_profile": "v3",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 74
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "3052",
+        "Recinto Universitario de Mayagüez de la Universidad de Puerto Rico",
+        "2017-000244",
+        "A",
+        "10-31-2019",
+        "10-31-2019",
+        "01-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "79577a9a30d00d1e9e943884f2efb787f78c115d870c1c76142591bf5d3a3544",
+      "reason": "shifted_row",
+      "row_number": 1573
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "31050.00",
+        "0.00",
+        "PUCHO POOL CENTER INC."
+      ],
+      "raw_record_sha256": "c43e628621a7dc890c00f80f48a33bbda79bd509aa5011f75c088eb3ec251197",
+      "reason": "shifted_row",
+      "row_number": 1574
+    },
+    {
+      "raw_fields": [
+        "4032",
+        "Municipio de Guaynabo",
+        "2018-000669",
+        "A",
+        "04-08-2020",
+        "04-08-2020",
+        "04-08-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "98bc5ba63eb5cf036e4289abe02db082511d58ea388fca8137a85354126602f9",
+      "reason": "shifted_row",
+      "row_number": 2743
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "93000.00",
+        "0.00",
+        "OPTIMUS ENGINEERS & CONTRACTORS"
+      ],
+      "raw_record_sha256": "bdf967a34e77feba7c658723d386e9807e75655c8b81ac261b40bcef6390a1f0",
+      "reason": "shifted_row",
+      "row_number": 2744
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-B00009",
+        "C",
+        "06-30-2020",
+        "06-30-2020",
+        "06-30-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "19d1878685a0ceac0a55a6f86304bb8d906ff99b624f5caf50224e8ac362f116",
+      "reason": "shifted_row",
+      "row_number": 8500
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "94800.00",
+        "0.00",
+        "MANUEL COLÓN ELECTRICAL CORP."
+      ],
+      "raw_record_sha256": "c8e3ad9f34395bfd03a99dbff946af9296033f681c77a55a7c6b32f716169f51",
+      "reason": "shifted_row",
+      "row_number": 8501
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2019-B00009",
+        "B",
+        "08-22-2019",
+        "08-22-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "8cdc38d7a46f79dfd4801ed2dbf8bc1b6a98544ad02f1408a1167a46b55f7b20",
+      "reason": "shifted_row",
+      "row_number": 8502
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "94800.00",
+        "0.00",
+        "MANUEL COLÓN ELECTRICAL CORP."
+      ],
+      "raw_record_sha256": "c8e3ad9f34395bfd03a99dbff946af9296033f681c77a55a7c6b32f716169f51",
+      "reason": "shifted_row",
+      "row_number": 8503
+    },
+    {
+      "raw_fields": [
+        "3159",
+        "Autoridad del Distrito del Centro de Convenciones de Puerto Rico",
+        "2020-000013",
+        "A",
+        "09-19-2019",
+        "09-19-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "1dcf978843c5e42620929a3df7b31fd68610015eb70a34fdef26b903a7f5a96d",
+      "reason": "shifted_row",
+      "row_number": 12107
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "144079.40",
+        "0.00",
+        "SYNERGY M & E SERVICES INC"
+      ],
+      "raw_record_sha256": "3fac91f81dfe64b3cea315797211de026add3c4a18a0b5044bb3e309884cb381",
+      "reason": "shifted_row",
+      "row_number": 12108
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2020-000016",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f871281e6abd816192aa0b5b4f43b8deb1382121668eccf10ebd080838ace809",
+      "reason": "shifted_row",
+      "row_number": 12543
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "27600.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "3d44b1a5021e56b35df26abfd9774ced54ad66629aad26380cc521dd314e2d54",
+      "reason": "shifted_row",
+      "row_number": 12544
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2020-000016",
+        "B",
+        "11-05-2019",
+        "11-05-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "c60e1d174099b1794a0b8e7c9cf59e38f3f6a650bdce2ce3be3ac5987464fced",
+      "reason": "shifted_row",
+      "row_number": 12545
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "300.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "a89fb50ee44fb475897527d9276d04c2ce1be9c0276b3739a379322c618ff132",
+      "reason": "shifted_row",
+      "row_number": 12546
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2020-000016",
+        "C",
+        "11-13-2019",
+        "11-13-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "6bd36f597eb25053f4fd26ff007a8f8a95a3e6fade668ded4e5f7cf912e3d069",
+      "reason": "shifted_row",
+      "row_number": 12547
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1000.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "48719873e6a73bb0f781a0c588b19b0efb0de8b5e6eac8bc11d186e1b1edf8b1",
+      "reason": "shifted_row",
+      "row_number": 12548
+    },
+    {
+      "raw_fields": [
+        "4027",
+        "Municipio de Fajardo",
+        "2020-000016",
+        "A",
+        "08-26-2019",
+        "08-26-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f6342ce66d7ffff125189b0573e2ba81742108f7487f264d7ec31c01ce48f376",
+      "reason": "shifted_row",
+      "row_number": 12551
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1274.56",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "2b4b73e9e8e7193cebb37cc45ddbb374887c8b33216310de0ba10fd304f9bc10",
+      "reason": "shifted_row",
+      "row_number": 12552
+    },
+    {
+      "raw_fields": [
+        "4010",
+        "Municipio de Barranquitas",
+        "2020-000018",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "ce55185bf870fefcd8b2ae20a787aed7f5f0e408a82fdfe55c6835897f6fdcb7",
+      "reason": "shifted_row",
+      "row_number": 12956
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "13500.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "0f76965ae5d6d8c20ba50a3233cc8697fe0c30f7cb854b75eb11da7e8bc87733",
+      "reason": "shifted_row",
+      "row_number": 12957
+    },
+    {
+      "raw_fields": [
+        "4054",
+        "Municipio de Naranjito",
+        "2020-000019",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a14d9a781f0c2cdac0e99c6b620b77a220fb8b10d6ea949641cc727a0f74dee0",
+      "reason": "shifted_row",
+      "row_number": 13255
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "24000.00",
+        "0.00",
+        "AHS CONSTRUCTION & RENT LLC"
+      ],
+      "raw_record_sha256": "9070dabddb06215bfc66234aab2a0c84c3e39de17421c46cdebd499421fddea2",
+      "reason": "shifted_row",
+      "row_number": 13256
+    },
+    {
+      "raw_fields": [
+        "2300",
+        "Oficina de Administración de los Tribunales",
+        "2020-000022",
+        "A",
+        "06-30-2020",
+        "07-01-2020",
+        "12-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a05fa5e48ee03904dfbce08b55f8e3a886ee8caebf81ee92b16e57564a40fff4",
+      "reason": "shifted_row",
+      "row_number": 13867
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "21600.00",
+        "0.00",
+        "GC COMPANY CORP."
+      ],
+      "raw_record_sha256": "9ee52fd5bf6171d9f5ef798160dc157b91572c7d19bdd1f523d21bc46bf9d28e",
+      "reason": "shifted_row",
+      "row_number": 13868
+    },
+    {
+      "raw_fields": [
+        "4033",
+        "Municipio de Gurabo",
+        "2020-000052",
+        "\u0000",
+        "07-09-2019",
+        "07-09-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "3309ae0db987d7f6a87b41eae67a781b526a3743d38955afb87061b63d2dfd6e",
+      "reason": "shifted_row",
+      "row_number": 19420
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "15360.00",
+        "0.00",
+        "JONATHAN PEREZ MONTANEZ"
+      ],
+      "raw_record_sha256": "567771c7a410c20326f2b8382d8276b22d9d3b5bf86ed0bbac52c82410775241",
+      "reason": "shifted_row",
+      "row_number": 19421
+    },
+    {
+      "raw_fields": [
+        "4066",
+        "Municipio de San Lorenzo",
+        "2020-000062",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "e1ffc8c6c20fdab6a553bfa447b57c28c9dd23defd9bd2abfa9c01a200a2162d",
+      "reason": "shifted_row",
+      "row_number": 21385
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "8000.00",
+        "0.00",
+        "JOSUE ANZUETA GONZALEZ"
+      ],
+      "raw_record_sha256": "754171a2cece0d1dacc7a2a4f3dca9ac20e5501df2d3745935ea84198fdf1698",
+      "reason": "shifted_row",
+      "row_number": 21386
+    },
+    {
+      "raw_fields": [
+        "4066",
+        "Municipio de San Lorenzo",
+        "2020-000062",
+        "A",
+        "05-18-2020",
+        "05-18-2020",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "19d8977511deaced9e35c1d026c6fc62d61b898e810f97faffab490327fdfea4",
+      "reason": "shifted_row",
+      "row_number": 21388
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "9000.00",
+        "0.00",
+        "JOSUE ANZUETA GONZALEZ"
+      ],
+      "raw_record_sha256": "41596a441f6326711d56c37a68cd296e2e57a14f2d778af78011ee30dc4fc956",
+      "reason": "shifted_row",
+      "row_number": 21389
+    },
+    {
+      "raw_fields": [
+        "4030",
+        "Municipio de Guayama",
+        "2020-000092",
+        "\u0000",
+        "07-15-2019",
+        "07-15-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "db425f14cf6934ffc695d5a595105bc236087fdcb8a64b7b259a605244ca30ea",
+      "reason": "shifted_row",
+      "row_number": 26510
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "20400.00",
+        "0.00",
+        "RAMON SOLIVAN  GONZALEZ DBA SES PEST CONTROL AND"
+      ],
+      "raw_record_sha256": "96accbf30fd3f65d20748e8c4198ce8296876917aa7482dd5ef1dbd5f1df821d",
+      "reason": "shifted_row",
+      "row_number": 26511
+    },
+    {
+      "raw_fields": [
+        "4030",
+        "Municipio de Guayama",
+        "2020-000092",
+        "A",
+        "06-22-2020",
+        "07-01-2020",
+        "07-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "f7144b4b52bcb0d4227ed8877de4da6c2c171e89a2f2a4f00c456ba05132e667",
+      "reason": "shifted_row",
+      "row_number": 26522
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "0.00",
+        "0.00",
+        "RAMON SOLIVAN  GONZALEZ DBA SES PEST CONTROL AND"
+      ],
+      "raw_record_sha256": "98895f5af18a067a45fdf1081313c73b1b6bfab9a625f0d681aca9ffd4a02719",
+      "reason": "shifted_row",
+      "row_number": 26523
+    },
+    {
+      "raw_fields": [
+        "4071",
+        "Municipio de Trujillo Alto",
+        "2020-000093",
+        "\u0000",
+        "08-06-2019",
+        "08-06-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "0e8833fa6655ee09cc5e361e1ba117f25ba5007da3eeb09fc10f4506a359ac25",
+      "reason": "shifted_row",
+      "row_number": 26569
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "23349.00",
+        "0.00",
+        "PUERTO RICO QUALITY WATER INC."
+      ],
+      "raw_record_sha256": "60da272147c436cbe0a0dd7872deeef00836f44da5915efc80aed8a823712dfb",
+      "reason": "shifted_row",
+      "row_number": 26570
+    },
+    {
+      "raw_fields": [
+        "4071",
+        "Municipio de Trujillo Alto",
+        "2020-000094",
+        "\u0000",
+        "08-06-2019",
+        "08-06-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "944d74d729786a834cbb7442cddf11fc74b50af158ceeb7be74a04e51b7d3a32",
+      "reason": "shifted_row",
+      "row_number": 26842
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "12216.00",
+        "0.00",
+        "PREVENTIVE MAINTENANCE SERVICES INC."
+      ],
+      "raw_record_sha256": "dfd9281d3211f60300d463d55e8ac5d56e3b7d4b62f7db00a9f4f99d6ea7c691",
+      "reason": "shifted_row",
+      "row_number": 26843
+    },
+    {
+      "raw_fields": [
+        "4026",
+        "Municipio de Dorado",
+        "2020-000138",
+        "A",
+        "12-30-2019",
+        "01-01-2020",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "7272a38492713d91c70e794617beae43f51b6ec32d54a1f152b612ecc45685ad",
+      "reason": "shifted_row",
+      "row_number": 32870
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "9000.00",
+        "0.00",
+        "CLEARWATER POOL & SPA INC."
+      ],
+      "raw_record_sha256": "69b7d7e55b09f8b02d151568eba6ebfc4fea4f01201ed7757dcd335aad5bb484",
+      "reason": "shifted_row",
+      "row_number": 32871
+    },
+    {
+      "raw_fields": [
+        "4026",
+        "Municipio de Dorado",
+        "2020-000138",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "12-31-2019",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "b55137de03b8d7b471e99b7ffc1e920eec518f121546d65a501c27d32c75229f",
+      "reason": "shifted_row",
+      "row_number": 32872
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "9000.00",
+        "0.00",
+        "CLEARWATER POOL & SPA INC."
+      ],
+      "raw_record_sha256": "69b7d7e55b09f8b02d151568eba6ebfc4fea4f01201ed7757dcd335aad5bb484",
+      "reason": "shifted_row",
+      "row_number": 32873
+    },
+    {
+      "raw_fields": [
+        "2160",
+        "Administración de Servicios Médicos de Puerto Rico",
+        "2020-000194",
+        "\u0000",
+        "07-01-2019",
+        "07-01-2019",
+        "06-30-2020",
+        "SERVICIOS DE RADIOTERAPIA"
+      ],
+      "raw_record_sha256": "e778499d4c3c6e2517f665829de94cae051b313d80ad533255e7d907b6e19fa7",
+      "reason": "shifted_row",
+      "row_number": 38748
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS RELACIONADOS CON LA SALUD",
+        "01-01-2020",
+        "216050.00",
+        "0.00",
+        "GRUPO RADIOTERAPIA DEL NORTE PSC"
+      ],
+      "raw_record_sha256": "29ad21040f03d9d94aea39367994a1e5bbe84d467d8f67f99e3c9e5cc8d133e1",
+      "reason": "shifted_row",
+      "row_number": 38749
+    },
+    {
+      "raw_fields": [
+        "3052",
+        "Recinto Universitario de Mayagüez de la Universidad de Puerto Rico",
+        "2020-000211",
+        "\u0000",
+        "01-31-2020",
+        "02-01-2020",
+        "01-31-2023",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "06a0bd2290a9b17579f36b1c6fc6a1ce3a9dad45d51fd26b4900da3f3222199d",
+      "reason": "shifted_row",
+      "row_number": 40255
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "359820.00",
+        "0.00",
+        "PUCHO POOL CENTER INC."
+      ],
+      "raw_record_sha256": "43609030cd9422ae9e91a3163707c320de7e24a009a59cd45a152f9f609ae1a3",
+      "reason": "shifted_row",
+      "row_number": 40256
+    },
+    {
+      "raw_fields": [
+        "4013",
+        "Municipio de Caguas",
+        "2020-000595",
+        "\u0000",
+        "07-18-2019",
+        "07-19-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "7df15a3b3649e38df45cadc5cb6212fc08e3c41ae5d72bb980f72ab70e2cc3dc",
+      "reason": "shifted_row",
+      "row_number": 58281
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "173974.68",
+        "0.00",
+        "CARRILLO RAMOS JAVIER LUIS/DBA EMPRESAS CARRILLO"
+      ],
+      "raw_record_sha256": "6f12f1d7f32ce26f842a9cfe511a4479f1da27a1c39436082b8aa2bc83ef00c2",
+      "reason": "shifted_row",
+      "row_number": 58282
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2020-000778",
+        "\u0000",
+        "08-02-2019",
+        "08-02-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "880cd24f33b1e700caa48bc113f7e04c604930cf48d62203b0cbc5c7ddcce735",
+      "reason": "shifted_row",
+      "row_number": 61569
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "7500.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "27bd420bd12587b756c90e41434037d2632c92a3031b94ea69c3176c4842af36",
+      "reason": "shifted_row",
+      "row_number": 61570
+    },
+    {
+      "raw_fields": [
+        "4032",
+        "Municipio de Guaynabo",
+        "2020-000802",
+        "\u0000",
+        "06-30-2020",
+        "06-30-2020",
+        "11-27-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "3eba90c7379f984b15f1f25e074da0f0aaa62acb24f0cabb858bcf1e084f13a5",
+      "reason": "shifted_row",
+      "row_number": 61857
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "70734.00",
+        "0.00",
+        "OPTIMUS CONTRACTORS CORP."
+      ],
+      "raw_record_sha256": "ea7f29a6f4608f6c0dbec381c09a9456d19bd6a52adaff4ed9308efbf47346e3",
+      "reason": "shifted_row",
+      "row_number": 61858
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2020-000836",
+        "\u0000",
+        "08-05-2019",
+        "08-05-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "5575cbd1311a18a2760484c4a449b610cb39c0cea7b4d45b0b56ce7f71626174",
+      "reason": "shifted_row",
+      "row_number": 62266
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "19800.00",
+        "0.00",
+        "JOSE CANDELARIA MUÑOZ D/B/A CANDELARIA POOL SERVIC"
+      ],
+      "raw_record_sha256": "c8539e1b3476be1472026e16d2248c5e34fc1705329f3e4de501b27bcece7bd7",
+      "reason": "shifted_row",
+      "row_number": 62267
+    },
+    {
+      "raw_fields": [
+        "4036",
+        "Municipio de Humacao",
+        "2020-000872",
+        "\u0000",
+        "06-12-2020",
+        "06-12-2020",
+        "12-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "24fbf797edde8ac1649b7e207eb86dea3763da57e83c2d6e36654e75d881628a",
+      "reason": "shifted_row",
+      "row_number": 62659
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "20400.00",
+        "0.00",
+        "CARRILLO RAMOS JAVIER"
+      ],
+      "raw_record_sha256": "bf06d163b6fca4af251b7f4e81bf86eda76fd4e78f7e93f6d7ac8ea7d882acf1",
+      "reason": "shifted_row",
+      "row_number": 62660
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2020-001672",
+        "\u0000",
+        "01-29-2020",
+        "02-01-2020",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a653971fd6da3327ce6cc5c9c4982239762cb10e002d3123a53b057973a45d61",
+      "reason": "shifted_row",
+      "row_number": 67123
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "29000.00",
+        "0.00",
+        "JOSE G. CANDELARIA MUÑOZ"
+      ],
+      "raw_record_sha256": "1b0fc91f7f9757b1cbb782d4f05b86e59bf6a24420bd458cae015b9dbd026bad",
+      "reason": "shifted_row",
+      "row_number": 67124
+    },
+    {
+      "raw_fields": [
+        "1465",
+        "Oficina Estatal de Conservación Histórica",
+        "2020-155011",
+        "\u0000",
+        "07-16-2019",
+        "07-16-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "787b4e5256eadf4170020f3377fd135d11117393856dba66827dd78cf6a6200a",
+      "reason": "shifted_row",
+      "row_number": 69961
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "06-30-2020",
+        "5400.00",
+        "0.00",
+        "GC COMPANY CORP."
+      ],
+      "raw_record_sha256": "7055f303dfbac0e15dedcaac0a0cce5cc831e5c1e30894d89b1ea00e5dfd3a71",
+      "reason": "shifted_row",
+      "row_number": 69962
+    },
+    {
+      "raw_fields": [
+        "1440",
+        "Negociado de la Policía de Puerto Rico",
+        "2020-C00020",
+        "\u0000",
+        "07-10-2019",
+        "07-10-2019",
+        "06-30-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "482c79a7e89a46982683ce6f92c9a15a22650a10a306eac4da70059179716ce1",
+      "reason": "shifted_row",
+      "row_number": 73708
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "14400.00",
+        "0.00",
+        "CANDELARIA'S POOL SERVICES"
+      ],
+      "raw_record_sha256": "445c25afd62818ea48c3b0db91b3e71e4edb7a2d8f428e9861fff5235e06a21c",
+      "reason": "shifted_row",
+      "row_number": 73709
+    },
+    {
+      "raw_fields": [
+        "3045",
+        "Administración de Terrenos de Puerto Rico",
+        "2021-000001",
+        "\u0000",
+        "06-30-2020",
+        "07-01-2020",
+        "06-30-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "d6b4f211a9c0731b1b76d827879710f5cdf0aee6062c4ae0377a9a354b586bd9",
+      "reason": "shifted_row",
+      "row_number": 84424
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "1740.00",
+        "0.00",
+        "Universal Equipment Sales & Services Corp."
+      ],
+      "raw_record_sha256": "f2daf8b485b8097d93449e3d7890edda27324c322f07595f59f4ee45b1fb9abd",
+      "reason": "shifted_row",
+      "row_number": 84425
+    },
+    {
+      "raw_fields": [
+        "4016",
+        "Municipio de Carolina",
+        "2021-000147",
+        "\u0000",
+        "06-30-2020",
+        "07-06-2020",
+        "12-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "36c4a33872afeb01a633f2884b7bfe1dbdc7cf708e88016cc982a02f5a241ee9",
+      "reason": "shifted_row",
+      "row_number": 86150
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "124200.00",
+        "0.00",
+        "MARIA DE LOURDES MARRERO FELIX"
+      ],
+      "raw_record_sha256": "07a991f677f9f1791a94e91b20fc45cac25ce503f24c46de70775de2b8692101",
+      "reason": "shifted_row",
+      "row_number": 86151
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2021-000182",
+        "\u0000",
+        "06-26-2020",
+        "07-01-2020",
+        "06-30-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a9369a160986e3524a89dc51b21c61c9a3a1c55497bf189c367671de36089305",
+      "reason": "shifted_row",
+      "row_number": 86236
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "7500.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "27bd420bd12587b756c90e41434037d2632c92a3031b94ea69c3176c4842af36",
+      "reason": "shifted_row",
+      "row_number": 86237
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2021-000183",
+        "\u0000",
+        "06-26-2020",
+        "07-01-2020",
+        "06-30-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "ffbb05eed5ff9de3bfeaafd8e2d825fdba67d14d6279b36cbf9ef9b4f88c5ded",
+      "reason": "shifted_row",
+      "row_number": 86240
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "66500.00",
+        "0.00",
+        "PILOT POOL LLC"
+      ],
+      "raw_record_sha256": "2e211710bb2ac235c9b3cac9632a52ee6489bca01f24548962e75d72031a5f58",
+      "reason": "shifted_row",
+      "row_number": 86241
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2021-000452",
+        "\u0000",
+        "06-30-2020",
+        "07-01-2020",
+        "06-30-2021",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "6541b7d869d11e8058d2e0d503bb13080ef6a1a4e53f2fe79fcd34981d8a7428",
+      "reason": "shifted_row",
+      "row_number": 86709
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "21600.00",
+        "0.00",
+        "JOSE CANDELARIA MUÑOZ D/B/A CANDELARIA POOL SERVIC"
+      ],
+      "raw_record_sha256": "64985853e4cc3dbe575769d77cf030402be84f051c9454c3509be3726b7b8a2b",
+      "reason": "shifted_row",
+      "row_number": 86710
+    },
+    {
+      "raw_fields": [
+        "4065",
+        "Municipio de San Juan",
+        "2021-000453",
+        "\u0000",
+        "06-30-2020",
+        "07-01-2020",
+        "12-31-2020",
+        "SERVICIOS DE MANTENIMIENTO DE PISCINAS Y FUENTES"
+      ],
+      "raw_record_sha256": "a5e07e312f5e469c09af9836e2a2b29d34efcbb48e1762ca76e199d104f884f4",
+      "reason": "shifted_row",
+      "row_number": 86711
+    },
+    {
+      "raw_fields": [
+        ",\"\"SERVICIOS MISCELÁNEOS NO PERSONALES",
+        "\u0000",
+        "34800.00",
+        "0.00",
+        "JOSE CANDELARIA MUÑOZ D/B/A CANDELARIA POOL SERVIC"
+      ],
+      "raw_record_sha256": "9f4a5e132828fde1d3a82748477a655ec109426930755812d1d1112b46ce4ddd",
+      "reason": "shifted_row",
+      "row_number": 86712
+    }
+  ],
+  "report_hash": "ec61c846d7eb3fdb10982874ce884cefe3412a3289eb2ed6395c2395d7924096",
+  "rows_certified": 87077,
+  "rows_quarantined": 74,
+  "rows_total": 87151,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "0ef4371dc6314199fdedee75e590a4ece883ac1959125b18ca6aba987c3a4a8b",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2019-2020.csv",
+  "source_unique_contribution_count": 87055,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2019-2020",
+  "verdict": "certified_with_quarantine"
+}

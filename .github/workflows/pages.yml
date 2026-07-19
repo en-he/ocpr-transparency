@@ -31,6 +31,13 @@ jobs:
         with:
           lfs: false
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify certified archive revision
+        run: python pipeline/generate_bulk_certification.py --check
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

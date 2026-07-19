@@ -1,0 +1,127 @@
+{
+  "archive_url": null,
+  "byte_length": 24708850,
+  "capture_time": "2026-04-03T00:31:39-04:00",
+  "capture_time_status": "git_first_seen",
+  "content_type": null,
+  "duplicate_count": 4,
+  "encoding": "latin-1",
+  "fiscal_year": "2012-2013",
+  "header_fingerprint": "77e95b69c1e0d0a68462a40df431f44885bb56127323084d788bb5b3a3d58ba6",
+  "header_profile": "v2",
+  "http_status": null,
+  "normalizer_version": "bulk-certify-normalizer-1.0.0",
+  "parser_version": "bulk-certify-parser-1.1.0",
+  "quarantine_reason_counts": {
+    "shifted_row": 5
+  },
+  "quarantined_rows": [
+    {
+      "raw_fields": [
+        "2256",
+        "Administración de Familias y Niños",
+        "2013-000023",
+        "\u0000",
+        "07-02-2012",
+        "07-01-2012",
+        "06-30-2013",
+        "TRANSFERENCIA DE FONDOS",
+        "TRANSFERENCIA DE FONDOS",
+        "\u0000",
+        "96000.00",
+        "\"ÏAZDIEL \"\"LEVANTANDO NUESTRA GENERACION",
+        " INC.\"\"\""
+      ],
+      "raw_record_sha256": "07b47aefadf74a6965ade272e86224918309c4d6af84425d18def5fb46d90b73",
+      "reason": "shifted_row",
+      "row_number": 19322
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2013-000084",
+        "\u0000",
+        "07-09-2012",
+        "07-09-2012",
+        "06-30-2013",
+        "COMPRA DE MATERIALES, MEDICINAS Y COMBUSTIBLE",
+        "COMPRA DE MATERIALES, SUMINISTROS Y EFECTOS",
+        "\u0000",
+        "100.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "1346b50e502e23d9951fcd04d3eafbaf463ad10a3debd9250faaf068a5aebe7e",
+      "reason": "shifted_row",
+      "row_number": 31961
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2013-000802",
+        "\u0000",
+        "02-15-2013",
+        "02-16-2013",
+        "06-30-2013",
+        "OBTENER EQUIPO Y VEHÍCULOS",
+        "COMPRA, VENTA Y ALQUILER DE EQUIPO, VEHÍCULOS Y OTROS",
+        "\u0000",
+        "10575.00",
+        "\"GUEVÁREZ & GUVÁREZ, CORP.",
+        ""
+      ],
+      "raw_record_sha256": "58bd8224dd758c08c9b38182638178246dca54d8eb90231a6a2ad77cf470a8a6",
+      "reason": "shifted_row",
+      "row_number": 83801
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2013-001144",
+        "\u0000",
+        "03-15-2013",
+        "\u0000",
+        "\u0000",
+        ",",
+        "\u0000",
+        "105000.00",
+        "DORAL BANK"
+      ],
+      "raw_record_sha256": "6e38fa048377264ab3623829a756fedbac6d5b32386c8e4094edcac62e51b708",
+      "reason": "shifted_row",
+      "row_number": 92100
+    },
+    {
+      "raw_fields": [
+        "4070",
+        "Municipio de Toa Baja",
+        "2013-001147",
+        "\u0000",
+        "02-26-2013",
+        "\u0000",
+        "\u0000",
+        ",",
+        "\u0000",
+        "79000.00",
+        "BANCO POPULAR DE PUERTO RICO"
+      ],
+      "raw_record_sha256": "7716c2aa39febc13671b8a14d05f81e3278ec4469a2834c0bd5021391e6531d3",
+      "reason": "shifted_row",
+      "row_number": 92174
+    }
+  ],
+  "report_hash": "8f3b4653913bddf8c61370a6313428c089bf91bb114a5de3bf4524a99cbdf602",
+  "rows_certified": 121475,
+  "rows_quarantined": 5,
+  "rows_total": 121480,
+  "schema_version": "bulk-certification-report-1",
+  "sha256": "7e3c737a7487c42a950d672fe5e33c1f43acca4fc5fcfc5fc9e03bfa5dc12b5e",
+  "source_channel": "official_bulk",
+  "source_file": "data/raw/contratos_2012-2013.csv",
+  "source_unique_contribution_count": 121471,
+  "source_url": "https://consultacontratos.ocpr.gov.pr/contract/downloadfrequentsearchfiscalyeardocument?q=2012-2013",
+  "verdict": "certified_with_quarantine"
+}
