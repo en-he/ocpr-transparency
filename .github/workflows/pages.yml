@@ -29,6 +29,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           lfs: false
 
       - uses: actions/setup-python@v5

@@ -26,6 +26,8 @@
 # Immutable evidence and generated artifacts stay byte-preserved.
 data/raw/*.csv -text -eol -diff
 data/raw/**/*.csv -text -eol -diff
+data/recovery/*.csv -text -eol -diff
+data/recovery/**/*.csv -text -eol -diff
 data/evidence/bulk/**/*.csv -text -eol -diff
 # Certification fixtures deliberately preserve Latin-1 bytes and CRLF/LF shape.
 tests/fixtures/bulk/*.csv -text -eol -diff

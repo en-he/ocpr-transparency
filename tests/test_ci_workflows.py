@@ -80,7 +80,8 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertEqual(permission_lines, ["contents: read"])
         self.assertRegex(
             workflow,
-            r"(?ms)actions/checkout@v4.*?with:\s*\n\s+lfs:\s*false.*?persist-credentials:\s*false",
+            r"(?ms)actions/checkout@v4.*?with:\s*\n"
+            r"\s+fetch-depth:\s*0.*?lfs:\s*false.*?persist-credentials:\s*false",
         )
         self.assertRegex(workflow, r"(?ms)actions/setup-python@v5.*?cache:\s*pip")
         self.assertRegex(
@@ -106,6 +107,22 @@ class CIWorkflowTests(unittest.TestCase):
             [command for command in BASELINE_COMMANDS if command in ci],
             [command for command in BASELINE_COMMANDS if command in sync],
         )
+
+    def test_every_certification_workflow_checks_out_complete_history(self):
+        for filename in ("ci.yml", "sync.yml", "pages.yml"):
+            workflow = workflow_text(filename)
+            checkout = re.search(
+                r"(?ms)uses: actions/checkout@v[45]\s*\n"
+                r"\s+with:\s*\n(?P<body>(?:\s+[^\n]+\n?)+?)"
+                r"(?=\s+- (?:uses:|name:|run:))",
+                workflow,
+            )
+            self.assertIsNotNone(checkout, filename)
+            self.assertRegex(
+                checkout.group("body"),
+                r"(?m)^\s+fetch-depth:\s*0\s*$",
+                filename,
+            )
 
     def test_sync_baseline_precedes_all_current_side_effect_steps(self):
         workflow = workflow_text("sync.yml")
@@ -191,6 +208,7 @@ class CIWorkflowTests(unittest.TestCase):
         )
         self.assertIsNotNone(checkout)
         self.assertRegex(checkout.group("body"), r"(?m)^\s+ref:\s*main\s*$")
+        self.assertRegex(checkout.group("body"), r"(?m)^\s+fetch-depth:\s*0\s*$")
         self.assertRegex(checkout.group("body"), r"(?m)^\s+lfs:\s*false\s*$")
 
     def test_sync_auto_commit_keeps_contract_and_has_stable_id(self):

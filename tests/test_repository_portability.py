@@ -192,6 +192,7 @@ class RepositoryPortabilityTests(unittest.TestCase):
             ".github/workflows/sync.yml",
             "docs/diagram.svg",
             "data/raw/example.csv",
+            "data/recovery/live_recovered_contracts.csv",
             "tests/fixtures/bulk/ocpr-bulk-v1.csv",
             "data/db/example.db-wal",
             "data/db/archive.sqlite3.bak",
