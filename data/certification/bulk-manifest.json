@@ -7253,10 +7253,6 @@
   ],
   "encoding": "latin-1",
   "generator_version": "bulk-certification-generator-1.0.0",
-  "normalization_registry": {
-    "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-    "version": "normalization-registry-1"
-  },
   "schema_version": "bulk-certification-manifest-1",
   "snapshots": [
     {
@@ -7269,10 +7265,6 @@
       "fiscal_year": "2010-2011",
       "header_fingerprint": "d847faf65f7039b2d01951082646a956db6bab2f555dc885e556ec2340ffcee5",
       "header_profile": "v1",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7301,10 +7293,6 @@
       "fiscal_year": "2011-2012",
       "header_fingerprint": "d847faf65f7039b2d01951082646a956db6bab2f555dc885e556ec2340ffcee5",
       "header_profile": "v1",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7333,10 +7321,6 @@
       "fiscal_year": "2012-2013",
       "header_fingerprint": "77e95b69c1e0d0a68462a40df431f44885bb56127323084d788bb5b3a3d58ba6",
       "header_profile": "v2",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7365,10 +7349,6 @@
       "fiscal_year": "2013-2014",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {},
@@ -7395,10 +7375,6 @@
       "fiscal_year": "2014-2015",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7427,10 +7403,6 @@
       "fiscal_year": "2015-2016",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7459,10 +7431,6 @@
       "fiscal_year": "2016-2017",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7491,10 +7459,6 @@
       "fiscal_year": "2017-2018",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7523,10 +7487,6 @@
       "fiscal_year": "2018-2019",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7555,10 +7515,6 @@
       "fiscal_year": "2019-2020",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7587,10 +7543,6 @@
       "fiscal_year": "2020-2021",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7619,10 +7571,6 @@
       "fiscal_year": "2021-2022",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {
@@ -7651,10 +7599,6 @@
       "fiscal_year": "2022-2023",
       "header_fingerprint": "65e37c8b935f5487aa8aa9e5d752f4302e2cdbfbbe34f8b6e28917c78dea6d7a",
       "header_profile": "v3",
-      "normalization_registry": {
-        "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-        "version": "normalization-registry-1"
-      },
       "normalizer_version": "bulk-certify-normalizer-1.0.0",
       "parser_version": "bulk-certify-parser-1.1.0",
       "quarantine_reason_counts": {

@@ -13,12 +13,14 @@ import csv
 import hashlib
 import json
 import sqlite3
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
 from bulk_observations import (
     generate_bulk_observations,
     insert_bulk_observations,
+    project_bulk_observation_batches,
     project_bulk_observations,
 )
 from config import (
@@ -93,22 +95,14 @@ def _portable_source_path(csv_path: Path) -> str:
         return csv_path.name
 
 
-def ingest_raw_csv(
-    conn: sqlite3.Connection,
-    csv_path: Path,
-    fiscal_year: str,
-    *,
-    index_fts: bool = True,
-    manage_transaction: bool = True,
-):
-    print(f"\n  [ingest] {csv_path.name} (fiscal year: {fiscal_year})")
+def _generate_bulk_batch(csv_path: Path, fiscal_year: str):
     metadata = _certification_metadata(csv_path, fiscal_year)
     source_channel = metadata.get("source_channel") or (
         "archive_bulk"
         if fiscal_year in ARCHIVED_ONLY_FISCAL_YEARS
         else "official_bulk"
     )
-    batch = generate_bulk_observations(
+    return generate_bulk_observations(
         csv_path,
         fiscal_year=fiscal_year,
         source_channel=source_channel,
@@ -121,6 +115,52 @@ def ingest_raw_csv(
         requested_url=metadata.get("source_url"),
         final_url=metadata.get("source_url"),
     )
+
+
+def _write_bulk_ingestion_log(
+    conn: sqlite3.Connection,
+    csv_path: Path,
+    fiscal_year: str,
+    observations_total: int,
+    quarantine_reason_counts: Mapping[str, int],
+    projection,
+    inserted_at: str | None,
+):
+    exclusion_counts = dict(projection.exclusion_reason_counts)
+    for reason, count in quarantine_reason_counts.items():
+        exclusion_counts[f"parser_{reason}"] = count
+    conn.execute(
+        """
+        INSERT INTO ingestion_log (
+            fiscal_year, csv_file, rows_parsed, rows_new, rows_dup,
+            ingested_at, observations_total, canonical_excluded,
+            exclusions_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            fiscal_year,
+            _portable_source_path(csv_path),
+            observations_total,
+            projection.rows_new,
+            projection.rows_duplicate,
+            inserted_at,
+            observations_total,
+            projection.rows_duplicate + projection.rows_ineligible,
+            json.dumps(exclusion_counts, sort_keys=True, separators=(",", ":")),
+        ),
+    )
+
+
+def ingest_raw_csv(
+    conn: sqlite3.Connection,
+    csv_path: Path,
+    fiscal_year: str,
+    *,
+    index_fts: bool = True,
+    manage_transaction: bool = True,
+):
+    print(f"\n  [ingest] {csv_path.name} (fiscal year: {fiscal_year})")
+    batch = _generate_bulk_batch(csv_path, fiscal_year)
     inserted_at = batch.evidence.captured_at
 
     def apply():
@@ -132,32 +172,14 @@ def ingest_raw_csv(
             index_fts=index_fts,
         )
 
-        exclusion_counts = dict(projection.exclusion_reason_counts)
-        for reason, count in batch.report.quarantine_reason_counts.items():
-            exclusion_counts[f"parser_{reason}"] = count
-        conn.execute(
-            """
-            INSERT INTO ingestion_log (
-                fiscal_year, csv_file, rows_parsed, rows_new, rows_dup,
-                ingested_at, observations_total, canonical_excluded,
-                exclusions_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                fiscal_year,
-                _portable_source_path(csv_path),
-                len(batch),
-                projection.rows_new,
-                projection.rows_duplicate,
-                inserted_at,
-                len(batch),
-                projection.rows_duplicate + projection.rows_ineligible,
-                json.dumps(
-                    exclusion_counts,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            ),
+        _write_bulk_ingestion_log(
+            conn,
+            csv_path,
+            fiscal_year,
+            len(batch),
+            batch.report.quarantine_reason_counts,
+            projection,
+            inserted_at,
         )
         return projection
 
@@ -178,20 +200,71 @@ def ingest_raw_csv(
 
 
 def ingest_bulk_csvs(conn: sqlite3.Connection, csv_files: list[Path]):
-    """Ingest a complete bulk set atomically and rebuild external FTS once."""
+    """Ingest a complete bulk set atomically with deterministic representatives.
+
+    Each certifier report is released after its observations reach the ledger. Only
+    compact per-source summaries survive until global projection, keeping peak Python
+    memory proportional to the largest source rather than the complete corpus.
+    """
+    summaries: list[dict] = []
     results = []
-    rows_new = 0
     with conn:
-        for csv_path in csv_files:
-            result = ingest_raw_csv(
-                conn,
-                csv_path,
-                fiscal_year_from_filename(csv_path),
-                index_fts=False,
-                manage_transaction=False,
+        for path in csv_files:
+            fiscal_year = fiscal_year_from_filename(path)
+            batch = _generate_bulk_batch(path, fiscal_year)
+            insert_bulk_observations(conn, batch, manage_transaction=False)
+            summaries.append(
+                {
+                    "path": path,
+                    "fiscal_year": fiscal_year,
+                    "evidence_id": batch.evidence.evidence_id,
+                    "inserted_at": batch.evidence.captured_at,
+                    "observations_total": len(batch),
+                    "quarantine_reason_counts": dict(
+                        batch.report.quarantine_reason_counts
+                    ),
+                }
             )
-            results.append(result)
-            rows_new += result[1]
+            del batch
+
+        projections = project_bulk_observation_batches(
+            conn,
+            [
+                (summary["evidence_id"], summary["inserted_at"])
+                for summary in summaries
+            ],
+            index_fts=False,
+        )
+        rows_new = 0
+        for summary in summaries:
+            projection = projections[summary["evidence_id"]]
+            rows_new += projection.rows_new
+            _write_bulk_ingestion_log(
+                conn,
+                summary["path"],
+                summary["fiscal_year"],
+                summary["observations_total"],
+                summary["quarantine_reason_counts"],
+                projection,
+                summary["inserted_at"],
+            )
+            results.append(
+                (
+                    summary["observations_total"],
+                    projection.rows_new,
+                    projection.rows_duplicate,
+                )
+            )
+            print(
+                f"\n  [ingest] {summary['path'].name} "
+                f"(fiscal year: {summary['fiscal_year']})\n"
+                "    "
+                f"observations={summary['observations_total']}  "
+                f"new={projection.rows_new}  "
+                f"duplicates={projection.rows_duplicate}  "
+                f"quarantined={projection.rows_ineligible}  "
+                f"existing={projection.rows_existing}"
+            )
         if rows_new:
             conn.execute("INSERT INTO contracts_fts(contracts_fts) VALUES('rebuild')")
     return results

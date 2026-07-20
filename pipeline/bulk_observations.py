@@ -490,6 +490,338 @@ def insert_bulk_observations(
     return apply()
 
 
+def project_bulk_observation_batches(
+    conn: sqlite3.Connection,
+    batches: Sequence[tuple[BulkObservationBatch | str, str | None]],
+    *,
+    index_fts: bool = True,
+) -> dict[str, ProjectionResult]:
+    """Project persisted source sets with deterministic, bounded-memory ordering.
+
+    Each source is identified by either its lazy batch or its evidence ID. Candidate
+    identities are read back from the append-only observation ledger, staged in a
+    temporary SQLite table, and consumed in ``canonical_id, observation_id`` order.
+    Production ingestion can therefore release each certifier report before loading
+    the next source instead of retaining the full corpus in Python RAM.
+    """
+    sources = [
+        (
+            source.evidence.evidence_id
+            if isinstance(source, BulkObservationBatch)
+            else source,
+            inserted_at,
+        )
+        for source, inserted_at in batches
+    ]
+    counters: dict[str, dict[str, Any]] = {
+        evidence_id: {
+            "rows_new": 0,
+            "rows_duplicate": 0,
+            "rows_ineligible": 0,
+            "rows_existing": 0,
+            "reasons": Counter(),
+        }
+        for evidence_id, _ in sources
+    }
+    conn.execute("DROP TABLE IF EXISTS temp.pending_canonical_candidates")
+    conn.execute(
+        """
+        CREATE TEMP TABLE pending_canonical_candidates (
+            observation_id TEXT PRIMARY KEY,
+            evidence_id TEXT NOT NULL,
+            canonical_id TEXT NOT NULL
+        ) WITHOUT ROWID
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX pending_canonical_candidates_order
+        ON pending_canonical_candidates(canonical_id, observation_id)
+        """
+    )
+
+    try:
+        for evidence_id, inserted_at in sources:
+            state = counters[evidence_id]
+            evidence_row = conn.execute(
+                """
+                SELECT source_url
+                FROM evidence_objects
+                WHERE evidence_id = ?
+                """,
+                (evidence_id,),
+            ).fetchone()
+            if evidence_row is None:
+                raise RuntimeError(
+                    f"projection source is missing evidence object: {evidence_id}"
+                )
+            source_url = evidence_row[0]
+            observations = conn.execute(
+                """
+                SELECT observation_id, canonical_eligible,
+                       canonical_exclusion_reason, parsed_values_json,
+                       normalizer_version
+                FROM bulk_observations
+                WHERE evidence_id = ?
+                ORDER BY source_row_number, observation_id
+                """,
+                (evidence_id,),
+            )
+            for (
+                observation_id_value,
+                canonical_eligible,
+                canonical_exclusion_reason,
+                parsed_values_json,
+                normalizer_version,
+            ) in observations:
+                if conn.execute(
+                    "SELECT 1 FROM bulk_projection_results WHERE observation_id = ?",
+                    (observation_id_value,),
+                ).fetchone():
+                    state["rows_existing"] += 1
+                    continue
+                if not canonical_eligible:
+                    reason = canonical_exclusion_reason
+                    conn.execute(
+                        """
+                        INSERT INTO bulk_projection_results (
+                            observation_id, row_hash, contract_id,
+                            projection_status, reason
+                        ) VALUES (?, NULL, NULL, 'excluded', ?)
+                        """,
+                        (observation_id_value, reason),
+                    )
+                    state["rows_ineligible"] += 1
+                    state["reasons"][reason] += 1
+                    continue
+                parsed = json.loads(parsed_values_json)
+                parsed.update(
+                    {
+                        "source_type": RAW_SOURCE_TYPE,
+                        "source_url": source_url,
+                        "source_contract_id": None,
+                        "representative_observation_id": observation_id_value,
+                        "canonicalization_status": "selected_observation",
+                        "normalizer_version": normalizer_version,
+                    }
+                )
+                normalized = normalize_contract_record(
+                    parsed,
+                    default_source_type=RAW_SOURCE_TYPE,
+                    inserted_at=inserted_at,
+                    preserve_missing_inserted_at=True,
+                )
+                conn.execute(
+                    """
+                    INSERT INTO pending_canonical_candidates (
+                        observation_id, evidence_id, canonical_id
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (
+                        observation_id_value,
+                        evidence_id,
+                        normalized["canonical_id"],
+                    ),
+                )
+
+        had_preexisting_contracts = bool(
+            conn.execute("SELECT EXISTS(SELECT 1 FROM contracts LIMIT 1)").fetchone()[0]
+        )
+        cached_canonical_id = None
+        cached_contract = None
+        candidates = conn.execute(
+            """
+            SELECT candidate.observation_id, candidate.evidence_id,
+                   candidate.canonical_id, observation.parsed_values_json,
+                   observation.normalizer_version, observation.source_row_number,
+                   evidence.source_url, evidence.captured_at
+            FROM pending_canonical_candidates AS candidate
+            JOIN bulk_observations AS observation
+              ON observation.observation_id = candidate.observation_id
+            JOIN evidence_objects AS evidence
+              ON evidence.evidence_id = candidate.evidence_id
+            ORDER BY candidate.canonical_id, candidate.observation_id
+            """
+        )
+        for (
+            observation_id_value,
+            evidence_id,
+            staged_canonical_id,
+            parsed_values_json,
+            observation_normalizer_version,
+            source_row_number,
+            source_url,
+            captured_at,
+        ) in candidates:
+            state = counters[evidence_id]
+            parsed = json.loads(parsed_values_json)
+            parsed.update(
+                {
+                    "source_type": RAW_SOURCE_TYPE,
+                    "source_url": source_url,
+                    "source_contract_id": None,
+                    "representative_observation_id": observation_id_value,
+                    "canonicalization_status": "selected_observation",
+                    "normalizer_version": observation_normalizer_version,
+                }
+            )
+            normalized = normalize_contract_record(
+                parsed,
+                default_source_type=RAW_SOURCE_TYPE,
+                inserted_at=captured_at,
+                preserve_missing_inserted_at=True,
+            )
+            if normalized["canonical_id"] != staged_canonical_id:
+                raise RuntimeError("staged canonical identity changed during projection")
+
+            if staged_canonical_id == cached_canonical_id:
+                existing_contract = cached_contract
+            elif had_preexisting_contracts:
+                existing_contract = conn.execute(
+                    """
+                    SELECT id, canonical_id, family_id,
+                           representative_observation_id, canonicalization_status
+                    FROM contracts WHERE canonical_id = ?
+                    """,
+                    (staged_canonical_id,),
+                ).fetchone()
+            else:
+                existing_contract = None
+            if existing_contract is None:
+                cur = conn.execute(CONTRACT_INSERT_SQL, normalized)
+                if cur.rowcount != 1:
+                    raise RuntimeError(
+                        "canonical insert did not select exactly one observation"
+                    )
+                contract_id = cur.lastrowid
+                representative_id = observation_id_value
+                cached_canonical_id = staged_canonical_id
+                cached_contract = (
+                    contract_id,
+                    normalized["canonical_id"],
+                    normalized["family_id"],
+                    representative_id,
+                    "selected_observation",
+                )
+                if index_fts:
+                    conn.execute(
+                        """
+                        INSERT INTO contracts_fts (
+                            rowid, contract_number, entity, contractor,
+                            service_category, service_type
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            contract_id,
+                            normalized["contract_number"],
+                            normalized["entity"],
+                            normalized["contractor"],
+                            normalized["service_category"],
+                            normalized["service_type"],
+                        ),
+                    )
+                conn.execute(
+                    """
+                    INSERT INTO canonical_observation_contributors (
+                        canonical_id, family_id, observation_id,
+                        representative_observation_id, contribution_role,
+                        merge_reason, decision_version
+                    ) VALUES (?, ?, ?, ?, 'representative',
+                              'selected_representative', 'canonical-decision-v1')
+                    """,
+                    (
+                        normalized["canonical_id"],
+                        normalized["family_id"],
+                        observation_id_value,
+                        representative_id,
+                    ),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO bulk_projection_results (
+                        observation_id, row_hash, contract_id,
+                        projection_status, reason
+                    ) VALUES (?, ?, ?, 'selected', NULL)
+                    """,
+                    (observation_id_value, normalized["row_hash"], contract_id),
+                )
+                state["rows_new"] += 1
+                continue
+
+            cached_canonical_id = staged_canonical_id
+            cached_contract = existing_contract
+            contract_id, canonical_id, family_id, representative_id, status = (
+                existing_contract
+            )
+            if status != "selected_observation" or not representative_id:
+                raise RuntimeError(
+                    "bulk canonical identity collided with a contract lacking "
+                    "observation lineage"
+                )
+            conn.execute(
+                """
+                INSERT INTO canonical_observation_contributors (
+                    canonical_id, family_id, observation_id,
+                    representative_observation_id, contribution_role,
+                    merge_reason, decision_version
+                ) VALUES (?, ?, ?, ?, 'duplicate',
+                          'canonical_record_duplicate', 'canonical-decision-v1')
+                """,
+                (canonical_id, family_id, observation_id_value, representative_id),
+            )
+            reason = "canonical_row_hash_duplicate"
+            conn.execute(
+                """
+                INSERT INTO bulk_projection_results (
+                    observation_id, row_hash, contract_id,
+                    projection_status, reason
+                ) VALUES (?, ?, ?, 'excluded', ?)
+                """,
+                (observation_id_value, normalized["row_hash"], contract_id, reason),
+            )
+            exclusion_id = _sha256_id(
+                ["bulk-projection-exclusion-v1", observation_id_value, reason]
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO bulk_projection_exclusions (
+                    exclusion_id, observation_id, evidence_id,
+                    source_row_number, reason, details_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    exclusion_id,
+                    observation_id_value,
+                    evidence_id,
+                    source_row_number,
+                    reason,
+                    _json(
+                        {
+                            "canonical_id": normalized["canonical_id"],
+                            "family_id": normalized["family_id"],
+                            "representative_observation_id": representative_id,
+                            "row_hash": normalized["row_hash"],
+                        }
+                    ),
+                ),
+            )
+            state["rows_duplicate"] += 1
+            state["reasons"][reason] += 1
+    finally:
+        conn.execute("DROP TABLE IF EXISTS temp.pending_canonical_candidates")
+
+    return {
+        evidence_id: ProjectionResult(
+            rows_new=state["rows_new"],
+            rows_duplicate=state["rows_duplicate"],
+            rows_ineligible=state["rows_ineligible"],
+            rows_existing=state["rows_existing"],
+            exclusion_reason_counts=dict(sorted(state["reasons"].items())),
+        )
+        for evidence_id, state in counters.items()
+    }
+
+
 def project_bulk_observations(
     conn: sqlite3.Connection,
     batch: BulkObservationBatch,
@@ -497,127 +829,39 @@ def project_bulk_observations(
     inserted_at: str | None,
     index_fts: bool = True,
 ) -> ProjectionResult:
-    """Project eligible observations once and retain every exclusion reason."""
-    rows_new = rows_duplicate = rows_ineligible = rows_existing = 0
-    reason_counts: Counter[str] = Counter()
-
-    for observation in batch:
-        already = conn.execute(
-            "SELECT 1 FROM bulk_projection_results WHERE observation_id = ?",
-            (observation["observation_id"],),
-        ).fetchone()
-        if already:
-            rows_existing += 1
-            continue
-
-        if not observation["canonical_eligible"]:
-            reason = observation["canonical_exclusion_reason"]
-            conn.execute(
-                """
-                INSERT INTO bulk_projection_results (
-                    observation_id, row_hash, contract_id, projection_status, reason
-                ) VALUES (?, NULL, NULL, 'excluded', ?)
-                """,
-                (observation["observation_id"], reason),
-            )
-            rows_ineligible += 1
-            reason_counts[reason] += 1
-            continue
-
-        parsed = json.loads(observation["parsed_values_json"])
-        parsed.update(
-            {
-                "source_type": RAW_SOURCE_TYPE,
-                "source_url": batch.evidence.source_url,
-                "source_contract_id": None,
-                "representative_observation_id": observation["observation_id"],
-                "canonicalization_status": "selected_observation",
-                "normalizer_version": observation["normalizer_version"],
-            }
+    evidence_id = batch.evidence.evidence_id
+    has_unprojected = conn.execute(
+        """
+        SELECT EXISTS(
+            SELECT 1
+            FROM bulk_observations AS observation
+            LEFT JOIN bulk_projection_results AS result
+              ON result.observation_id = observation.observation_id
+            WHERE observation.evidence_id = ?
+              AND result.observation_id IS NULL
         )
-        normalized = normalize_contract_record(
-            parsed,
-            default_source_type=RAW_SOURCE_TYPE,
-            inserted_at=inserted_at,
-            preserve_missing_inserted_at=True,
+        """,
+        (evidence_id,),
+    ).fetchone()[0]
+    has_other_projected_source = conn.execute(
+        """
+        SELECT EXISTS(
+            SELECT 1
+            FROM bulk_projection_results AS result
+            JOIN bulk_observations AS observation
+              ON observation.observation_id = result.observation_id
+            WHERE observation.evidence_id != ?
         )
-        existing_contract = conn.execute(
-            "SELECT id FROM contracts WHERE row_hash = ?",
-            (normalized["row_hash"],),
-        ).fetchone()
-        if existing_contract is None:
-            cur = conn.execute(CONTRACT_INSERT_SQL, normalized)
-            if cur.rowcount != 1:
-                raise RuntimeError("canonical insert did not select exactly one observation")
-            contract_id = cur.lastrowid
-            if index_fts:
-                conn.execute(
-                    """
-                    INSERT INTO contracts_fts (
-                        rowid, contract_number, entity, contractor,
-                        service_category, service_type
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        contract_id,
-                        normalized["contract_number"],
-                        normalized["entity"],
-                        normalized["contractor"],
-                        normalized["service_category"],
-                        normalized["service_type"],
-                    ),
-                )
-            conn.execute(
-                """
-                INSERT INTO bulk_projection_results (
-                    observation_id, row_hash, contract_id, projection_status, reason
-                ) VALUES (?, ?, ?, 'selected', NULL)
-                """,
-                (observation["observation_id"], normalized["row_hash"], contract_id),
-            )
-            rows_new += 1
-            continue
-
-        reason = "canonical_row_hash_duplicate"
-        conn.execute(
-            """
-            INSERT INTO bulk_projection_results (
-                observation_id, row_hash, contract_id, projection_status, reason
-            ) VALUES (?, ?, ?, 'excluded', ?)
-            """,
-            (
-                observation["observation_id"],
-                normalized["row_hash"],
-                existing_contract[0],
-                reason,
-            ),
+        """,
+        (evidence_id,),
+    ).fetchone()[0]
+    if has_unprojected and has_other_projected_source:
+        raise RuntimeError(
+            "incremental bulk projection cannot preserve global representative "
+            "ordering; use ingest_bulk_csvs with the complete source set"
         )
-        exclusion_id = _sha256_id(
-            ["bulk-projection-exclusion-v1", observation["observation_id"], reason]
-        )
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO bulk_projection_exclusions (
-                exclusion_id, observation_id, evidence_id,
-                source_row_number, reason, details_json
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                exclusion_id,
-                observation["observation_id"],
-                observation["evidence_id"],
-                observation["source_row_number"],
-                reason,
-                _json({"row_hash": normalized["row_hash"]}),
-            ),
-        )
-        rows_duplicate += 1
-        reason_counts[reason] += 1
-
-    return ProjectionResult(
-        rows_new=rows_new,
-        rows_duplicate=rows_duplicate,
-        rows_ineligible=rows_ineligible,
-        rows_existing=rows_existing,
-        exclusion_reason_counts=dict(sorted(reason_counts.items())),
-    )
+    return project_bulk_observation_batches(
+        conn,
+        [(batch, inserted_at)],
+        index_fts=index_fts,
+    )[evidence_id]

@@ -1,9 +1,9 @@
 # Normalization registry
 
-This directory is the deterministic, reviewed foundation for normalization knowledge.
-It is intentionally separate from source evidence and from the legacy normalization
-constants in `pipeline/contract_utils.py`. The legacy constants remain in place until
-a later task wires this registry into ingestion.
+This directory is the deterministic, reviewed source of normalization knowledge.
+It is intentionally separate from source evidence and from the immutable Phase 1
+certification artifacts. The ingestion and browser projections consume this registry;
+changes require a new registry version and reviewed decision rows.
 
 ## Contract
 
@@ -23,14 +23,16 @@ a later task wires this registry into ingestion.
   alias key is returned as `collision` and never resolves to one identity.
 - The registry payload contains only versioned schema/alias/review data. It contains
   no machine paths, timestamps, or generated values, so its SHA-256 is reproducible.
+- `registry-manifest.json` is the separate Milestone B provenance artifact. It records
+  the payload identity and source-file hashes without rewriting immutable Phase 1
+  certification reports or their manifest.
 
 ## Reviewed contents
 
-`contractor-aliases.csv` contains exactly the 23 explicit override mappings that
-currently live in `CONTRACTOR_FAMILY_OVERRIDES` in `pipeline/contract_utils.py`.
-They are retained as reviewed aliases with stable canonical IDs and display labels;
-this task does not add fuzzy variants, remove the source constants, or wire the
-registry into the existing pipeline.
+`contractor-aliases.csv` contains exactly the 23 reviewed mappings formerly
+duplicated in Python and JavaScript override constants. They are retained as reviewed
+aliases with stable canonical IDs and display labels; both ingestion and browser
+projections now consume the projected registry identities rather than separate tables.
 
 `entity-aliases.csv`, `service-category-aliases.csv`, and `service-type-aliases.csv`
 are deliberately header-only because no additional reviewed explicit mappings were

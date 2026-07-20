@@ -18,7 +18,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import DB_PATH, REPO_ROOT
-from contract_utils import parse_date, register_sqlite_functions
+from contract_utils import (
+    CANONICAL_IDENTITY_VERSION,
+    FAMILY_IDENTITY_VERSION,
+    canonical_id_for_row,
+    family_id_for_row,
+    parse_date,
+    register_sqlite_functions,
+)
 from normalization import registry_payload, registry_version
 
 
@@ -70,12 +77,25 @@ BROWSER_COLUMNS = [
     "service_type_canonical_id",
     "service_type_display_label",
     "service_type_resolution_status",
+    "canonical_id",
+    "family_id",
+    "canonical_identity_version",
+    "family_identity_version",
 ]
 
 
 def contractor_family_expr(alias: str = "c") -> str:
     col = f"{alias}.contractor"
     return f"normalize_contractor_family({col})"
+
+
+def family_identity_expr(alias: str = "c") -> str:
+    contractor = contractor_family_expr(alias)
+    return (
+        f"COALESCE(NULLIF({alias}.family_id, ''), "
+        f"'legacy:' || COALESCE({alias}.contract_number, '') || char(31) || "
+        f"COALESCE({alias}.entity, '') || char(31) || {contractor})"
+    )
 
 
 def fiscal_year_sort_key(value: str) -> tuple[int, int]:
@@ -234,10 +254,14 @@ def create_browser_schema(conn: sqlite3.Connection):
             procurement_method  TEXT,
             fund_type           TEXT,
             pco_number          TEXT,
-            cancelled           INTEGER DEFAULT 0,
+            cancelled           INTEGER NOT NULL DEFAULT 0
+                                CHECK (cancelled IN (0, 1)),
             cancellation_raw    TEXT,
             cancellation_date   TEXT,
-            cancellation_status TEXT NOT NULL DEFAULT 'unknown',
+            cancellation_status TEXT NOT NULL DEFAULT 'unknown'
+                                CHECK (cancellation_status IN (
+                                    'cancelled', 'not_cancelled', 'unknown', 'malformed'
+                                )),
             document_url        TEXT,
             fiscal_year         TEXT,
             source_type         TEXT,
@@ -255,7 +279,20 @@ def create_browser_schema(conn: sqlite3.Connection):
             service_category_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
             service_type_canonical_id TEXT,
             service_type_display_label TEXT,
-            service_type_resolution_status TEXT NOT NULL DEFAULT 'unresolved'
+            service_type_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+            canonical_id TEXT NOT NULL UNIQUE
+                         CHECK (length(canonical_id) = 77
+                                AND substr(canonical_id, 1, 13) = 'canonical:v1:'),
+            family_id TEXT NOT NULL
+                      CHECK (length(family_id) = 74
+                             AND substr(family_id, 1, 10) = 'family:v1:'),
+            canonical_identity_version TEXT NOT NULL
+                                       CHECK (canonical_identity_version = 'canonical-record-v1'),
+            family_identity_version TEXT NOT NULL
+                                    CHECK (family_identity_version = 'contract-family-v1'),
+            CHECK (cancelled = CASE
+                WHEN cancellation_status = 'cancelled' THEN 1 ELSE 0 END),
+            CHECK (cancellation_date IS NULL OR cancellation_status = 'cancelled')
         );
 
         CREATE INDEX idx_browser_entity       ON contracts(entity);
@@ -265,6 +302,7 @@ def create_browser_schema(conn: sqlite3.Connection):
         CREATE INDEX idx_browser_fiscal_year  ON contracts(fiscal_year);
         CREATE INDEX idx_browser_contract_no  ON contracts(contract_number);
         CREATE INDEX idx_browser_service_cat  ON contracts(service_category);
+        CREATE INDEX idx_browser_family_id    ON contracts(family_id);
 
         CREATE VIRTUAL TABLE contracts_fts USING fts5(
             contract_number,
@@ -328,6 +366,13 @@ def build_browser_db(source_db: Path, browser_db: Path):
 
         batch = []
         for row in rows:
+            identity = row
+            if not row["canonical_id"] or not row["family_id"]:
+                identity = dict(row)
+                identity["canonical_id"] = canonical_id_for_row(identity)
+                identity["family_id"] = family_id_for_row(identity)
+                identity["canonical_identity_version"] = CANONICAL_IDENTITY_VERSION
+                identity["family_identity_version"] = FAMILY_IDENTITY_VERSION
             batch.append((
                 row["id"],
                 normalize_text(row["contract_number"]),
@@ -368,6 +413,10 @@ def build_browser_db(source_db: Path, browser_db: Path):
                 normalize_text(row["service_type_canonical_id"]),
                 normalize_text(row["service_type_display_label"]),
                 normalize_text(row["service_type_resolution_status"]) or "unresolved",
+                normalize_text(identity["canonical_id"]),
+                normalize_text(identity["family_id"]),
+                normalize_text(identity["canonical_identity_version"]),
+                normalize_text(identity["family_identity_version"]),
             ))
 
         dst.executemany(insert_sql, batch)
@@ -408,33 +457,36 @@ def collect_dashboard(browser_db: Path, archived_csv_fiscal_years: list[str] | N
     register_sqlite_functions(conn)
 
     family_expr = contractor_family_expr("c")
+    identity_expr = family_identity_expr("c")
     family_cte = f"""
         WITH ranked AS (
             SELECT
                 c.*,
                 {family_expr} AS contractor_family,
+                {identity_expr} AS projection_family_id,
                 ROW_NUMBER() OVER (
-                    PARTITION BY c.contract_number, c.entity, {family_expr}
+                    PARTITION BY {identity_expr}
                     ORDER BY
                         CASE
                             WHEN NULLIF(TRIM(COALESCE(c.amendment, '')), '') IS NULL THEN 0
                             ELSE 1
                         END ASC,
                         c.award_date ASC,
-                        c.id ASC
+                        c.canonical_id ASC
                 ) AS representative_row
             FROM contracts c
         ),
         families AS (
             SELECT
-                contract_number,
-                entity,
-                contractor_family,
+                projection_family_id AS family_id,
+                MAX(contract_number) AS contract_number,
+                MAX(entity) AS entity,
+                MAX(contractor_family) AS contractor_family,
                 MAX(CASE WHEN representative_row = 1 THEN contractor END) AS contractor,
                 MAX(CASE WHEN representative_row = 1 THEN fiscal_year END) AS fiscal_year,
                 SUM(COALESCE(amount, 0)) AS family_total_amount
             FROM ranked
-            GROUP BY contract_number, entity, contractor_family
+            GROUP BY projection_family_id
         )
     """
 

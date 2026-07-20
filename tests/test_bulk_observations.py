@@ -418,6 +418,8 @@ class BulkObservationPersistenceTests(unittest.TestCase):
                 conn.execute("SELECT COUNT(*) FROM contracts").fetchone()[0],
                 1,
             )
+            representative = min(batch, key=lambda row: row["observation_id"])
+            duplicate = max(batch, key=lambda row: row["observation_id"])
             contract = conn.execute(
                 """
                 SELECT id, row_hash, representative_observation_id,
@@ -425,9 +427,9 @@ class BulkObservationPersistenceTests(unittest.TestCase):
                 FROM contracts
                 """
             ).fetchone()
-            self.assertEqual(contract[2], batch[0]["observation_id"])
+            self.assertEqual(contract[2], representative["observation_id"])
             self.assertEqual(contract[3], "selected_observation")
-            self.assertEqual(contract[4], batch[0]["normalizer_version"])
+            self.assertEqual(contract[4], representative["normalizer_version"])
             with self.assertRaisesRegex(
                 sqlite3.IntegrityError,
                 "projection results are append-only",
@@ -442,7 +444,7 @@ class BulkObservationPersistenceTests(unittest.TestCase):
             ):
                 conn.execute(
                     "DELETE FROM bulk_projection_exclusions WHERE observation_id = ?",
-                    (batch[1]["observation_id"],),
+                    (duplicate["observation_id"],),
                 )
             projection_result = conn.execute(
                 """
@@ -473,7 +475,7 @@ class BulkObservationPersistenceTests(unittest.TestCase):
                 FROM bulk_projection_exclusions
                 WHERE observation_id = ?
                 """,
-                (batch[1]["observation_id"],),
+                (duplicate["observation_id"],),
             ).fetchone()
             with self.assertRaisesRegex(
                 sqlite3.IntegrityError,
@@ -506,7 +508,7 @@ class BulkObservationPersistenceTests(unittest.TestCase):
                     SET representative_observation_id = ?
                     WHERE id = ?
                     """,
-                    (batch[1]["observation_id"], contract[0]),
+                    (duplicate["observation_id"], contract[0]),
                 )
             exclusion_count = conn.execute(
                 "SELECT COUNT(*) FROM bulk_projection_exclusions"

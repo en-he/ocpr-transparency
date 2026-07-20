@@ -271,6 +271,53 @@ class CancellationSchemaAndPipelineTests(unittest.TestCase):
             )
             browser.close()
 
+    def test_browser_schema_rejects_inconsistent_cancellation_projections(self):
+        browser = sqlite3.connect(":memory:")
+        build_site_artifacts.create_browser_schema(browser)
+        base = {
+            "id": 1,
+            "canonical_id": "canonical:v1:" + ("a" * 64),
+            "family_id": "family:v1:" + ("b" * 64),
+            "canonical_identity_version": "canonical-record-v1",
+            "family_identity_version": "contract-family-v1",
+        }
+        with self.assertRaises(sqlite3.IntegrityError):
+            browser.execute(
+                """
+                INSERT INTO contracts (
+                    id, cancelled, cancellation_status, canonical_id, family_id,
+                    canonical_identity_version, family_identity_version
+                ) VALUES (:id, 0, 'cancelled', :canonical_id, :family_id,
+                          :canonical_identity_version, :family_identity_version)
+                """,
+                base,
+            )
+        with self.assertRaises(sqlite3.IntegrityError):
+            browser.execute(
+                """
+                INSERT INTO contracts (
+                    id, cancelled, cancellation_status, canonical_id, family_id,
+                    canonical_identity_version, family_identity_version
+                ) VALUES (:id, 0, 'invented', :canonical_id, :family_id,
+                          :canonical_identity_version, :family_identity_version)
+                """,
+                base,
+            )
+        with self.assertRaises(sqlite3.IntegrityError):
+            browser.execute(
+                """
+                INSERT INTO contracts (
+                    id, cancelled, cancellation_date, cancellation_status,
+                    canonical_id, family_id, canonical_identity_version,
+                    family_identity_version
+                ) VALUES (:id, 0, '2011-09-30', 'unknown',
+                          :canonical_id, :family_id,
+                          :canonical_identity_version, :family_identity_version)
+                """,
+                base,
+            )
+        browser.close()
+
 
 class CancellationDetailRenderingContractTests(unittest.TestCase):
     def test_detail_page_and_locales_name_source_status_and_effective_date(self):

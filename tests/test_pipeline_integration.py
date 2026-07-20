@@ -1,9 +1,11 @@
 import csv
+import gc
 import json
 import sqlite3
 import sys
 import tempfile
 import unittest
+import weakref
 from pathlib import Path
 from unittest.mock import patch
 
@@ -149,7 +151,26 @@ class PipelineIntegrationTests(unittest.TestCase):
             create_schema(conn)
             statements = []
             conn.set_trace_callback(statements.append)
-            results = ingest.ingest_bulk_csvs(conn, [first, second])
+            real_generate = ingest._generate_bulk_batch
+            batch_refs = []
+
+            def generate_one_source(path, fiscal_year):
+                if batch_refs:
+                    gc.collect()
+                    self.assertIsNone(
+                        batch_refs[-1](),
+                        "previous certifier report remained live while loading next source",
+                    )
+                batch = real_generate(path, fiscal_year)
+                batch_refs.append(weakref.ref(batch))
+                return batch
+
+            with patch.object(
+                ingest, "_generate_bulk_batch", side_effect=generate_one_source
+            ):
+                results = ingest.ingest_bulk_csvs(conn, [first, second])
+            gc.collect()
+            self.assertTrue(all(reference() is None for reference in batch_refs))
 
             self.assertEqual(results, [(1, 1, 0), (1, 1, 0)])
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM contracts_fts").fetchone()[0], 2)

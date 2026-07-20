@@ -360,7 +360,13 @@ function renderResults(rows) {
         const parentUrl = buildFamilyDetailUrlForRow(r);
         const amendCount =
             Number(r.family_size || 0) ||
-            getAmendmentCount(r.contract_number, r.entity, r.contractor, r.id);
+            getAmendmentCount(
+                r.contract_number,
+                r.entity,
+                r.contractor,
+                r.id,
+                r.family_id
+            );
         const hasAmendments = amendCount > 1;
 
         tr.innerHTML = `
@@ -400,7 +406,8 @@ function renderResults(rows) {
                         r.contract_number,
                         r.entity,
                         r.contractor,
-                        Number(r.family_has_original) ? r.id : null
+                        Number(r.family_has_original) ? r.id : null,
+                        r.family_id
                     );
                     let insertionPoint = tr;
                     for (const a of amendments) {

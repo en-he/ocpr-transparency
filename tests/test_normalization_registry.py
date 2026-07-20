@@ -197,6 +197,28 @@ class NormalizationRegistryTests(unittest.TestCase):
         self.assertNotIn(str(REPO_ROOT), first)
         self.assertNotIn("timestamp", first.lower())
 
+    def test_separate_registry_manifest_is_deterministic_and_not_phase1_evidence(self):
+        manifest_path = REPO_ROOT / "data" / "normalization" / "registry-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        registry = normalization.load_registry(REPO_ROOT)
+        self.assertEqual(
+            manifest["schema_version"], "normalization-registry-manifest-1"
+        )
+        self.assertEqual(manifest["registry_version"], registry.registry_version)
+        self.assertEqual(manifest["algorithm_version"], registry.algorithm_version)
+        self.assertEqual(manifest["payload_sha256"], registry.payload_sha256)
+        for source in manifest["source_files"]:
+            source_path = REPO_ROOT / source["path"]
+            self.assertEqual(
+                source["sha256"], hashlib.sha256(source_path.read_bytes()).hexdigest()
+            )
+        certification_manifest = json.loads(
+            (REPO_ROOT / "data" / "certification" / "bulk-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertNotIn("normalization_registry", certification_manifest)
+
     def test_missing_and_unresolved_values_preserve_raw_input_without_candidates(self):
         for raw_value in (None, "", " \t"):
             with self.subTest(raw_value=raw_value):

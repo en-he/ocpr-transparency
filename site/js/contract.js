@@ -102,6 +102,7 @@ async function initDetail() {
         const familyContractNumber = (params.get("contract_number") || "").trim();
         const familyEntity = (params.get("entity") || "").trim();
         const familyContractor = (params.get("contractor") || "").trim();
+        const familyId = (params.get("family_id") || "").trim() || null;
         const backLink = document.getElementById("back-to-search");
         if (backLink) {
             backLink.href = buildSearchUrl();
@@ -133,7 +134,8 @@ async function initDetail() {
             const resolved = resolveContractFamilyDetail(
                 familyContractNumber,
                 familyEntity,
-                familyContractor
+                familyContractor,
+                familyId
             );
             contract = resolved.contract;
             recoveryTarget = resolved.recoveryTarget;
@@ -234,7 +236,13 @@ function renderContract(c) {
 function renderAmendments(c) {
     if (!c.contract_number || !c.entity || !c.contractor) return;
 
-    const amendments = getAmendments(c.contract_number, c.entity, c.contractor, c.id);
+    const amendments = getAmendments(
+        c.contract_number,
+        c.entity,
+        c.contractor,
+        c.id,
+        c.family_id
+    );
 
     const section = document.getElementById("amendments-section");
     if (amendments.length === 0) {

@@ -1,0 +1,32 @@
+{
+  "schema_version": "normalization-registry-manifest-1",
+  "registry_version": "normalization-registry-1",
+  "algorithm_version": "lookup-v1",
+  "payload_sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
+  "source_files": [
+    {
+      "path": "data/normalization/schema-profiles.json",
+      "sha256": "359794a8a6ae4a51e6c4fad864f6bbe5890235307ce2a052884d39a74122c173"
+    },
+    {
+      "path": "data/normalization/contractor-aliases.csv",
+      "sha256": "bf2d39aadaaddd25d1df74cd08a3172d9e8918bb0d990e878f6717c073fa65de"
+    },
+    {
+      "path": "data/normalization/entity-aliases.csv",
+      "sha256": "ba00a34baa18cceeece2b22c379873347953b0ea5b63e995373a0889ccb10b6d"
+    },
+    {
+      "path": "data/normalization/service-category-aliases.csv",
+      "sha256": "ba00a34baa18cceeece2b22c379873347953b0ea5b63e995373a0889ccb10b6d"
+    },
+    {
+      "path": "data/normalization/service-type-aliases.csv",
+      "sha256": "ba00a34baa18cceeece2b22c379873347953b0ea5b63e995373a0889ccb10b6d"
+    },
+    {
+      "path": "data/normalization/review-decisions.csv",
+      "sha256": "1f8b9c15569b52b7896a187f33998ead1922db1c42b00e76c000f79e52a345ff"
+    }
+  ]
+}

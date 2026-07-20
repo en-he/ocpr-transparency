@@ -43,6 +43,7 @@ const DEFAULT_MANIFEST = {
 let _db = null;
 let _manifest = DEFAULT_MANIFEST;
 const _distinctCache = new Map();
+let _contractColumns = null;
 
 async function loadManifest() {
     try {
@@ -127,7 +128,25 @@ async function initDB(onStatus) {
     onStatus("Opening database...");
     _db = new SQL.Database(dbBytes);
     registerSqlHelpers(_db);
+    refreshContractColumns(_db);
     _db.run("PRAGMA cache_size = -32000");
+}
+
+function refreshContractColumns(db) {
+    _contractColumns = new Set();
+    const result = db.exec("PRAGMA table_info(contracts)")[0];
+    if (!result) return;
+    const nameIndex = result.columns.indexOf("name");
+    for (const row of result.values) {
+        _contractColumns.add(row[nameIndex]);
+    }
+}
+
+function hasContractColumn(column) {
+    // Before a database is loaded, query builders target the current schema.
+    // Once loaded, feature detection keeps the committed frontend usable with
+    // the previously published Phase 1 browser artifact until release rebuild.
+    return _contractColumns == null || _contractColumns.has(column);
 }
 
 async function decompress(compressed) {
@@ -455,11 +474,24 @@ function buildContractUrl(contractId, backRef = getSearchStateReference()) {
     return `contract.html?${params.toString()}`;
 }
 
-function buildFamilyContractUrl(contractNumber, entity, contractor, backRef = getSearchStateReference()) {
+function isPersistedFamilyId(value) {
+    return /^family:v1:[0-9a-f]{64}$/u.test(String(value || ""));
+}
+
+function buildFamilyContractUrl(
+    contractNumber,
+    entity,
+    contractor,
+    familyId = null,
+    backRef = getSearchStateReference()
+) {
     const params = new URLSearchParams();
     params.set("contract_number", contractNumber || "");
     params.set("entity", entity || "");
     params.set("contractor", contractor || "");
+    if (isPersistedFamilyId(familyId)) {
+        params.set("family_id", familyId);
+    }
 
     const normalizedBackRef = String(backRef || "").replace(/^#/, "");
     if (normalizedBackRef) {
@@ -510,14 +542,22 @@ function buildFamilyDetailUrlForRow(row, backRef = getSearchStateReference()) {
         : Number(row.family_has_original) === 1;
 
     if (familySize > 1 || familyHasOriginal === false) {
-        return buildFamilyContractUrl(row.contract_number, row.entity, row.contractor, backRef);
+        return buildFamilyContractUrl(
+            row.contract_number,
+            row.entity,
+            row.contractor,
+            isPersistedFamilyId(row.family_id) ? row.family_id : null,
+            backRef
+        );
     }
     return buildContractUrl(row.id, backRef);
 }
 
 function contractorFamilyExpr(alias = "c") {
     const col = `${alias}.contractor`;
-    const reviewedId = `NULLIF(${alias}.contractor_canonical_id, '')`;
+    const reviewedId = hasContractColumn("contractor_canonical_id")
+        ? `NULLIF(${alias}.contractor_canonical_id, '')`
+        : "NULL";
     let fallback;
     if (_hasNormalizeContractorFamilySqlFunction) {
         fallback = `normalize_contractor_family(${col})`;
@@ -529,6 +569,17 @@ function contractorFamilyExpr(alias = "c") {
         fallback = `TRIM(REPLACE(REPLACE(REPLACE(${cleaned}, '  ', ' '), '  ', ' '), '  ', ' '))`;
     }
     return `COALESCE(${reviewedId}, ${fallback})`;
+}
+
+function familyIdentityExpr(alias = "c") {
+    const persistedFamilyId = hasContractColumn("family_id")
+        ? `NULLIF(${alias}.family_id, '')`
+        : "NULL";
+    return `COALESCE(
+        ${persistedFamilyId},
+        'legacy:' || COALESCE(${alias}.contract_number, '') || char(31) ||
+        COALESCE(${alias}.entity, '') || char(31) || ${contractorFamilyExpr(alias)}
+    )`;
 }
 
 function escapeLikeValue(value) {
@@ -782,7 +833,8 @@ function buildFilteredQueryParts(filters = {}) {
         WITH base_filtered AS (
             SELECT
                 c.*,
-                ${contractorFamilyExpr("c")} AS contractor_family
+                ${contractorFamilyExpr("c")} AS contractor_family,
+                ${familyIdentityExpr("c")} AS projection_family_id
             FROM contracts c
             ${baseWhereClause}
         ),
@@ -798,13 +850,16 @@ function buildFilteredQueryParts(filters = {}) {
 
 function buildFamilyQueryParts(filters = {}) {
     const { filteredCte, params } = buildFilteredQueryParts(filters);
+    const canonicalTieBreak = hasContractColumn("canonical_id")
+        ? "f.canonical_id"
+        : "f.id";
     const representativeOrderExpr = `
         CASE
             WHEN ${blankAmendmentExpr("f")} THEN 0
             ELSE 1
         END ASC,
         f.award_date ASC,
-        f.id ASC
+        ${canonicalTieBreak} ASC
     `;
 
     const familyCte = `
@@ -813,16 +868,17 @@ function buildFamilyQueryParts(filters = {}) {
             SELECT
                 f.*,
                 ROW_NUMBER() OVER (
-                    PARTITION BY f.contract_number, f.entity, f.contractor_family
+                    PARTITION BY f.projection_family_id
                     ORDER BY ${representativeOrderExpr}
                 ) AS representative_row
             FROM filtered f
         ),
         families AS (
             SELECT
-                contract_number,
-                entity,
-                contractor_family,
+                projection_family_id AS family_id,
+                MAX(contract_number) AS contract_number,
+                MAX(entity) AS entity,
+                MAX(contractor_family) AS contractor_family,
                 COUNT(*) AS family_size,
                 -- Compatibility field: unvalidated sum of reported family
                 -- rows, not spending, payment, or current contract value.
@@ -846,7 +902,7 @@ function buildFamilyQueryParts(filters = {}) {
                 MAX(CASE WHEN representative_row = 1 THEN award_date END) AS representative_award_date,
                 MIN(award_date) AS family_earliest_award_date
             FROM ranked
-            GROUP BY contract_number, entity, contractor_family
+            GROUP BY projection_family_id
         )
     `;
 
@@ -874,6 +930,7 @@ function buildSearchQuery(filters, page = 1, sortCol = "award_date", sortDir = "
     const dataSql = `${familyCte}
         SELECT
             representative_id AS id,
+            family_id,
             contract_number,
             contractor,
             entity,
@@ -957,6 +1014,8 @@ function buildDetailedQuery(filters, page = 1, sortCol = "award_date", sortDir =
     const dataSql = `${filteredCte}
         SELECT
             id,
+            ${hasContractColumn("canonical_id") ? "canonical_id" : "NULL AS canonical_id"},
+            ${hasContractColumn("family_id") ? "family_id" : "NULL AS family_id"},
             contract_number,
             entity,
             entity_number,
@@ -1014,6 +1073,12 @@ function compareFamilyMembers(a, b) {
         return awardDateA.localeCompare(awardDateB);
     }
 
+    const canonicalIdA = a.canonical_id || "";
+    const canonicalIdB = b.canonical_id || "";
+    if (canonicalIdA !== canonicalIdB) {
+        return canonicalIdA.localeCompare(canonicalIdB);
+    }
+
     if (amendmentA !== amendmentB) {
         return amendmentA.localeCompare(amendmentB);
     }
@@ -1062,11 +1127,12 @@ function buildMergedFamilySummaries(rows = []) {
     const groups = new Map();
 
     for (const row of rows) {
-        const key = [
+        const legacyKey = [
             row.contract_number || "",
             row.entity || "",
             normalizeContractorFamily(row.contractor),
         ].join("\u001F");
+        const key = row.family_id || `legacy:${legacyKey}`;
 
         if (!groups.has(key)) {
             groups.set(key, []);
@@ -1098,6 +1164,8 @@ function buildMergedFamilySummaries(rows = []) {
 
         return {
             id: representative.id,
+            canonical_id: representative.canonical_id,
+            family_id: representative.family_id,
             contract_number: representative.contract_number,
             contractor: representative.contractor,
             entity: representative.entity,
@@ -1259,6 +1327,7 @@ function buildMissingOriginalPlaceholderContract(contractNumber, entity, contrac
     const showRecoveryMetadata = recoveryStatus && recoveryStatus !== "recovered";
     return {
         id: null,
+        family_id: firstFamilyRow.family_id || null,
         contract_number: contractNumber || firstFamilyRow.contract_number || null,
         entity: recoveryTarget?.entity || entity || firstFamilyRow.entity || null,
         entity_number: null,
@@ -1287,8 +1356,13 @@ function buildMissingOriginalPlaceholderContract(contractNumber, entity, contrac
     };
 }
 
-function resolveContractFamilyDetail(contractNumber, entity, contractor) {
-    const familyRows = getContractFamilyRows(contractNumber, entity, contractor);
+function resolveContractFamilyDetail(contractNumber, entity, contractor, familyId = null) {
+    const familyRows = getContractFamilyRows(
+        contractNumber,
+        entity,
+        contractor,
+        familyId
+    );
     const recoveryTarget = getRecoveryTarget(contractNumber, entity, contractor);
     const originalRow = familyRows.find(row => isOriginalAmendment(row.amendment)) || null;
 
@@ -1326,7 +1400,7 @@ function resolveContractFamilyDetail(contractNumber, entity, contractor) {
     };
 }
 
-function getContractFamilyRows(contractNumber, entity, contractor) {
+function getContractFamilyRows(contractNumber, entity, contractor, familyId = null) {
     if (!contractNumber || !entity || !contractor) return [];
 
     const rows = query(
@@ -1336,24 +1410,31 @@ function getContractFamilyRows(contractNumber, entity, contractor) {
            AND entity = ?`,
         [contractNumber, entity]
     );
-    const target = rows.find(row => row.contractor === contractor);
+    if (isPersistedFamilyId(familyId)) {
+        return rows
+            .filter(row => row.family_id === familyId)
+            .sort(compareFamilyMembers);
+    }
+    const target = rows.find(row => row.contractor === contractor && !row.family_id);
     const contractorFamily = target?.contractor_canonical_id
         || normalizeContractorFamily(contractor);
     return rows
         .filter(row => (
-            row.contractor_canonical_id || normalizeContractorFamily(row.contractor)
-        ) === contractorFamily)
+            !row.family_id && (
+                row.contractor_canonical_id || normalizeContractorFamily(row.contractor)
+            ) === contractorFamily
+        ))
         .sort(compareFamilyMembers);
 }
 
-function getAmendmentCount(contractNumber, entity, contractor, currentId) {
-    return getContractFamilyRows(contractNumber, entity, contractor)
+function getAmendmentCount(contractNumber, entity, contractor, currentId, familyId = null) {
+    return getContractFamilyRows(contractNumber, entity, contractor, familyId)
         .filter(row => !isOriginalAmendment(row.amendment) || row.id === currentId)
         .length;
 }
 
-function getAmendments(contractNumber, entity, contractor, excludeId) {
-    return getContractFamilyRows(contractNumber, entity, contractor)
+function getAmendments(contractNumber, entity, contractor, excludeId, familyId = null) {
+    return getContractFamilyRows(contractNumber, entity, contractor, familyId)
         .filter(row => excludeId == null || row.id !== excludeId)
         .map(row => ({
             id: row.id,

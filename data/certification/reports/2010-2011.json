@@ -10,10 +10,6 @@
   "header_fingerprint": "d847faf65f7039b2d01951082646a956db6bab2f555dc885e556ec2340ffcee5",
   "header_profile": "v1",
   "http_status": null,
-  "normalization_registry": {
-    "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced",
-    "version": "normalization-registry-1"
-  },
   "normalizer_version": "bulk-certify-normalizer-1.0.0",
   "parser_version": "bulk-certify-parser-1.1.0",
   "quarantine_reason_counts": {

@@ -4,6 +4,7 @@ Shared helpers for contract normalization, schema management, and inserts.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
 import sqlite3
@@ -23,6 +24,9 @@ from normalization import (
 RAW_SOURCE_TYPE = "csv"
 LIVE_MONITOR_SOURCE_TYPE = "live_monitor"
 LIVE_RECOVERY_SOURCE_TYPE = "live_recovery"
+CANONICAL_IDENTITY_VERSION = "canonical-record-v1"
+FAMILY_IDENTITY_VERSION = "contract-family-v1"
+CANONICAL_DECISION_VERSION = "canonical-decision-v1"
 
 CANCELLATION_STATUSES = frozenset(
     {"cancelled", "not_cancelled", "unknown", "malformed"}
@@ -55,6 +59,13 @@ NORMALIZATION_PROJECTION_COLUMNS = [
     "service_type_resolution_status",
 ]
 
+IDENTITY_PROJECTION_COLUMNS = [
+    "canonical_id",
+    "family_id",
+    "canonical_identity_version",
+    "family_identity_version",
+]
+
 CONTRACT_COLUMNS = [
     "contract_number",
     "entity",
@@ -84,10 +95,14 @@ PROVENANCE_COLUMNS = [
 ]
 
 CANONICAL_RECORD_COLUMNS = (
-    CONTRACT_COLUMNS + PROVENANCE_COLUMNS + NORMALIZATION_PROJECTION_COLUMNS
+    CONTRACT_COLUMNS
+    + PROVENANCE_COLUMNS
+    + NORMALIZATION_PROJECTION_COLUMNS
+    + IDENTITY_PROJECTION_COLUMNS
 )
 INSERT_COLUMNS = (
     ["row_hash"]
+    + IDENTITY_PROJECTION_COLUMNS
     + CONTRACT_COLUMNS
     + PROVENANCE_COLUMNS
     + NORMALIZATION_PROJECTION_COLUMNS
@@ -623,21 +638,83 @@ def normalize_contractor_family(value) -> str:
     return family
 
 
+def _identity_from_parsed_values(parsed_values_json: str, identity_kind: str) -> str:
+    parsed = json.loads(parsed_values_json)
+    normalized = normalize_contract_record(
+        parsed,
+        default_source_type=RAW_SOURCE_TYPE,
+        inserted_at=None,
+        preserve_missing_inserted_at=True,
+    )
+    if identity_kind == "canonical":
+        return normalized["canonical_id"]
+    if identity_kind == "family":
+        return normalized["family_id"]
+    raise ValueError(f"unsupported identity kind: {identity_kind}")
+
+
 def register_sqlite_functions(conn: sqlite3.Connection):
     conn.create_function("contractor_family_key", 1, contractor_family_key)
     conn.create_function("normalize_contractor_family", 1, normalize_contractor_family)
+    conn.create_function(
+        "canonical_id_from_parsed_values",
+        1,
+        lambda payload: _identity_from_parsed_values(payload, "canonical"),
+        deterministic=True,
+    )
+    conn.create_function(
+        "family_id_from_parsed_values",
+        1,
+        lambda payload: _identity_from_parsed_values(payload, "family"),
+        deterministic=True,
+    )
+
+
+def _identity_digest(version: str, fields: list[tuple[str, Any]]) -> str:
+    payload = json.dumps(
+        {"version": version, "fields": fields},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def canonical_digest(row: dict) -> str:
+    fields = [
+        (column, row.get(column))
+        for column in CONTRACT_COLUMNS + NORMALIZATION_PROJECTION_COLUMNS
+    ]
+    return _identity_digest(CANONICAL_IDENTITY_VERSION, fields)
+
+
+def canonical_id_for_row(row: dict) -> str:
+    return f"canonical:v1:{canonical_digest(row)}"
+
+
+def family_id_for_row(row: dict) -> str:
+    entity_identity = (
+        row.get("entity_canonical_id")
+        or clean_str(row.get("entity_number"))
+        or normalize_lookup_value(row.get("entity"))
+    )
+    contractor_identity = (
+        row.get("contractor_canonical_id")
+        or contractor_family_key(row.get("contractor"))
+    )
+    digest = _identity_digest(
+        FAMILY_IDENTITY_VERSION,
+        [
+            ("contract_number", normalize_lookup_value(row.get("contract_number"))),
+            ("entity", entity_identity),
+            ("contractor", contractor_identity),
+        ],
+    )
+    return f"family:v1:{digest}"
 
 
 def row_hash(row: dict) -> str:
-    key = "|".join([
-        row.get("contract_number") or "",
-        row.get("entity") or "",
-        row.get("contractor") or "",
-        normalize_amendment_value(row.get("amendment")),
-        row.get("award_date") or "",
-        str(row.get("amount") or ""),
-    ])
-    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    """Compatibility digest for the complete versioned canonical identity."""
+    return canonical_digest(row)
 
 
 def normalize_contract_record(
@@ -723,7 +800,11 @@ def normalize_contract_record(
         "canonicalization_status": canonicalization_status,
         "normalizer_version": clean_str(record.get("normalizer_version")),
     }
-    normalized["row_hash"] = row_hash(normalized)
+    normalized["canonical_identity_version"] = CANONICAL_IDENTITY_VERSION
+    normalized["family_identity_version"] = FAMILY_IDENTITY_VERSION
+    normalized["canonical_id"] = canonical_id_for_row(normalized)
+    normalized["family_id"] = family_id_for_row(normalized)
+    normalized["row_hash"] = canonical_digest(normalized)
     return normalized
 
 
@@ -739,6 +820,7 @@ def records_equivalent(left: dict, right: dict) -> bool:
 
 
 def create_schema(conn: sqlite3.Connection):
+    register_sqlite_functions(conn)
     conn.execute("PRAGMA foreign_keys = ON")
     if conn.execute("PRAGMA foreign_keys").fetchone()[0] != 1:
         raise RuntimeError("schema creation requires PRAGMA foreign_keys=ON")
@@ -755,6 +837,22 @@ def create_schema(conn: sqlite3.Connection):
             CREATE TABLE contracts (
                 id                  INTEGER PRIMARY KEY AUTOINCREMENT,
                 row_hash            TEXT UNIQUE,
+                canonical_id         TEXT UNIQUE
+                                     CHECK (canonical_id IS NULL OR (
+                                         length(canonical_id) = 77
+                                         AND substr(canonical_id, 1, 13) = 'canonical:v1:'
+                                     )),
+                family_id            TEXT
+                                     CHECK (family_id IS NULL OR (
+                                         length(family_id) = 74
+                                         AND substr(family_id, 1, 10) = 'family:v1:'
+                                     )),
+                canonical_identity_version TEXT
+                                     CHECK (canonical_identity_version IS NULL OR
+                                            canonical_identity_version = 'canonical-record-v1'),
+                family_identity_version TEXT
+                                     CHECK (family_identity_version IS NULL OR
+                                            family_identity_version = 'contract-family-v1'),
                 contract_number     TEXT,
                 entity              TEXT,
                 entity_number       TEXT,
@@ -801,7 +899,8 @@ def create_schema(conn: sqlite3.Connection):
                     CHECK (canonicalization_status IN (
                         'selected_observation', 'legacy_unlinked', 'recovery_unlinked'
                     )),
-                normalizer_version  TEXT
+                normalizer_version  TEXT,
+                UNIQUE(canonical_id, family_id)
             );
         """)
 
@@ -1087,6 +1186,75 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
             )
         );
 
+        CREATE TABLE IF NOT EXISTS canonical_observation_contributors (
+            canonical_id                 TEXT NOT NULL
+                                         REFERENCES contracts(canonical_id)
+                                         ON DELETE RESTRICT,
+            family_id                    TEXT NOT NULL,
+            observation_id               TEXT PRIMARY KEY
+                                         REFERENCES bulk_observations(observation_id)
+                                         ON DELETE RESTRICT,
+            representative_observation_id TEXT NOT NULL
+                                         REFERENCES bulk_observations(observation_id)
+                                         ON DELETE RESTRICT,
+            contribution_role            TEXT NOT NULL
+                                         CHECK (contribution_role IN ('representative', 'duplicate')),
+            merge_reason                 TEXT NOT NULL
+                                         CHECK (merge_reason IN ('selected_representative', 'canonical_record_duplicate')),
+            decision_version             TEXT NOT NULL
+                                         CHECK (decision_version = 'canonical-decision-v1'),
+            FOREIGN KEY (canonical_id, family_id)
+                REFERENCES contracts(canonical_id, family_id)
+                ON DELETE RESTRICT,
+            CHECK (
+                (contribution_role = 'representative'
+                 AND observation_id = representative_observation_id
+                 AND merge_reason = 'selected_representative')
+                OR
+                (contribution_role = 'duplicate'
+                 AND observation_id != representative_observation_id
+                 AND merge_reason = 'canonical_record_duplicate')
+            )
+        );
+        CREATE INDEX IF NOT EXISTS idx_canonical_contributors_canonical
+            ON canonical_observation_contributors(canonical_id);
+        CREATE INDEX IF NOT EXISTS idx_canonical_contributors_family
+            ON canonical_observation_contributors(family_id);
+
+        DROP TRIGGER IF EXISTS validate_canonical_contributor_insert;
+        CREATE TRIGGER validate_canonical_contributor_insert
+        BEFORE INSERT ON canonical_observation_contributors
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM contracts AS contract
+            JOIN bulk_observations AS observation
+              ON observation.observation_id = NEW.observation_id
+            WHERE contract.canonical_id = NEW.canonical_id
+              AND contract.family_id = NEW.family_id
+              AND contract.representative_observation_id = NEW.representative_observation_id
+              AND observation.observation_status = 'certified'
+              AND observation.canonical_eligible = 1
+              AND canonical_id_from_parsed_values(
+                    observation.parsed_values_json
+                  ) = NEW.canonical_id
+              AND family_id_from_parsed_values(
+                    observation.parsed_values_json
+                  ) = NEW.family_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'invalid canonical contributor lineage');
+        END;
+        CREATE TRIGGER IF NOT EXISTS canonical_contributors_no_update
+        BEFORE UPDATE ON canonical_observation_contributors
+        BEGIN
+            SELECT RAISE(ABORT, 'canonical contributors are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS canonical_contributors_no_delete
+        BEFORE DELETE ON canonical_observation_contributors
+        BEGIN
+            SELECT RAISE(ABORT, 'canonical contributors are append-only');
+        END;
+
         CREATE TRIGGER IF NOT EXISTS validate_contract_lineage_insert
         BEFORE INSERT ON contracts
         WHEN NEW.canonicalization_status = 'selected_observation'
@@ -1094,6 +1262,11 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
             SELECT CASE WHEN
                 NEW.representative_observation_id IS NULL
                 OR NEW.normalizer_version IS NULL
+                OR NEW.row_hash IS NULL OR length(NEW.row_hash) != 64
+                OR NEW.canonical_id IS NULL OR length(NEW.canonical_id) != 77
+                OR NEW.family_id IS NULL OR length(NEW.family_id) != 74
+                OR NEW.canonical_identity_version != 'canonical-record-v1'
+                OR NEW.family_identity_version != 'contract-family-v1'
                 OR NOT EXISTS (
                     SELECT 1 FROM bulk_observations AS observation
                     WHERE observation.observation_id = NEW.representative_observation_id
@@ -1105,7 +1278,9 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
         END;
 
         CREATE TRIGGER IF NOT EXISTS validate_contract_lineage_update
-        BEFORE UPDATE OF row_hash, representative_observation_id,
+        BEFORE UPDATE OF row_hash, canonical_id, family_id,
+                         canonical_identity_version, family_identity_version,
+                         representative_observation_id,
                          canonicalization_status, normalizer_version ON contracts
         BEGIN
             SELECT CASE WHEN
@@ -1113,6 +1288,11 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
                 AND (
                     NEW.representative_observation_id IS NULL
                     OR NEW.normalizer_version IS NULL
+                    OR NEW.row_hash IS NULL OR length(NEW.row_hash) != 64
+                    OR NEW.canonical_id IS NULL OR length(NEW.canonical_id) != 77
+                    OR NEW.family_id IS NULL OR length(NEW.family_id) != 74
+                    OR NEW.canonical_identity_version != 'canonical-record-v1'
+                    OR NEW.family_identity_version != 'contract-family-v1'
                     OR NOT EXISTS (
                         SELECT 1 FROM bulk_observations AS observation
                         WHERE observation.observation_id = NEW.representative_observation_id
@@ -1187,6 +1367,25 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
                   AND contract.canonicalization_status = 'selected_observation'
                   AND contract.normalizer_version = observation.normalizer_version
             ) THEN RAISE(ABORT, 'selected projection lineage mismatch') END;
+            SELECT CASE WHEN NEW.contract_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1
+                FROM contracts AS contract
+                JOIN canonical_observation_contributors AS contributor
+                  ON contributor.canonical_id = contract.canonical_id
+                 AND contributor.family_id = contract.family_id
+                WHERE contract.id = NEW.contract_id
+                  AND contributor.observation_id = NEW.observation_id
+                  AND contributor.representative_observation_id =
+                      contract.representative_observation_id
+                  AND (
+                      (NEW.projection_status = 'selected'
+                       AND contributor.contribution_role = 'representative')
+                      OR
+                      (NEW.projection_status = 'excluded'
+                       AND NEW.reason = 'canonical_row_hash_duplicate'
+                       AND contributor.contribution_role = 'duplicate')
+                  )
+            ) THEN RAISE(ABORT, 'projection contributor lineage mismatch') END;
         END;
 
         CREATE TRIGGER IF NOT EXISTS validate_projection_result_update
@@ -1207,6 +1406,25 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
                   AND contract.canonicalization_status = 'selected_observation'
                   AND contract.normalizer_version = observation.normalizer_version
             ) THEN RAISE(ABORT, 'selected projection lineage mismatch') END;
+            SELECT CASE WHEN NEW.contract_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1
+                FROM contracts AS contract
+                JOIN canonical_observation_contributors AS contributor
+                  ON contributor.canonical_id = contract.canonical_id
+                 AND contributor.family_id = contract.family_id
+                WHERE contract.id = NEW.contract_id
+                  AND contributor.observation_id = NEW.observation_id
+                  AND contributor.representative_observation_id =
+                      contract.representative_observation_id
+                  AND (
+                      (NEW.projection_status = 'selected'
+                       AND contributor.contribution_role = 'representative')
+                      OR
+                      (NEW.projection_status = 'excluded'
+                       AND NEW.reason = 'canonical_row_hash_duplicate'
+                       AND contributor.contribution_role = 'duplicate')
+                  )
+            ) THEN RAISE(ABORT, 'projection contributor lineage mismatch') END;
         END;
         CREATE TRIGGER IF NOT EXISTS bulk_projection_results_no_update
         BEFORE UPDATE ON bulk_projection_results
@@ -1227,6 +1445,10 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
     existing = {row[1] for row in conn.execute("PRAGMA table_info(contracts)").fetchall()}
     additions = {
         "row_hash": "TEXT",
+        "canonical_id": "TEXT",
+        "family_id": "TEXT",
+        "canonical_identity_version": "TEXT",
+        "family_identity_version": "TEXT",
         "contract_number": "TEXT",
         "entity": "TEXT",
         "entity_number": "TEXT",
@@ -1271,6 +1493,7 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
     }
     cancellation_status_added = "cancellation_status" not in existing
     normalization_added = "normalization_registry_version" not in existing
+    identity_added = "canonical_id" not in existing
     for column, sql_type in additions.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE contracts ADD COLUMN {column} {sql_type}")
@@ -1354,6 +1577,60 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
         SET canonicalization_status = 'legacy_unlinked'
         WHERE canonicalization_status IS NULL OR TRIM(canonicalization_status) = ''
         """
+    )
+
+    if identity_added:
+        projection_table_exists = conn.execute(
+            """
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table' AND name = 'bulk_projection_results'
+            """
+        ).fetchone()
+        if projection_table_exists and conn.execute(
+            "SELECT EXISTS(SELECT 1 FROM bulk_projection_results LIMIT 1)"
+        ).fetchone()[0]:
+            raise RuntimeError(
+                "canonical identity migration requires a deterministic rebuild "
+                "when append-only projection results already exist"
+            )
+        cursor = conn.execute(
+            f"SELECT id, {', '.join(CONTRACT_COLUMNS + PROVENANCE_COLUMNS + NORMALIZATION_PROJECTION_COLUMNS)} "
+            "FROM contracts ORDER BY id"
+        )
+        names = [description[0] for description in cursor.description]
+        for values in cursor.fetchall():
+            legacy = dict(zip(names, values))
+            contract_id = legacy.pop("id")
+            identity_row_hash = canonical_digest(legacy)
+            identity_canonical_id = canonical_id_for_row(legacy)
+            identity_family_id = family_id_for_row(legacy)
+            conn.execute(
+                """
+                UPDATE contracts
+                SET row_hash = ?, canonical_id = ?, family_id = ?,
+                    canonical_identity_version = ?, family_identity_version = ?
+                WHERE id = ?
+                """,
+                (
+                    identity_row_hash,
+                    identity_canonical_id,
+                    identity_family_id,
+                    CANONICAL_IDENTITY_VERSION,
+                    FAMILY_IDENTITY_VERSION,
+                    contract_id,
+                ),
+            )
+
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_contracts_canonical_id "
+        "ON contracts(canonical_id)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_contracts_canonical_family "
+        "ON contracts(canonical_id, family_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_contracts_family_id ON contracts(family_id)"
     )
     conn.commit()
 
