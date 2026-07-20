@@ -13,15 +13,24 @@ if str(PIPELINE_DIR) not in sys.path:
     sys.path.insert(0, str(PIPELINE_DIR))
 
 import build_site_artifacts  # noqa: E402
+import bulk_observations  # noqa: E402
 import ingest  # noqa: E402
 import monitor  # noqa: E402
 import seed_live_recovery_targets  # noqa: E402
+from bulk_manifest import HEADER_PROFILES  # noqa: E402
 from contract_utils import create_schema  # noqa: E402
 from live_recovery import load_recovery_targets, write_recovered_rows, write_recovery_targets  # noqa: E402
 from recover_live_parents import process_target, select_targets_for_processing  # noqa: E402
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "recovery"
+
+
+def write_bulk_v3(path: Path, rows: list[list[str]]) -> None:
+    with open(path, "w", encoding="latin-1", newline="") as fh:
+        writer = csv.writer(fh, lineterminator="\r\n")
+        writer.writerow(HEADER_PROFILES["v3"])
+        writer.writerows(rows)
 
 
 class PipelineIntegrationTests(unittest.TestCase):
@@ -58,16 +67,139 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertIn("source_contract_id", columns)
         conn.close()
 
+    def test_bulk_ingest_rolls_back_observations_projection_and_fts_together(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "contratos_2021-2022.csv"
+            write_bulk_v3(
+                source,
+                [[
+                    "9000", "Entidad Demo", "2021-000001", "",
+                    "08-01-2021", "08-01-2021", "06-30-2022",
+                    "SERVICIOS PROFESIONALES", "SERVICIOS PROFESIONALES",
+                    "", "10,000.00", "0.00", "Demo Contractor",
+                ]],
+            )
+            conn = sqlite3.connect(":memory:")
+            create_schema(conn)
+            with patch.object(
+                ingest,
+                "project_bulk_observations",
+                side_effect=RuntimeError("synthetic projection failure"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "synthetic projection failure"):
+                    ingest.ingest_raw_csv(conn, source, "2021-2022")
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM evidence_objects").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM bulk_observations").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM contracts").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM contracts_fts").fetchone()[0], 0)
+            conn.close()
+
+    def test_bulk_ingest_updates_fts_incrementally_without_full_rebuild(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "contratos_2021-2022.csv"
+            write_bulk_v3(
+                source,
+                [[
+                    "9000", "Entidad Demo", "2021-000001", "",
+                    "08-01-2021", "08-01-2021", "06-30-2022",
+                    "SERVICIOS PROFESIONALES", "SERVICIOS PROFESIONALES",
+                    "", "10,000.00", "0.00", "Contractor Searchable",
+                ]],
+            )
+            conn = sqlite3.connect(":memory:")
+            create_schema(conn)
+            statements = []
+            conn.set_trace_callback(statements.append)
+
+            ingest.ingest_raw_csv(conn, source, "2021-2022")
+
+            self.assertEqual(
+                conn.execute(
+                    "SELECT COUNT(*) FROM contracts_fts WHERE contracts_fts MATCH 'Searchable'"
+                ).fetchone()[0],
+                1,
+            )
+            self.assertFalse(
+                any(
+                    "INSERT INTO CONTRACTS_FTS(CONTRACTS_FTS) VALUES('REBUILD')"
+                    in statement.upper()
+                    for statement in statements
+                )
+            )
+            conn.close()
+
+    def test_bulk_set_rebuilds_fts_once_and_rolls_back_as_one_unit(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            first = tmp / "contratos_2020-2021.csv"
+            second = tmp / "contratos_2021-2022.csv"
+            row = [
+                "9000", "Entidad Demo", "2021-000001", "",
+                "08-01-2021", "08-01-2021", "06-30-2022",
+                "SERVICIOS PROFESIONALES", "SERVICIOS PROFESIONALES",
+                "", "10,000.00", "0.00", "Contractor Searchable",
+            ]
+            write_bulk_v3(first, [row])
+            second_row = list(row)
+            second_row[2] = "2022-000002"
+            second_row[12] = "Second Searchable"
+            write_bulk_v3(second, [second_row])
+
+            conn = sqlite3.connect(":memory:")
+            create_schema(conn)
+            statements = []
+            conn.set_trace_callback(statements.append)
+            results = ingest.ingest_bulk_csvs(conn, [first, second])
+
+            self.assertEqual(results, [(1, 1, 0), (1, 1, 0)])
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM contracts_fts").fetchone()[0], 2)
+            rebuilds = [
+                statement
+                for statement in statements
+                if "INSERT INTO CONTRACTS_FTS(CONTRACTS_FTS) VALUES('REBUILD')"
+                in statement.upper()
+            ]
+            self.assertEqual(len(rebuilds), 1)
+            conn.close()
+
+            bad = tmp / "contratos_2022-2023.csv"
+            bad.write_bytes(
+                (
+                    Path(__file__).resolve().parent
+                    / "fixtures"
+                    / "bulk"
+                    / "unknown-header.csv"
+                ).read_bytes()
+            )
+            conn = sqlite3.connect(":memory:")
+            create_schema(conn)
+            with self.assertRaises(bulk_observations.UnknownHeaderProfileError):
+                ingest.ingest_bulk_csvs(conn, [first, bad])
+            for table in (
+                "evidence_objects", "bulk_observations", "contracts",
+                "bulk_projection_results", "contracts_fts", "ingestion_log",
+            ):
+                self.assertEqual(
+                    conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0],
+                    0,
+                )
+            conn.close()
+
     def test_ingest_reads_recovery_csv_with_reset_path(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             raw_dir = tmp / "raw"
             raw_dir.mkdir()
             raw_csv = raw_dir / "contratos_2021-2022.csv"
-            with open(raw_csv, "w", encoding="utf-8", newline="") as fh:
-                writer = csv.writer(fh)
-                writer.writerow(["Núm. Contrato", "Entidad", "Contratista", "Enmienda", "Cuantía", "Otorgado en"])
-                writer.writerow(["2021-000001", "Entidad Demo", "Demo Contractor", "", "$10,000.00", "2021-08-01"])
+            write_bulk_v3(
+                raw_csv,
+                [[
+                    "9000", "Entidad Demo", "2021-000001", "",
+                    "08-01-2021", "08-01-2021", "06-30-2022",
+                    "SERVICIOS PROFESIONALES", "SERVICIOS PROFESIONALES",
+                    "", "10,000.00", "0.00", "Demo Contractor",
+                ]],
+            )
 
             recovery_csv = tmp / "live_recovered_contracts.csv"
             with open(recovery_csv, "w", encoding="utf-8", newline="") as fh:
@@ -118,6 +250,11 @@ class PipelineIntegrationTests(unittest.TestCase):
             self.assertEqual(total_rows, 2)
             self.assertEqual(source_types["2021-000001"], "csv")
             self.assertEqual(source_types["2022-000019"], "live_recovery")
+            recovery_log_path = conn.execute(
+                "SELECT csv_file FROM ingestion_log WHERE fiscal_year = 'recovery'"
+            ).fetchone()[0]
+            self.assertEqual(recovery_log_path, recovery_csv.name)
+            self.assertFalse(Path(recovery_log_path).is_absolute())
             conn.close()
 
     def test_browser_artifact_build_preserves_provenance_columns(self):
@@ -162,6 +299,49 @@ class PipelineIntegrationTests(unittest.TestCase):
             self.assertIn("source_url", columns)
             self.assertIn("source_contract_id", columns)
             self.assertEqual(row, ("live_recovery", "https://consultacontratos.ocpr.gov.pr/contract/details?contractid=5248440", "5248440"))
+            browser_conn.close()
+
+    def test_browser_artifact_excludes_full_observation_ledger(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            source_db = tmp / "source.db"
+            browser_db = tmp / "browser.db"
+            batch = bulk_observations.generate_bulk_observations(
+                Path(__file__).resolve().parent
+                / "fixtures"
+                / "bulk"
+                / "ocpr-bulk-v1.csv",
+                fiscal_year="2010-2011",
+                source_channel="archive_bulk",
+            )
+
+            conn = sqlite3.connect(source_db)
+            create_schema(conn)
+            bulk_observations.insert_bulk_observations(conn, batch)
+            with conn:
+                bulk_observations.project_bulk_observations(
+                    conn,
+                    batch,
+                    inserted_at="1970-01-01T00:00:00+00:00",
+                )
+            conn.close()
+
+            build_site_artifacts.build_browser_db(source_db, browser_db)
+            browser_conn = sqlite3.connect(browser_db)
+            tables = {
+                row[0]
+                for row in browser_conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type IN ('table', 'view')"
+                )
+            }
+            self.assertNotIn("evidence_objects", tables)
+            self.assertNotIn("bulk_observations", tables)
+            self.assertNotIn("bulk_projection_exclusions", tables)
+            self.assertNotIn("bulk_projection_results", tables)
+            self.assertEqual(
+                browser_conn.execute("SELECT COUNT(*) FROM contracts").fetchone()[0],
+                2,
+            )
             browser_conn.close()
 
     def test_manifest_includes_recovery_targets(self):
@@ -333,25 +513,27 @@ class PipelineIntegrationTests(unittest.TestCase):
             raw_dir = tmp / "raw"
             raw_dir.mkdir()
             raw_csv = raw_dir / "contratos_2021-2022.csv"
-            with open(raw_csv, "w", encoding="utf-8", newline="") as fh:
-                writer = csv.writer(fh)
-                writer.writerow(["Núm. Contrato", "Entidad", "Contratista", "Enmienda", "Cuantía", "Otorgado en"])
-                writer.writerow([
-                    "2022-000019",
-                    "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
-                    "IEMES PSC",
-                    "A",
-                    "$5,000.00",
-                    "2022-04-01",
-                ])
-                writer.writerow([
-                    "2022-000019",
-                    "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
-                    "IEMES PSC",
-                    "B",
-                    "$6,000.00",
-                    "2022-05-01",
-                ])
+            write_bulk_v3(
+                raw_csv,
+                [
+                    [
+                        "3136",
+                        "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
+                        "2022-000019", "A", "04-01-2022", "04-01-2022",
+                        "06-30-2022", "SERVICIOS DE INGENIERÍA",
+                        "SERVICIOS PROFESIONALES", "", "5,000.00", "0.00",
+                        "IEMES PSC",
+                    ],
+                    [
+                        "3136",
+                        "Autoridad de Transporte Marítimo de Puerto Rico y las Islas Municipios",
+                        "2022-000019", "B", "05-01-2022", "05-01-2022",
+                        "06-30-2022", "SERVICIOS DE INGENIERÍA",
+                        "SERVICIOS PROFESIONALES", "", "6,000.00", "0.00",
+                        "IEMES PSC",
+                    ],
+                ],
+            )
 
             db_path = tmp / "contracts.db"
             recovery_csv = tmp / "live_recovered_contracts.csv"

@@ -10,21 +10,28 @@ from __future__ import annotations
 
 import argparse
 import csv
-import io
+import hashlib
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import COLUMN_MAP, DB_PATH, RAW_DIR, REPO_ROOT
+from bulk_observations import (
+    generate_bulk_observations,
+    insert_bulk_observations,
+    project_bulk_observations,
+)
+from config import (
+    ARCHIVED_ONLY_FISCAL_YEARS,
+    COLUMN_MAP,
+    DB_PATH,
+    RAW_DIR,
+    REPO_ROOT,
+)
 from contract_utils import (
     CONTRACT_INSERT_SQL,
-    RAW_SOURCE_TYPE,
-    clean_str,
     create_schema,
     normalize_contract_record,
-    parse_amount,
-    parse_cancelled,
-    parse_date,
 )
 
 
@@ -58,91 +65,136 @@ def fiscal_year_from_filename(path: Path) -> str:
     return path.stem
 
 
-def ingest_raw_csv(conn: sqlite3.Connection, csv_path: Path, fiscal_year: str):
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _certification_metadata(csv_path: Path, fiscal_year: str) -> dict:
+    """Load tracked metadata only when it identifies these exact source bytes."""
+    report_path = (
+        REPO_ROOT / "data" / "certification" / "reports" / f"{fiscal_year}.json"
+    )
+    if not report_path.is_file():
+        return {}
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    if payload.get("sha256") != _sha256_file(csv_path):
+        return {}
+    return payload
+
+
+def _portable_source_path(csv_path: Path) -> str:
+    try:
+        return csv_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return csv_path.name
+
+
+def ingest_raw_csv(
+    conn: sqlite3.Connection,
+    csv_path: Path,
+    fiscal_year: str,
+    *,
+    index_fts: bool = True,
+    manage_transaction: bool = True,
+):
     print(f"\n  [ingest] {csv_path.name} (fiscal year: {fiscal_year})")
+    metadata = _certification_metadata(csv_path, fiscal_year)
+    source_channel = metadata.get("source_channel") or (
+        "archive_bulk"
+        if fiscal_year in ARCHIVED_ONLY_FISCAL_YEARS
+        else "official_bulk"
+    )
+    batch = generate_bulk_observations(
+        csv_path,
+        fiscal_year=fiscal_year,
+        source_channel=source_channel,
+        source_url=metadata.get("source_url"),
+        archive_url=metadata.get("archive_url"),
+        capture_time=metadata.get("capture_time"),
+        capture_time_status=metadata.get("capture_time_status", "unknown"),
+        http_status=metadata.get("http_status"),
+        content_type=metadata.get("content_type"),
+        requested_url=metadata.get("source_url"),
+        final_url=metadata.get("source_url"),
+    )
+    inserted_at = batch.evidence.captured_at
 
-    encoding = detect_encoding(csv_path)
-    with open(csv_path, encoding=encoding, newline="") as fh:
-        content = fh.read()
-
-    reader = csv.DictReader(io.StringIO(content))
-    headers = reader.fieldnames or []
-    print(f"    columns: {headers}")
-
-    column_lookup = {canonical: resolve_header(headers, canonical) for canonical in COLUMN_MAP}
-    missing = [canonical for canonical, value in column_lookup.items() if value is None]
-    if missing:
-        print(f"    [warn] not found: {missing}")
-
-    inserted_at = datetime.now(timezone.utc).isoformat()
-    rows_parsed = rows_new = rows_dup = 0
-    batch: list[dict] = []
-
-    for raw_row in reader:
-        rows_parsed += 1
-
-        def get(canonical: str) -> str:
-            key = column_lookup.get(canonical)
-            return (raw_row.get(key) or "").strip() if key else ""
-
-        batch.append(
-            normalize_contract_record(
-                {
-                    "contract_number": get("contract_number"),
-                    "entity": get("entity"),
-                    "entity_number": get("entity_number"),
-                    "contractor": get("contractor"),
-                    "amendment": get("amendment"),
-                    "service_category": get("service_category"),
-                    "service_type": get("service_type"),
-                    "amount": parse_amount(get("amount")),
-                    "amount_receivable": parse_amount(get("amount_receivable")),
-                    "award_date": parse_date(get("award_date")),
-                    "valid_from": parse_date(get("valid_from")),
-                    "valid_to": parse_date(get("valid_to")),
-                    "procurement_method": clean_str(get("procurement_method")),
-                    "fund_type": clean_str(get("fund_type")),
-                    "pco_number": clean_str(get("pco_number")),
-                    "cancelled": parse_cancelled(get("cancelled")),
-                    "document_url": clean_str(get("document_url")),
-                    "fiscal_year": fiscal_year,
-                    "source_type": RAW_SOURCE_TYPE,
-                    "source_url": None,
-                    "source_contract_id": None,
-                    "inserted_at": inserted_at,
-                },
-                default_source_type=RAW_SOURCE_TYPE,
-                inserted_at=inserted_at,
-            )
+    def apply():
+        insert_bulk_observations(conn, batch, manage_transaction=False)
+        projection = project_bulk_observations(
+            conn,
+            batch,
+            inserted_at=inserted_at,
+            index_fts=index_fts,
         )
 
-        if len(batch) >= 500:
-            result = conn.executemany(CONTRACT_INSERT_SQL, batch)
-            rows_new += result.rowcount
-            rows_dup += len(batch) - result.rowcount
-            batch.clear()
+        exclusion_counts = dict(projection.exclusion_reason_counts)
+        for reason, count in batch.report.quarantine_reason_counts.items():
+            exclusion_counts[f"parser_{reason}"] = count
+        conn.execute(
+            """
+            INSERT INTO ingestion_log (
+                fiscal_year, csv_file, rows_parsed, rows_new, rows_dup,
+                ingested_at, observations_total, canonical_excluded,
+                exclusions_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                fiscal_year,
+                _portable_source_path(csv_path),
+                len(batch),
+                projection.rows_new,
+                projection.rows_duplicate,
+                inserted_at,
+                len(batch),
+                projection.rows_duplicate + projection.rows_ineligible,
+                json.dumps(
+                    exclusion_counts,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+            ),
+        )
+        return projection
 
-    if batch:
-        result = conn.executemany(CONTRACT_INSERT_SQL, batch)
-        rows_new += result.rowcount
-        rows_dup += len(batch) - result.rowcount
+    if manage_transaction:
+        with conn:
+            projection = apply()
+    else:
+        projection = apply()
 
-    conn.commit()
-    conn.execute("INSERT INTO contracts_fts(contracts_fts) VALUES('rebuild')")
-    conn.commit()
-
-    conn.execute(
-        """
-        INSERT INTO ingestion_log (
-            fiscal_year, csv_file, rows_parsed, rows_new, rows_dup, ingested_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (fiscal_year, str(csv_path), rows_parsed, rows_new, rows_dup, inserted_at),
+    print(
+        "    "
+        f"observations={len(batch)}  new={projection.rows_new}  "
+        f"duplicates={projection.rows_duplicate}  "
+        f"quarantined={projection.rows_ineligible}  "
+        f"existing={projection.rows_existing}"
     )
-    conn.commit()
+    return len(batch), projection.rows_new, projection.rows_duplicate
 
-    print(f"    parsed={rows_parsed}  new={rows_new}  duplicates={rows_dup}")
-    return rows_parsed, rows_new, rows_dup
+
+def ingest_bulk_csvs(conn: sqlite3.Connection, csv_files: list[Path]):
+    """Ingest a complete bulk set atomically and rebuild external FTS once."""
+    results = []
+    rows_new = 0
+    with conn:
+        for csv_path in csv_files:
+            result = ingest_raw_csv(
+                conn,
+                csv_path,
+                fiscal_year_from_filename(csv_path),
+                index_fts=False,
+                manage_transaction=False,
+            )
+            results.append(result)
+            rows_new += result[1]
+        if rows_new:
+            conn.execute("INSERT INTO contracts_fts(contracts_fts) VALUES('rebuild')")
+    return results
 
 
 def ingest_recovery_csv(conn: sqlite3.Connection, csv_path: Path):
@@ -188,7 +240,7 @@ def ingest_recovery_csv(conn: sqlite3.Connection, csv_path: Path):
             fiscal_year, csv_file, rows_parsed, rows_new, rows_dup, ingested_at
         ) VALUES (?, ?, ?, ?, ?, ?)
         """,
-        ("recovery", str(csv_path), rows_parsed, rows_new, rows_dup, now),
+        ("recovery", _portable_source_path(csv_path), rows_parsed, rows_new, rows_dup, now),
     )
     conn.commit()
 
@@ -254,8 +306,7 @@ def main():
 
     print(f"\nIngesting {len(csv_files)} CSV file(s) into {db_path}\n")
 
-    for csv_path in csv_files:
-        ingest_raw_csv(conn, csv_path, fiscal_year_from_filename(csv_path))
+    ingest_bulk_csvs(conn, csv_files)
 
     ingest_recovery_csv(conn, Path(args.recovery_csv))
 

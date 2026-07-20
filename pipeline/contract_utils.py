@@ -4,16 +4,25 @@ Shared helpers for contract normalization, schema management, and inserts.
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 import sqlite3
 import unicodedata
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 from zoneinfo import ZoneInfo
 
 
 RAW_SOURCE_TYPE = "csv"
 LIVE_MONITOR_SOURCE_TYPE = "live_monitor"
 LIVE_RECOVERY_SOURCE_TYPE = "live_recovery"
+
+CANONICAL_LINEAGE_COLUMNS = [
+    "representative_observation_id",
+    "canonicalization_status",
+    "normalizer_version",
+]
 
 CONTRACT_COLUMNS = [
     "contract_number",
@@ -43,7 +52,13 @@ PROVENANCE_COLUMNS = [
 ]
 
 CANONICAL_RECORD_COLUMNS = CONTRACT_COLUMNS + PROVENANCE_COLUMNS
-INSERT_COLUMNS = ["row_hash"] + CONTRACT_COLUMNS + PROVENANCE_COLUMNS + ["inserted_at"]
+INSERT_COLUMNS = (
+    ["row_hash"]
+    + CONTRACT_COLUMNS
+    + PROVENANCE_COLUMNS
+    + ["inserted_at"]
+    + CANONICAL_LINEAGE_COLUMNS
+)
 
 CONTRACT_INSERT_SQL = f"""
     INSERT OR IGNORE INTO contracts (
@@ -200,6 +215,128 @@ def normalize_lookup_value(value) -> str:
     normalized = normalized.replace("\x00", " ")
     normalized = re.sub(r"\s+", " ", normalized)
     return normalized.strip().upper()
+
+
+# Bulk observations use an explicit typed-result contract.  The legacy
+# ``parse_amount``/``parse_date`` helpers below intentionally remain permissive
+# for recovery and compatibility ingestion; bulk parsing calls this stricter
+# profile-aware API instead.
+BULK_FIELD_STATUSES = frozenset(
+    {"valid", "missing", "malformed", "ambiguous", "out_of_domain"}
+)
+BULK_ALLOWED_CANONICAL_STATUSES = frozenset({"valid", "missing"})
+_BULK_AMOUNT_PATTERN = re.compile(r"-?(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?")
+_BULK_DATE_FIELDS = {"award_date", "valid_from", "valid_to"}
+_BULK_AMOUNT_FIELDS = {"amount", "amount_receivable"}
+
+
+@dataclass(frozen=True)
+class TypedFieldResult:
+    """A raw bulk field paired with its typed value and closed status."""
+
+    value: Any
+    raw_value: str | None
+    status: str
+    warning: str | None = None
+
+    def __post_init__(self):
+        if self.status not in BULK_FIELD_STATUSES:
+            raise ValueError(f"unknown bulk field status: {self.status!r}")
+
+
+def _bulk_blank(raw: Any) -> bool:
+    return raw is None or str(raw).strip() in {"", "\x00"}
+
+
+def _parse_bulk_date(raw: Any) -> TypedFieldResult:
+    if _bulk_blank(raw):
+        return TypedFieldResult(None, None if raw is None else str(raw), "missing")
+
+    text = str(raw).replace("\u00a0", " ").strip()
+    parts = text.split("-")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return TypedFieldResult(None, str(raw), "malformed")
+
+    month, day, year = parts
+    if len(year) == 2:
+        return TypedFieldResult(None, str(raw), "ambiguous")
+    if len(year) != 4:
+        return TypedFieldResult(None, str(raw), "malformed")
+    try:
+        parsed = datetime.strptime(text, "%m-%d-%Y").date().isoformat()
+    except ValueError:
+        # The shape is date-like, but the profile's fixed calendar domain
+        # rejects it.  Certification separately reports this as malformed_date.
+        return TypedFieldResult(None, str(raw), "out_of_domain")
+    return TypedFieldResult(parsed, str(raw), "valid")
+
+
+def _parse_bulk_amount(raw: Any) -> TypedFieldResult:
+    if _bulk_blank(raw):
+        return TypedFieldResult(None, None if raw is None else str(raw), "missing")
+
+    text = str(raw).strip()
+    if not _BULK_AMOUNT_PATTERN.fullmatch(text):
+        return TypedFieldResult(None, str(raw), "malformed")
+    try:
+        parsed = float(text.replace(",", ""))
+    except ValueError:
+        return TypedFieldResult(None, str(raw), "malformed")
+    if not math.isfinite(parsed):
+        return TypedFieldResult(None, str(raw), "out_of_domain")
+    return TypedFieldResult(parsed, str(raw), "valid")
+
+
+def _parse_bulk_cancelled(raw: Any) -> TypedFieldResult:
+    if _bulk_blank(raw):
+        return TypedFieldResult(0, None if raw is None else str(raw), "missing")
+
+    text = str(raw).strip()
+    normalized = normalize_lookup_value(text)
+    if normalized in {"SÍ", "SI", "YES", "S", "Y", "1", "TRUE"}:
+        return TypedFieldResult(1, str(raw), "valid")
+    if normalized in {"NO", "N", "0", "FALSE"}:
+        return TypedFieldResult(0, str(raw), "valid")
+
+    dated = _parse_bulk_date(text)
+    if dated.status == "valid":
+        # Task 3 preserves the source date/status while retaining the legacy
+        # boolean projection.  Task 4 owns the cancellation migration.
+        return TypedFieldResult(
+            0,
+            str(raw),
+            "valid",
+            warning="dated_cancellation_preserved_for_task_4",
+        )
+    if dated.status == "ambiguous":
+        return TypedFieldResult(None, str(raw), "ambiguous")
+    return TypedFieldResult(None, str(raw), "malformed")
+
+
+def parse_bulk_field(
+    canonical: str,
+    raw: Any,
+    *,
+    profile: str | None = None,
+) -> TypedFieldResult:
+    """Parse one known bulk field without trying alternate date orders.
+
+    ``profile`` is accepted as an explicit contract marker even though all
+    currently certified profiles use MM-DD-YYYY.  Keeping it in the API makes
+    a future profile-specific rule change appendable and auditable rather than
+    silently changing the interpretation of old observations.
+    """
+    del profile  # The certified corpus rule is fixed for v1/v2/v3 today.
+    raw_value = None if raw is None else str(raw)
+    if canonical in _BULK_DATE_FIELDS:
+        return _parse_bulk_date(raw)
+    if canonical in _BULK_AMOUNT_FIELDS:
+        return _parse_bulk_amount(raw)
+    if canonical == "cancelled":
+        return _parse_bulk_cancelled(raw)
+    if _bulk_blank(raw):
+        return TypedFieldResult(None, raw_value, "missing")
+    return TypedFieldResult(clean_str(raw), raw_value, "valid")
 
 
 def normalize_entity_name(value) -> str:
@@ -364,8 +501,20 @@ def normalize_contract_record(
     *,
     default_source_type: str = RAW_SOURCE_TYPE,
     inserted_at: str | None = None,
+    preserve_missing_inserted_at: bool = False,
 ) -> dict:
-    now = inserted_at or record.get("inserted_at") or datetime.now(timezone.utc).isoformat()
+    if preserve_missing_inserted_at:
+        now = inserted_at or record.get("inserted_at")
+    else:
+        now = inserted_at or record.get("inserted_at") or datetime.now(timezone.utc).isoformat()
+    source_type = clean_str(record.get("source_type")) or default_source_type
+    canonicalization_status = clean_str(record.get("canonicalization_status"))
+    if not canonicalization_status:
+        canonicalization_status = (
+            "recovery_unlinked"
+            if source_type in {LIVE_MONITOR_SOURCE_TYPE, LIVE_RECOVERY_SOURCE_TYPE}
+            else "legacy_unlinked"
+        )
     normalized = {
         "contract_number": clean_str(record.get("contract_number")),
         "entity": strip_entity_code(record.get("entity")),
@@ -385,10 +534,15 @@ def normalize_contract_record(
         "cancelled": parse_cancelled(record.get("cancelled")) if not isinstance(record.get("cancelled"), int) else int(record.get("cancelled")),
         "document_url": clean_str(record.get("document_url")),
         "fiscal_year": clean_str(record.get("fiscal_year")) or fiscal_year_from_date(record.get("award_date")),
-        "source_type": clean_str(record.get("source_type")) or default_source_type,
+        "source_type": source_type,
         "source_url": clean_str(record.get("source_url")),
         "source_contract_id": clean_str(record.get("source_contract_id")),
         "inserted_at": now,
+        "representative_observation_id": clean_str(
+            record.get("representative_observation_id")
+        ),
+        "canonicalization_status": canonicalization_status,
+        "normalizer_version": clean_str(record.get("normalizer_version")),
     }
     normalized["row_hash"] = row_hash(normalized)
     return normalized
@@ -406,6 +560,12 @@ def records_equivalent(left: dict, right: dict) -> bool:
 
 
 def create_schema(conn: sqlite3.Connection):
+    conn.execute("PRAGMA foreign_keys = ON")
+    if conn.execute("PRAGMA foreign_keys").fetchone()[0] != 1:
+        raise RuntimeError("schema creation requires PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA recursive_triggers = ON")
+    if conn.execute("PRAGMA recursive_triggers").fetchone()[0] != 1:
+        raise RuntimeError("schema creation requires PRAGMA recursive_triggers=ON")
     contracts_exists = bool(
         conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'contracts'"
@@ -437,7 +597,13 @@ def create_schema(conn: sqlite3.Connection):
                 source_type         TEXT NOT NULL DEFAULT 'csv',
                 source_url          TEXT,
                 source_contract_id  TEXT,
-                inserted_at         TEXT
+                inserted_at         TEXT,
+                representative_observation_id TEXT,
+                canonicalization_status TEXT NOT NULL DEFAULT 'legacy_unlinked'
+                    CHECK (canonicalization_status IN (
+                        'selected_observation', 'legacy_unlinked', 'recovery_unlinked'
+                    )),
+                normalizer_version  TEXT
             );
         """)
 
@@ -463,15 +629,361 @@ def create_schema(conn: sqlite3.Connection):
         );
 
         CREATE TABLE IF NOT EXISTS ingestion_log (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            fiscal_year TEXT,
-            csv_file    TEXT,
-            rows_parsed INTEGER,
-            rows_new    INTEGER,
-            rows_dup    INTEGER,
-            ingested_at TEXT
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            fiscal_year         TEXT,
+            csv_file            TEXT,
+            rows_parsed         INTEGER,
+            rows_new            INTEGER,
+            rows_dup            INTEGER,
+            ingested_at         TEXT,
+            observations_total  INTEGER DEFAULT 0,
+            canonical_excluded  INTEGER DEFAULT 0,
+            exclusions_json     TEXT NOT NULL DEFAULT '[]'
         );
     """)
+    migrate_ingestion_log_schema(conn)
+    create_bulk_observation_schema(conn)
+
+
+def migrate_ingestion_log_schema(conn: sqlite3.Connection):
+    """Add Task 3 audit columns without changing recovery log behavior."""
+    existing = {
+        row[1] for row in conn.execute("PRAGMA table_info(ingestion_log)").fetchall()
+    }
+    additions = {
+        "observations_total": "INTEGER DEFAULT 0",
+        "canonical_excluded": "INTEGER DEFAULT 0",
+        "exclusions_json": "TEXT NOT NULL DEFAULT '[]'",
+    }
+    for column, sql_type in additions.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE ingestion_log ADD COLUMN {column} {sql_type}")
+    conn.commit()
+
+
+def create_bulk_observation_schema(conn: sqlite3.Connection):
+    """Create the full/audit observation ledger, never the browser projection."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS evidence_objects (
+            evidence_id          TEXT PRIMARY KEY
+                                 CHECK (length(evidence_id) = 71 AND substr(evidence_id, 1, 7) = 'sha256:'),
+            source_channel       TEXT NOT NULL
+                                 CHECK (source_channel IN ('official_bulk', 'archive_bulk')),
+            fiscal_year          TEXT,
+            source_url           TEXT,
+            archive_url          TEXT,
+            captured_at          TEXT,
+            capture_time_status  TEXT NOT NULL
+                                 CHECK (capture_time_status IN ('observed', 'git_first_seen', 'unknown')),
+            sha256               TEXT NOT NULL
+                                 CHECK (length(sha256) = 64),
+            byte_length          INTEGER NOT NULL CHECK (byte_length >= 0),
+            encoding             TEXT NOT NULL,
+            media_type           TEXT,
+            header_profile       TEXT NOT NULL,
+            header_fingerprint   TEXT NOT NULL,
+            status               TEXT NOT NULL
+                                 CHECK (status IN ('certified', 'certified_with_quarantine')),
+            metadata_json        TEXT NOT NULL,
+            CHECK (evidence_id = 'sha256:' || sha256),
+            CHECK (
+                (capture_time_status = 'unknown' AND captured_at IS NULL)
+                OR
+                (capture_time_status != 'unknown' AND captured_at IS NOT NULL)
+            ),
+            UNIQUE(source_channel, fiscal_year, sha256)
+        );
+
+        CREATE TABLE IF NOT EXISTS bulk_observations (
+            observation_id             TEXT PRIMARY KEY
+                                       CHECK (length(observation_id) = 71 AND substr(observation_id, 1, 7) = 'sha256:'),
+            evidence_id               TEXT NOT NULL
+                                      REFERENCES evidence_objects(evidence_id)
+                                      ON DELETE RESTRICT,
+            source_row_number         INTEGER NOT NULL CHECK (source_row_number >= 2),
+            raw_row_hash              TEXT NOT NULL CHECK (length(raw_row_hash) = 64),
+            raw_record                TEXT NOT NULL,
+            raw_values_json           TEXT NOT NULL,
+            raw_coordinates_json      TEXT NOT NULL,
+            parser_profile             TEXT NOT NULL,
+            parser_version            TEXT NOT NULL,
+            normalizer_version        TEXT NOT NULL,
+            parsed_values_json        TEXT NOT NULL,
+            field_status_json         TEXT NOT NULL,
+            warnings_json              TEXT NOT NULL,
+            parser_outcome             TEXT NOT NULL
+                                       CHECK (parser_outcome IN (
+                                           'certified', 'shifted_row', 'malformed_csv',
+                                           'malformed_date', 'ambiguous_date',
+                                           'malformed_amount'
+                                       )),
+            observation_status         TEXT NOT NULL
+                                      CHECK (observation_status IN ('certified', 'quarantined')),
+            duplicate_status           TEXT NOT NULL
+                                      CHECK (duplicate_status IN ('unique', 'exact_duplicate')),
+            duplicate_of_observation_id TEXT
+                                        REFERENCES bulk_observations(observation_id)
+                                        ON DELETE RESTRICT,
+            canonical_eligible         INTEGER NOT NULL
+                                      CHECK (canonical_eligible IN (0, 1)),
+            canonical_exclusion_reason TEXT,
+            CHECK (
+                (canonical_eligible = 1 AND canonical_exclusion_reason IS NULL)
+                OR
+                (canonical_eligible = 0 AND canonical_exclusion_reason IS NOT NULL)
+            ),
+            CHECK (
+                (duplicate_status = 'unique' AND duplicate_of_observation_id IS NULL)
+                OR
+                (duplicate_status = 'exact_duplicate' AND duplicate_of_observation_id IS NOT NULL)
+            ),
+            UNIQUE(evidence_id, source_row_number, parser_version,
+                   normalizer_version),
+            UNIQUE(observation_id, evidence_id, source_row_number)
+        );
+        CREATE INDEX IF NOT EXISTS idx_bulk_observations_evidence
+            ON bulk_observations(evidence_id);
+        CREATE INDEX IF NOT EXISTS idx_bulk_observations_status
+            ON bulk_observations(observation_status, canonical_eligible);
+
+        CREATE TRIGGER IF NOT EXISTS validate_bulk_observation_insert
+        BEFORE INSERT ON bulk_observations
+        WHEN NEW.canonical_eligible = 1 AND NEW.observation_status != 'certified'
+        BEGIN
+            SELECT RAISE(ABORT, 'only certified observations may be canonical eligible');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS evidence_objects_no_update
+        BEFORE UPDATE ON evidence_objects
+        BEGIN
+            SELECT RAISE(ABORT, 'evidence objects are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS evidence_objects_no_delete
+        BEFORE DELETE ON evidence_objects
+        BEGIN
+            SELECT RAISE(ABORT, 'evidence objects are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_observations_no_update
+        BEFORE UPDATE ON bulk_observations
+        BEGIN
+            SELECT RAISE(ABORT, 'bulk observations are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_observations_no_delete
+        BEFORE DELETE ON bulk_observations
+        BEGIN
+            SELECT RAISE(ABORT, 'bulk observations are append-only');
+        END;
+
+        CREATE TABLE IF NOT EXISTS bulk_projection_exclusions (
+            exclusion_id       TEXT PRIMARY KEY
+                               CHECK (length(exclusion_id) = 71 AND substr(exclusion_id, 1, 7) = 'sha256:'),
+            observation_id     TEXT NOT NULL
+                               REFERENCES bulk_observations(observation_id)
+                               ON DELETE RESTRICT,
+            evidence_id        TEXT NOT NULL
+                               REFERENCES evidence_objects(evidence_id)
+                               ON DELETE RESTRICT,
+            source_row_number  INTEGER NOT NULL CHECK (source_row_number >= 2),
+            reason             TEXT NOT NULL,
+            details_json       TEXT NOT NULL,
+            UNIQUE(observation_id),
+            FOREIGN KEY (observation_id, evidence_id, source_row_number)
+                REFERENCES bulk_observations(
+                    observation_id, evidence_id, source_row_number
+                ) ON DELETE RESTRICT
+        );
+        CREATE INDEX IF NOT EXISTS idx_bulk_exclusions_evidence
+            ON bulk_projection_exclusions(evidence_id);
+
+        CREATE TRIGGER IF NOT EXISTS validate_projection_exclusion_insert
+        BEFORE INSERT ON bulk_projection_exclusions
+        WHEN NOT EXISTS (
+            SELECT 1 FROM bulk_observations AS observation
+            WHERE observation.observation_id = NEW.observation_id
+              AND (
+                  (
+                      observation.canonical_eligible = 0
+                      AND NEW.reason = observation.canonical_exclusion_reason
+                  )
+                  OR
+                  (
+                      observation.canonical_eligible = 1
+                      AND observation.observation_status = 'certified'
+                      AND NEW.reason = 'canonical_row_hash_duplicate'
+                  )
+              )
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'invalid projection exclusion semantics');
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_projection_exclusions_no_update
+        BEFORE UPDATE ON bulk_projection_exclusions
+        BEGIN
+            SELECT RAISE(ABORT, 'projection exclusions are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_projection_exclusions_no_delete
+        BEFORE DELETE ON bulk_projection_exclusions
+        BEGIN
+            SELECT RAISE(ABORT, 'projection exclusions are append-only');
+        END;
+
+        CREATE TABLE IF NOT EXISTS bulk_projection_results (
+            observation_id   TEXT PRIMARY KEY
+                             REFERENCES bulk_observations(observation_id)
+                             ON DELETE RESTRICT,
+            row_hash         TEXT,
+            contract_id      INTEGER REFERENCES contracts(id) ON DELETE RESTRICT,
+            projection_status TEXT NOT NULL
+                              CHECK (projection_status IN ('selected', 'excluded')),
+            reason           TEXT,
+            CHECK (
+                (projection_status = 'selected' AND contract_id IS NOT NULL
+                    AND row_hash IS NOT NULL AND reason IS NULL)
+                OR
+                (projection_status = 'excluded' AND reason IS NOT NULL
+                    AND (
+                        (contract_id IS NULL AND row_hash IS NULL)
+                        OR
+                        (contract_id IS NOT NULL AND row_hash IS NOT NULL)
+                    ))
+            )
+        );
+
+        CREATE TRIGGER IF NOT EXISTS validate_contract_lineage_insert
+        BEFORE INSERT ON contracts
+        WHEN NEW.canonicalization_status = 'selected_observation'
+        BEGIN
+            SELECT CASE WHEN
+                NEW.representative_observation_id IS NULL
+                OR NEW.normalizer_version IS NULL
+                OR NOT EXISTS (
+                    SELECT 1 FROM bulk_observations AS observation
+                    WHERE observation.observation_id = NEW.representative_observation_id
+                      AND observation.normalizer_version = NEW.normalizer_version
+                      AND observation.canonical_eligible = 1
+                      AND observation.observation_status = 'certified'
+                )
+            THEN RAISE(ABORT, 'invalid selected-observation contract lineage') END;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_contract_lineage_update
+        BEFORE UPDATE OF row_hash, representative_observation_id,
+                         canonicalization_status, normalizer_version ON contracts
+        BEGIN
+            SELECT CASE WHEN
+                NEW.canonicalization_status = 'selected_observation'
+                AND (
+                    NEW.representative_observation_id IS NULL
+                    OR NEW.normalizer_version IS NULL
+                    OR NOT EXISTS (
+                        SELECT 1 FROM bulk_observations AS observation
+                        WHERE observation.observation_id = NEW.representative_observation_id
+                          AND observation.normalizer_version = NEW.normalizer_version
+                          AND observation.canonical_eligible = 1
+                          AND observation.observation_status = 'certified'
+                    )
+                )
+            THEN RAISE(ABORT, 'invalid selected-observation contract lineage') END;
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM bulk_projection_results AS result
+                WHERE result.contract_id = OLD.id
+                  AND (
+                      (result.row_hash IS NOT NULL AND result.row_hash != NEW.row_hash)
+                      OR (
+                          result.projection_status = 'selected'
+                          AND (
+                              NEW.canonicalization_status != 'selected_observation'
+                              OR result.observation_id != NEW.representative_observation_id
+                          )
+                      )
+                  )
+            ) THEN RAISE(ABORT, 'canonical contract/projection mismatch') END;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_projection_result_insert
+        BEFORE INSERT ON bulk_projection_results
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1 FROM bulk_observations AS observation
+                WHERE observation.observation_id = NEW.observation_id
+                  AND (
+                      (
+                          NEW.projection_status = 'selected'
+                          AND observation.canonical_eligible = 1
+                          AND observation.observation_status = 'certified'
+                      )
+                      OR
+                      (
+                          NEW.projection_status = 'excluded'
+                          AND (
+                              (
+                                  NEW.contract_id IS NULL
+                                  AND NEW.row_hash IS NULL
+                                  AND observation.canonical_eligible = 0
+                                  AND NEW.reason = observation.canonical_exclusion_reason
+                              )
+                              OR
+                              (
+                                  NEW.contract_id IS NOT NULL
+                                  AND NEW.row_hash IS NOT NULL
+                                  AND observation.canonical_eligible = 1
+                                  AND observation.observation_status = 'certified'
+                                  AND NEW.reason = 'canonical_row_hash_duplicate'
+                              )
+                          )
+                      )
+                  )
+            ) THEN RAISE(ABORT, 'invalid projection result semantics') END;
+            SELECT CASE WHEN NEW.contract_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM contracts AS contract
+                WHERE contract.id = NEW.contract_id
+                  AND contract.row_hash = NEW.row_hash
+            ) THEN RAISE(ABORT, 'projection contract/hash mismatch') END;
+            SELECT CASE WHEN NEW.projection_status = 'selected' AND NOT EXISTS (
+                SELECT 1
+                FROM contracts AS contract
+                JOIN bulk_observations AS observation
+                  ON observation.observation_id = NEW.observation_id
+                WHERE contract.id = NEW.contract_id
+                  AND contract.representative_observation_id = NEW.observation_id
+                  AND contract.canonicalization_status = 'selected_observation'
+                  AND contract.normalizer_version = observation.normalizer_version
+            ) THEN RAISE(ABORT, 'selected projection lineage mismatch') END;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_projection_result_update
+        BEFORE UPDATE ON bulk_projection_results
+        BEGIN
+            SELECT CASE WHEN NEW.contract_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM contracts AS contract
+                WHERE contract.id = NEW.contract_id
+                  AND contract.row_hash = NEW.row_hash
+            ) THEN RAISE(ABORT, 'projection contract/hash mismatch') END;
+            SELECT CASE WHEN NEW.projection_status = 'selected' AND NOT EXISTS (
+                SELECT 1
+                FROM contracts AS contract
+                JOIN bulk_observations AS observation
+                  ON observation.observation_id = NEW.observation_id
+                WHERE contract.id = NEW.contract_id
+                  AND contract.representative_observation_id = NEW.observation_id
+                  AND contract.canonicalization_status = 'selected_observation'
+                  AND contract.normalizer_version = observation.normalizer_version
+            ) THEN RAISE(ABORT, 'selected projection lineage mismatch') END;
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_projection_results_no_update
+        BEFORE UPDATE ON bulk_projection_results
+        BEGIN
+            SELECT RAISE(ABORT, 'projection results are append-only');
+        END;
+        CREATE TRIGGER IF NOT EXISTS bulk_projection_results_no_delete
+        BEFORE DELETE ON bulk_projection_results
+        BEGIN
+            SELECT RAISE(ABORT, 'projection results are append-only');
+        END;
+        """
+    )
+    conn.commit()
 
 
 def migrate_contracts_schema(conn: sqlite3.Connection):
@@ -500,6 +1012,9 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
         "source_url": "TEXT",
         "source_contract_id": "TEXT",
         "inserted_at": "TEXT",
+        "representative_observation_id": "TEXT",
+        "canonicalization_status": "TEXT NOT NULL DEFAULT 'legacy_unlinked'",
+        "normalizer_version": "TEXT",
     }
     for column, sql_type in additions.items():
         if column not in existing:
@@ -508,6 +1023,13 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
     conn.execute(
         "UPDATE contracts SET source_type = ? WHERE source_type IS NULL OR TRIM(source_type) = ''",
         (RAW_SOURCE_TYPE,),
+    )
+    conn.execute(
+        """
+        UPDATE contracts
+        SET canonicalization_status = 'legacy_unlinked'
+        WHERE canonicalization_status IS NULL OR TRIM(canonicalization_status) = ''
+        """
     )
     conn.commit()
 
