@@ -90,6 +90,18 @@ class BulkCertificationArtifactTests(unittest.TestCase):
                 self.assertEqual(snapshot["capture_time_status"], "git_first_seen")
                 self.assertTrue(snapshot["capture_time"])
 
+    def test_registry_metadata_is_versioned_hashed_and_distinct_from_normalizer(self):
+        metadata = generator._normalization_registry_metadata(REPO_ROOT)
+        self.assertEqual(metadata["version"], "normalization-registry-1")
+        self.assertEqual(len(metadata["sha256"]), 64)
+        self.assertEqual(self.manifest["normalization_registry"], metadata)
+        for fiscal_year, report in self.reports.items():
+            with self.subTest(fiscal_year=fiscal_year):
+                self.assertEqual(report["normalization_registry"], metadata)
+                self.assertNotEqual(
+                    report["normalizer_version"], metadata["version"]
+                )
+
     def test_source_channels_and_unavailable_year_are_honest(self):
         channels = {
             snapshot["fiscal_year"]: snapshot["source_channel"]

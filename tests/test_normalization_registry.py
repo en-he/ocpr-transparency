@@ -2,6 +2,7 @@ import csv
 import hashlib
 import json
 import shutil
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ PIPELINE_DIR = REPO_ROOT / "pipeline"
 if str(PIPELINE_DIR) not in sys.path:
     sys.path.insert(0, str(PIPELINE_DIR))
 
+import contract_utils  # noqa: E402
 import normalization  # noqa: E402
 
 
@@ -347,6 +349,46 @@ class NormalizationRegistryTests(unittest.TestCase):
                 normalization.registry_payload(temporary_root),
                 baseline_payload,
             )
+
+    def test_canonical_projection_records_registry_identity_and_statuses(self):
+        record = contract_utils.normalize_contract_record(
+            {
+                "contract_number": "2026-000001",
+                "contractor": "INTEGRA, LLC",
+                "entity": "AGENCIA PUBLICA",
+                "service_category": "SERVICIOS PROFESIONALES",
+                "service_type": None,
+            },
+            inserted_at="1970-01-01T00:00:00+00:00",
+        )
+        self.assertEqual(
+            record["contractor_canonical_id"],
+            "contractor:integra-design-group",
+        )
+        self.assertEqual(record["contractor_display_label"], "INTEGRA DESIGN GROUP")
+        self.assertEqual(record["contractor_resolution_status"], "resolved")
+        self.assertEqual(record["entity_resolution_status"], "unresolved")
+        self.assertEqual(record["service_category_resolution_status"], "unresolved")
+        self.assertEqual(record["service_type_resolution_status"], "missing")
+        self.assertEqual(
+            record["normalization_registry_version"],
+            "normalization-registry-1",
+        )
+
+    def test_contract_schema_and_browser_consumer_expose_registry_projection(self):
+        connection = sqlite3.connect(":memory:")
+        contract_utils.create_schema(connection)
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(contracts)")
+        }
+        self.assertTrue(set(contract_utils.NORMALIZATION_PROJECTION_COLUMNS) <= columns)
+
+        browser_source = (REPO_ROOT / "site" / "js" / "db.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("CONTRACTOR_FAMILY_OVERRIDES", browser_source)
+        self.assertIn("contractor_canonical_id", browser_source)
+        self.assertIn("normalization_registry", browser_source)
 
     def test_loader_validates_required_files_headers_domains_order_and_ids(self):
         with tempfile.TemporaryDirectory() as temporary_root:

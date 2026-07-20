@@ -18,6 +18,10 @@ const DEFAULT_MANIFEST = {
     total_amount: null,
     fiscal_years: [],
     archived_csv_fiscal_years: [],
+    normalization_registry: {
+        version: null,
+        sha256: null,
+    },
     dashboard: {
         top_contractors: [],
         top_entities: [],
@@ -69,6 +73,10 @@ async function loadManifest() {
             recovery_targets: Array.isArray(loaded.recovery_targets)
                 ? loaded.recovery_targets
                 : DEFAULT_MANIFEST.recovery_targets,
+            normalization_registry: {
+                ...DEFAULT_MANIFEST.normalization_registry,
+                ...(loaded.normalization_registry || {}),
+            },
             browser_db: {
                 ...DEFAULT_MANIFEST.browser_db,
                 ...(loaded.browser_db || {}),
@@ -330,32 +338,6 @@ const CONTRACTOR_SPACED_SUFFIX_PATTERNS = [
 
 const LEADING_CONTRACTOR_TITLE_PATTERN = /^(?:ING|INGENIERO)\b\s*/u;
 
-const CONTRACTOR_FAMILY_OVERRIDES = new Map([
-    ["AUTORIDADF FINANCIAMIENTO INFRAESTRU", "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO"],
-    ["MAGLEZ ENGINEERINGS CONTRACTORS", "MAGLEZ ENGINEERING CONTRACTORS"],
-    ["CONSTRUCCIONES VIVI AGREDADO", "CONSTRUCCIONES VIVI AGREGADOS"],
-    ["CONSTRUCCIONES VIVI AGREGADO", "CONSTRUCCIONES VIVI AGREGADOS"],
-    ["CONSTRUCCIONES VIVI AGRAGADOS", "CONSTRUCCIONES VIVI AGREGADOS"],
-    ["BERMUDEZLONGODIAZ MASSO", "BERMUDEZ LONGO DIAZ MASSO"],
-    ["DESING BUILD", "DESIGN BUILD"],
-    ["JOSEPH HARRISON FLORESDBAHARISON CONSULTING", "JOSEPH HARRISON FLORES"],
-    ["MUNICIPIO VIEQUES CCD", "MUNICIPIO VIEQUES"],
-    ["MUNICIPIO SAN LOENZO", "MUNICIPIO SAN LORENZO"],
-    ["AUTORIDAD FINANCIAMIENTO INFRAESTRUC", "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO"],
-    ["J F BUILDING LEASE MAINTENANCE", "JF BUILDING LEASE MAINTENANCE"],
-    ["ISIDRO M MARTINEZ GILORMINI", "MARTINEZ GILORMINI ISIDRO M"],
-    ["ADMINISTRACION COMPENSACIONES POR ACCIDENTES", "ADMINISTRACION COMPENSACIONES POR ACCIDENTES AUTOMOVILES"],
-    ["CANCIO NADAL RIVERA", "CANCIONADAL RIVERA"],
-    ["AQUINO CORDOVA ALFARO", "AQUINO CORDOVAALFARO"],
-    ["RICHARD SANTOS GARCIA MA", "RICHARD SANTOS GARCIAMA"],
-    ["UNIVERSITY PUERTO RICO PARKING SYSTEM", "UNIVERSIDA PUERTO RICO PARKING SYSTEM"],
-    ["NAIOSCALY CRUZ PONCE", "CRUZ PONCE NAIOSCALY"],
-    ["GIOVANY RIVERA CARRERO", "RIVERA CARRERO GIOVANY"],
-    ["A1 GENERATOR SERVICES", "AI GENERATOR SERVICES"],
-    ["T P CONSULTING", "QUANTUM HEALTH CONSULTING"],
-    ["INTEGRA", "INTEGRA DESIGN GROUP"],
-]);
-
 const CONTRACTOR_SQL_CLEANUPS = [
     ["CHAR(0)", "' '"],
     ["'.'", "' '"],
@@ -414,8 +396,7 @@ function normalizeContractorFamily(value) {
         .split(" ")
         .filter(token => token && !CONTRACTOR_STOPWORDS.has(token));
 
-    const family = tokens.join(" ").trim();
-    return CONTRACTOR_FAMILY_OVERRIDES.get(family) || family;
+    return tokens.join(" ").trim();
 }
 
 function registerSqlHelpers(db) {
@@ -536,14 +517,18 @@ function buildFamilyDetailUrlForRow(row, backRef = getSearchStateReference()) {
 
 function contractorFamilyExpr(alias = "c") {
     const col = `${alias}.contractor`;
+    const reviewedId = `NULLIF(${alias}.contractor_canonical_id, '')`;
+    let fallback;
     if (_hasNormalizeContractorFamilySqlFunction) {
-        return `normalize_contractor_family(${col})`;
+        fallback = `normalize_contractor_family(${col})`;
+    } else {
+        const cleaned = applySqlReplacements(
+            `UPPER(COALESCE(${col}, ''))`,
+            CONTRACTOR_SQL_CLEANUPS
+        );
+        fallback = `TRIM(REPLACE(REPLACE(REPLACE(${cleaned}, '  ', ' '), '  ', ' '), '  ', ' '))`;
     }
-    const cleaned = applySqlReplacements(
-        `UPPER(COALESCE(${col}, ''))`,
-        CONTRACTOR_SQL_CLEANUPS
-    );
-    return `TRIM(REPLACE(REPLACE(REPLACE(${cleaned}, '  ', ' '), '  ', ' '), '  ', ' '))`;
+    return `COALESCE(${reviewedId}, ${fallback})`;
 }
 
 function escapeLikeValue(value) {
@@ -717,6 +702,9 @@ function buildFilteredQueryParts(filters = {}) {
         }
     }
 
+    // Amount bounds are intentionally applied to each source-row reported
+    // amount before family grouping. They never target a family sum or an
+    // inferred current contract value.
     if (filters.amountMin) {
         baseWhere.push("c.amount >= ?");
         params.push(Number(filters.amountMin));
@@ -836,6 +824,8 @@ function buildFamilyQueryParts(filters = {}) {
                 entity,
                 contractor_family,
                 COUNT(*) AS family_size,
+                -- Compatibility field: unvalidated sum of reported family
+                -- rows, not spending, payment, or current contract value.
                 SUM(COALESCE(amount, 0)) AS family_total_amount,
                 MAX(
                     CASE
@@ -1339,15 +1329,20 @@ function resolveContractFamilyDetail(contractNumber, entity, contractor) {
 function getContractFamilyRows(contractNumber, entity, contractor) {
     if (!contractNumber || !entity || !contractor) return [];
 
-    const contractorFamily = normalizeContractorFamily(contractor);
-    return query(
+    const rows = query(
         `SELECT *
          FROM contracts
          WHERE contract_number = ?
            AND entity = ?`,
         [contractNumber, entity]
-    )
-        .filter(row => normalizeContractorFamily(row.contractor) === contractorFamily)
+    );
+    const target = rows.find(row => row.contractor === contractor);
+    const contractorFamily = target?.contractor_canonical_id
+        || normalizeContractorFamily(contractor);
+    return rows
+        .filter(row => (
+            row.contractor_canonical_id || normalizeContractorFamily(row.contractor)
+        ) === contractorFamily)
         .sort(compareFamilyMembers);
 }
 

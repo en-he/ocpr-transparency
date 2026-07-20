@@ -77,13 +77,19 @@ Recovery ledger statuses (`pending`, `recovered`, `unrecoverable`, and `ambiguou
 
 ## Amount, amendment, and status semantics
 
-Public surfaces must keep three concepts separate:
+Public surfaces must keep the following concepts separate:
 
-1. **Reported amount** — the source's `Cuantía`/amount value for a row. This is a registered contract amount as reported by the source. It is not verified actual spending or payment.
-2. **Derived current contract value** — a future, explicitly labeled calculation over a reviewed contract family. It may combine a base amount with validated amendment deltas and cancellation/status rules. It must not be presented until the sign/encoding and family rules are source-validated.
-3. **Actual payments** — money actually disbursed. This requires a separate payment evidence source and ledger; no payment data is implemented in this repository.
+1. **Source-row reported amount** — the source's normalized `Cuantía`/`amount` value for one physical source row. It is an OCPR-reported contract amount, not a payment, actual spending, or current contract value.
+2. **Representative original reported amount** — the source-row reported amount from the deterministic original/representative row selected for a displayed family. It is not a reconstructed current contract value and does not absorb amendment rows.
+3. **Family-row sum** — an unvalidated arithmetic sum of the reported amounts on the source rows included in a displayed family or filtered result. If shown, it must carry an explicit warning that it is not current contract value or actual payments. It must never be labeled spending, disbursement, or family value.
+4. **Derived current contract value** — a future, explicitly labeled calculation over a reviewed contract family. It may combine a base amount with validated amendment deltas and cancellation/status rules. It must not be presented until the sign/encoding and family rules are source-validated.
+5. **Actual payments** — money actually disbursed. This requires a separate payment evidence source and ledger; no payment data is implemented in this repository.
 
-The project's current working interpretation treats amendment `Cuantía` as a possible increase/decrease delta, but its sign/encoding and cancellation semantics still require validation against OCPR source evidence. Until that validation and reconciliation exist, sums in the current SQLite/dashboard surfaces are aggregates of reported row amounts, not a claim about government spending or actual payments. The source `cancelled` flag should remain source status until lifecycle semantics are validated.
+The current amount-range filter applies to `contracts.amount` before family grouping: it therefore selects **source-row reported amounts**. Family summaries are then built only from matching rows. Public filter help and exports must disclose that scope.
+
+The project's current working interpretation treats amendment `Cuantía` as a possible increase/decrease delta, but its sign/encoding remains unvalidated against complete OCPR source evidence. Until that validation and reconciliation exist, dashboard and result sums are unvalidated aggregates of reported source-row amounts, not claims about government spending, actual payments, or current contract value.
+
+Cancellation is represented separately as exact source evidence (`cancellation_raw`), a validated effective cancellation date when present (`cancellation_date`), and a closed status (`cancelled`, `not_cancelled`, `unknown`, or `malformed`). Blank or NUL bulk evidence is `unknown`, not false; the legacy integer `cancelled` field is only a compatibility projection derived from validated status. Notification date and effective cancellation date are distinct concepts and must not be conflated.
 
 ## Known gaps and preservation rules
 

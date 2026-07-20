@@ -562,19 +562,22 @@ function updateExportHelper() {
     const { mode, format, count, limit, overLimit } = getExportEligibility();
     const helperPrefix = `${t("export.limitLabel")}: ${formatCount(limit)} ${getExportRowLabel(mode)}.`;
     const helperCount = `${t("export.currentLabel")}: ${formatCount(count)}.`;
+    const amountSemantics = mode === "summary"
+        ? t("amount.familyWarning")
+        : t("amount.filterScope");
 
     let helperText;
     if (exportState.busy) {
-        helperText = `${helperPrefix} ${helperCount} ${t("btn.exporting")}`;
+        helperText = `${helperPrefix} ${helperCount} ${t("btn.exporting")} ${amountSemantics}`;
         helper.classList.remove("is-warning");
     } else if (overLimit) {
-        helperText = `${helperPrefix} ${helperCount} ${t("export.overLimit")} ${t("export.chooseAnother")}`;
+        helperText = `${helperPrefix} ${helperCount} ${t("export.overLimit")} ${t("export.chooseAnother")} ${amountSemantics}`;
         helper.classList.add("is-warning");
     } else {
         const guidance = format === "pdf"
             ? t("export.pdfFallback")
             : t("export.tableFallback");
-        helperText = `${helperPrefix} ${helperCount} ${guidance}`;
+        helperText = `${helperPrefix} ${helperCount} ${guidance} ${amountSemantics}`;
         helper.classList.remove("is-warning");
     }
 

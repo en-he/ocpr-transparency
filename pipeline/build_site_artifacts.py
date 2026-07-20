@@ -19,6 +19,7 @@ from pathlib import Path
 
 from config import DB_PATH, REPO_ROOT
 from contract_utils import parse_date, register_sqlite_functions
+from normalization import registry_payload, registry_version
 
 
 DEFAULT_REPO_RAW_BASE = "https://github.com/en-he/ocpr-transparency/raw/main"
@@ -56,6 +57,19 @@ BROWSER_COLUMNS = [
     "source_type",
     "source_url",
     "source_contract_id",
+    "normalization_registry_version",
+    "contractor_canonical_id",
+    "contractor_display_label",
+    "contractor_resolution_status",
+    "entity_canonical_id",
+    "entity_display_label",
+    "entity_resolution_status",
+    "service_category_canonical_id",
+    "service_category_display_label",
+    "service_category_resolution_status",
+    "service_type_canonical_id",
+    "service_type_display_label",
+    "service_type_resolution_status",
 ]
 
 
@@ -228,7 +242,20 @@ def create_browser_schema(conn: sqlite3.Connection):
             fiscal_year         TEXT,
             source_type         TEXT,
             source_url          TEXT,
-            source_contract_id  TEXT
+            source_contract_id  TEXT,
+            normalization_registry_version TEXT NOT NULL DEFAULT 'normalization-registry-1',
+            contractor_canonical_id TEXT,
+            contractor_display_label TEXT,
+            contractor_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+            entity_canonical_id TEXT,
+            entity_display_label TEXT,
+            entity_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+            service_category_canonical_id TEXT,
+            service_category_display_label TEXT,
+            service_category_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+            service_type_canonical_id TEXT,
+            service_type_display_label TEXT,
+            service_type_resolution_status TEXT NOT NULL DEFAULT 'unresolved'
         );
 
         CREATE INDEX idx_browser_entity       ON contracts(entity);
@@ -288,16 +315,10 @@ def build_browser_db(source_db: Path, browser_db: Path):
     create_browser_schema(dst)
 
     select_sql = f"SELECT {', '.join(BROWSER_COLUMNS)} FROM contracts ORDER BY id"
-    insert_sql = """
-        INSERT INTO contracts (
-            id, contract_number, entity, entity_number, contractor, amendment,
-            service_category, service_type, amount, amount_receivable,
-            award_date, valid_from, valid_to, procurement_method, fund_type,
-            pco_number, cancelled, cancellation_raw, cancellation_date,
-            cancellation_status, document_url, fiscal_year,
-            source_type, source_url, source_contract_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """
+    insert_sql = (
+        f"INSERT INTO contracts ({', '.join(BROWSER_COLUMNS)}) VALUES "
+        f"({', '.join('?' for _ in BROWSER_COLUMNS)})"
+    )
 
     cur = src.execute(select_sql)
     while True:
@@ -333,6 +354,20 @@ def build_browser_db(source_db: Path, browser_db: Path):
                 normalize_text(row["source_type"]),
                 normalize_text(row["source_url"]),
                 normalize_text(row["source_contract_id"]),
+                normalize_text(row["normalization_registry_version"])
+                    or "normalization-registry-1",
+                normalize_text(row["contractor_canonical_id"]),
+                normalize_text(row["contractor_display_label"]),
+                normalize_text(row["contractor_resolution_status"]) or "unresolved",
+                normalize_text(row["entity_canonical_id"]),
+                normalize_text(row["entity_display_label"]),
+                normalize_text(row["entity_resolution_status"]) or "unresolved",
+                normalize_text(row["service_category_canonical_id"]),
+                normalize_text(row["service_category_display_label"]),
+                normalize_text(row["service_category_resolution_status"]) or "unresolved",
+                normalize_text(row["service_type_canonical_id"]),
+                normalize_text(row["service_type_display_label"]),
+                normalize_text(row["service_type_resolution_status"]) or "unresolved",
             ))
 
         dst.executemany(insert_sql, batch)
@@ -525,8 +560,15 @@ def write_manifest(
     recovery_targets: list[dict],
 ):
     now = datetime.now(timezone.utc).isoformat()
+    normalization_payload = registry_payload()
     manifest = {
         "generated_at": now,
+        "normalization_registry": {
+            "version": registry_version(),
+            "sha256": hashlib.sha256(
+                normalization_payload.encode("utf-8")
+            ).hexdigest(),
+        },
         "row_count": stats["row_count"],
         "total_amount": stats["total_amount"],
         "fiscal_years": stats["fiscal_years"],

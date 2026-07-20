@@ -13,6 +13,12 @@ from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from normalization import (
+    load_registry,
+    normalize_value as normalize_registry_value,
+    registry_version as normalization_registry_version,
+)
+
 
 RAW_SOURCE_TYPE = "csv"
 LIVE_MONITOR_SOURCE_TYPE = "live_monitor"
@@ -31,6 +37,22 @@ CANONICAL_LINEAGE_COLUMNS = [
     "representative_observation_id",
     "canonicalization_status",
     "normalizer_version",
+]
+
+NORMALIZATION_PROJECTION_COLUMNS = [
+    "normalization_registry_version",
+    "contractor_canonical_id",
+    "contractor_display_label",
+    "contractor_resolution_status",
+    "entity_canonical_id",
+    "entity_display_label",
+    "entity_resolution_status",
+    "service_category_canonical_id",
+    "service_category_display_label",
+    "service_category_resolution_status",
+    "service_type_canonical_id",
+    "service_type_display_label",
+    "service_type_resolution_status",
 ]
 
 CONTRACT_COLUMNS = [
@@ -61,11 +83,14 @@ PROVENANCE_COLUMNS = [
     "source_contract_id",
 ]
 
-CANONICAL_RECORD_COLUMNS = CONTRACT_COLUMNS + PROVENANCE_COLUMNS
+CANONICAL_RECORD_COLUMNS = (
+    CONTRACT_COLUMNS + PROVENANCE_COLUMNS + NORMALIZATION_PROJECTION_COLUMNS
+)
 INSERT_COLUMNS = (
     ["row_hash"]
     + CONTRACT_COLUMNS
     + PROVENANCE_COLUMNS
+    + NORMALIZATION_PROJECTION_COLUMNS
     + ["inserted_at"]
     + CANONICAL_LINEAGE_COLUMNS
 )
@@ -154,32 +179,6 @@ LEADING_CONTRACTOR_TITLE_PATTERN = re.compile(
     r"^(?:ING|INGENIERO)\b\s*",
     re.IGNORECASE | re.UNICODE,
 )
-
-CONTRACTOR_FAMILY_OVERRIDES = {
-    "AUTORIDADF FINANCIAMIENTO INFRAESTRU": "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO",
-    "MAGLEZ ENGINEERINGS CONTRACTORS": "MAGLEZ ENGINEERING CONTRACTORS",
-    "CONSTRUCCIONES VIVI AGREDADO": "CONSTRUCCIONES VIVI AGREGADOS",
-    "CONSTRUCCIONES VIVI AGREGADO": "CONSTRUCCIONES VIVI AGREGADOS",
-    "CONSTRUCCIONES VIVI AGRAGADOS": "CONSTRUCCIONES VIVI AGREGADOS",
-    "BERMUDEZLONGODIAZ MASSO": "BERMUDEZ LONGO DIAZ MASSO",
-    "DESING BUILD": "DESIGN BUILD",
-    "JOSEPH HARRISON FLORESDBAHARISON CONSULTING": "JOSEPH HARRISON FLORES",
-    "MUNICIPIO VIEQUES CCD": "MUNICIPIO VIEQUES",
-    "MUNICIPIO SAN LOENZO": "MUNICIPIO SAN LORENZO",
-    "AUTORIDAD FINANCIAMIENTO INFRAESTRUC": "AUTORIDAD FINANCIAMIENTO INFRAESTRUCTURA PUERTO RICO",
-    "J F BUILDING LEASE MAINTENANCE": "JF BUILDING LEASE MAINTENANCE",
-    "ISIDRO M MARTINEZ GILORMINI": "MARTINEZ GILORMINI ISIDRO M",
-    "ADMINISTRACION COMPENSACIONES POR ACCIDENTES": "ADMINISTRACION COMPENSACIONES POR ACCIDENTES AUTOMOVILES",
-    "CANCIO NADAL RIVERA": "CANCIONADAL RIVERA",
-    "AQUINO CORDOVA ALFARO": "AQUINO CORDOVAALFARO",
-    "RICHARD SANTOS GARCIA MA": "RICHARD SANTOS GARCIAMA",
-    "UNIVERSITY PUERTO RICO PARKING SYSTEM": "UNIVERSIDA PUERTO RICO PARKING SYSTEM",
-    "NAIOSCALY CRUZ PONCE": "CRUZ PONCE NAIOSCALY",
-    "GIOVANY RIVERA CARRERO": "RIVERA CARRERO GIOVANY",
-    "A1 GENERATOR SERVICES": "AI GENERATOR SERVICES",
-    "T P CONSULTING": "QUANTUM HEALTH CONSULTING",
-    "INTEGRA": "INTEGRA DESIGN GROUP",
-}
 
 SPANISH_MONTHS = {
     "ene": 1,
@@ -590,7 +589,7 @@ def is_original_amendment(value) -> bool:
     return normalized in {"", "ORIGINAL"}
 
 
-def normalize_contractor_family(value) -> str:
+def contractor_family_key(value) -> str:
     if not value:
         return ""
     normalized = unicodedata.normalize("NFD", str(value))
@@ -613,11 +612,19 @@ def normalize_contractor_family(value) -> str:
 
     normalized = LEADING_CONTRACTOR_TITLE_PATTERN.sub("", normalized).strip()
     tokens = [token for token in normalized.split(" ") if token and token not in CONTRACTOR_STOPWORDS]
-    family = " ".join(tokens).strip()
-    return CONTRACTOR_FAMILY_OVERRIDES.get(family, family)
+    return " ".join(tokens).strip()
+
+
+def normalize_contractor_family(value) -> str:
+    family = contractor_family_key(value)
+    reviewed = normalize_registry_value("contractor", family)
+    if reviewed["status"] == "resolved":
+        return reviewed["display_label"]
+    return family
 
 
 def register_sqlite_functions(conn: sqlite3.Connection):
+    conn.create_function("contractor_family_key", 1, contractor_family_key)
     conn.create_function("normalize_contractor_family", 1, normalize_contractor_family)
 
 
@@ -658,14 +665,27 @@ def normalize_contract_record(
         else record.get("cancelled")
     )
     cancellation = parse_cancellation(cancellation_source)
+    entity = strip_entity_code(record.get("entity"))
+    contractor = clean_str(record.get("contractor"))
+    service_category = clean_str(record.get("service_category"))
+    service_type = clean_str(record.get("service_type"))
+    contractor_resolution = normalize_registry_value(
+        "contractor", contractor_family_key(contractor)
+    )
+    entity_resolution = normalize_registry_value("entity", entity)
+    service_category_resolution = normalize_registry_value(
+        "service_category", service_category
+    )
+    service_type_resolution = normalize_registry_value("service_type", service_type)
+    registry_version = normalization_registry_version()
     normalized = {
         "contract_number": clean_str(record.get("contract_number")),
-        "entity": strip_entity_code(record.get("entity")),
+        "entity": entity,
         "entity_number": clean_str(record.get("entity_number")),
-        "contractor": clean_str(record.get("contractor")),
+        "contractor": contractor,
         "amendment": normalize_amendment_value(record.get("amendment")),
-        "service_category": clean_str(record.get("service_category")),
-        "service_type": clean_str(record.get("service_type")),
+        "service_category": service_category,
+        "service_type": service_type,
         "amount": parse_amount(record.get("amount")),
         "amount_receivable": parse_amount(record.get("amount_receivable")),
         "award_date": parse_date(record.get("award_date")),
@@ -683,6 +703,19 @@ def normalize_contract_record(
         "source_type": source_type,
         "source_url": clean_str(record.get("source_url")),
         "source_contract_id": clean_str(record.get("source_contract_id")),
+        "normalization_registry_version": registry_version,
+        "contractor_canonical_id": contractor_resolution["canonical_id"],
+        "contractor_display_label": contractor_resolution["display_label"],
+        "contractor_resolution_status": contractor_resolution["status"],
+        "entity_canonical_id": entity_resolution["canonical_id"],
+        "entity_display_label": entity_resolution["display_label"],
+        "entity_resolution_status": entity_resolution["status"],
+        "service_category_canonical_id": service_category_resolution["canonical_id"],
+        "service_category_display_label": service_category_resolution["display_label"],
+        "service_category_resolution_status": service_category_resolution["status"],
+        "service_type_canonical_id": service_type_resolution["canonical_id"],
+        "service_type_display_label": service_type_resolution["display_label"],
+        "service_type_resolution_status": service_type_resolution["status"],
         "inserted_at": now,
         "representative_observation_id": clean_str(
             record.get("representative_observation_id")
@@ -749,6 +782,19 @@ def create_schema(conn: sqlite3.Connection):
                 source_type         TEXT NOT NULL DEFAULT 'csv',
                 source_url          TEXT,
                 source_contract_id  TEXT,
+                normalization_registry_version TEXT NOT NULL DEFAULT 'normalization-registry-1',
+                contractor_canonical_id TEXT,
+                contractor_display_label TEXT,
+                contractor_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+                entity_canonical_id TEXT,
+                entity_display_label TEXT,
+                entity_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+                service_category_canonical_id TEXT,
+                service_category_display_label TEXT,
+                service_category_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
+                service_type_canonical_id TEXT,
+                service_type_display_label TEXT,
+                service_type_resolution_status TEXT NOT NULL DEFAULT 'unresolved',
                 inserted_at         TEXT,
                 representative_observation_id TEXT,
                 canonicalization_status TEXT NOT NULL DEFAULT 'legacy_unlinked'
@@ -1205,15 +1251,62 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
         "source_type": "TEXT NOT NULL DEFAULT 'csv'",
         "source_url": "TEXT",
         "source_contract_id": "TEXT",
+        "normalization_registry_version": "TEXT NOT NULL DEFAULT 'normalization-registry-1'",
+        "contractor_canonical_id": "TEXT",
+        "contractor_display_label": "TEXT",
+        "contractor_resolution_status": "TEXT NOT NULL DEFAULT 'unresolved'",
+        "entity_canonical_id": "TEXT",
+        "entity_display_label": "TEXT",
+        "entity_resolution_status": "TEXT NOT NULL DEFAULT 'unresolved'",
+        "service_category_canonical_id": "TEXT",
+        "service_category_display_label": "TEXT",
+        "service_category_resolution_status": "TEXT NOT NULL DEFAULT 'unresolved'",
+        "service_type_canonical_id": "TEXT",
+        "service_type_display_label": "TEXT",
+        "service_type_resolution_status": "TEXT NOT NULL DEFAULT 'unresolved'",
         "inserted_at": "TEXT",
         "representative_observation_id": "TEXT",
         "canonicalization_status": "TEXT NOT NULL DEFAULT 'legacy_unlinked'",
         "normalizer_version": "TEXT",
     }
     cancellation_status_added = "cancellation_status" not in existing
+    normalization_added = "normalization_registry_version" not in existing
     for column, sql_type in additions.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE contracts ADD COLUMN {column} {sql_type}")
+
+    if normalization_added:
+        register_sqlite_functions(conn)
+        conn.execute(
+            """
+            UPDATE contracts
+            SET normalization_registry_version = ?,
+                contractor_resolution_status = CASE
+                    WHEN contractor IS NULL OR TRIM(contractor) = ''
+                    THEN 'missing' ELSE 'unresolved' END,
+                entity_resolution_status = CASE
+                    WHEN entity IS NULL OR TRIM(entity) = ''
+                    THEN 'missing' ELSE 'unresolved' END,
+                service_category_resolution_status = CASE
+                    WHEN service_category IS NULL OR TRIM(service_category) = ''
+                    THEN 'missing' ELSE 'unresolved' END,
+                service_type_resolution_status = CASE
+                    WHEN service_type IS NULL OR TRIM(service_type) = ''
+                    THEN 'missing' ELSE 'unresolved' END
+            """,
+            (normalization_registry_version(),),
+        )
+        for entry in load_registry()["contractor"]:
+            conn.execute(
+                """
+                UPDATE contracts
+                SET contractor_canonical_id = ?,
+                    contractor_display_label = ?,
+                    contractor_resolution_status = 'resolved'
+                WHERE contractor_family_key(contractor) = ?
+                """,
+                (entry.canonical_id, entry.display_label, entry.alias_key),
+            )
 
     if cancellation_status_added:
         conn.execute(

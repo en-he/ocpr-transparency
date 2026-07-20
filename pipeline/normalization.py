@@ -13,6 +13,7 @@ import re
 import unicodedata
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -265,17 +266,30 @@ def normalize_value(
     repo_root: str | Path | None = None,
 ) -> NormalizationResult:
     """Normalize one value using only an exact reviewed registry alias."""
-    return load_registry(repo_root).normalize_value(domain, raw_value)
+    registry = _default_registry() if repo_root is None else load_registry(repo_root)
+    return registry.normalize_value(domain, raw_value)
 
 
 def registry_version(repo_root: str | Path | None = None) -> str:
     """Return the validated registry version."""
-    return load_registry(repo_root).registry_version
+    registry = _default_registry() if repo_root is None else load_registry(repo_root)
+    return registry.registry_version
 
 
 def registry_payload(repo_root: str | Path | None = None) -> str:
     """Return the canonical JSON payload used for deterministic hashing."""
-    return load_registry(repo_root).payload
+    registry = _default_registry() if repo_root is None else load_registry(repo_root)
+    return registry.payload
+
+
+@lru_cache(maxsize=1)
+def _default_registry() -> Registry:
+    """Cache only the immutable repository registry used by production rows.
+
+    Explicit ``repo_root`` calls remain uncached so hostile/temporary registry
+    tests always observe the bytes they just wrote.
+    """
+    return load_registry(None)
 
 
 def _resolve_repo_root(repo_root: str | Path | None) -> Path:

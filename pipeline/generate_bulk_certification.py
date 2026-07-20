@@ -52,6 +52,7 @@ from contract_utils import (  # noqa: E402
     parse_date,
 )
 from ingest import detect_encoding, resolve_header  # noqa: E402
+from normalization import registry_payload, registry_version  # noqa: E402
 
 
 MANIFEST_PATH = "data/certification/bulk-manifest.json"
@@ -117,6 +118,14 @@ def _json_bytes(value: Any) -> bytes:
         ).encode("utf-8")
         + b"\n"
     )
+
+
+def _normalization_registry_metadata(repo_root: Path | str) -> dict[str, str]:
+    payload = registry_payload(repo_root)
+    return {
+        "version": registry_version(repo_root),
+        "sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+    }
 
 
 def _repo_path(repo_root: Path | str) -> Path:
@@ -306,8 +315,10 @@ def _stable_report_payload(
     report: BulkCertificationReport,
     *,
     source_file: str,
+    normalization_registry: Mapping[str, str],
 ) -> dict[str, Any]:
     payload = {field: getattr(report, field) for field in _REPORT_FIELDS}
+    payload["normalization_registry"] = dict(normalization_registry)
     payload["report_hash"] = report_hash(report)
     payload["schema_version"] = REPORT_SCHEMA_VERSION
     payload["source_file"] = source_file
@@ -337,6 +348,7 @@ def _snapshot_summary(report_payload: Mapping[str, Any], report_path: str) -> di
         "header_fingerprint": report_payload["header_fingerprint"],
         "parser_version": report_payload["parser_version"],
         "normalizer_version": report_payload["normalizer_version"],
+        "normalization_registry": report_payload["normalization_registry"],
         "rows_total": report_payload["rows_total"],
         "rows_certified": report_payload["rows_certified"],
         "rows_quarantined": report_payload["rows_quarantined"],
@@ -478,6 +490,7 @@ def build_artifacts(repo_root: Path | str) -> dict[str, bytes]:
     into the returned bytes.
     """
     root = _repo_path(repo_root)
+    normalization_registry = _normalization_registry_metadata(root)
     source_files = discover_source_files(root)
     artifacts: dict[str, bytes] = {}
     snapshots: list[dict[str, Any]] = []
@@ -509,6 +522,7 @@ def build_artifacts(repo_root: Path | str) -> dict[str, bytes]:
             # source's certification or canonical accounting depends on it.
             failed_payload = {
                 "schema_version": REPORT_SCHEMA_VERSION,
+                "normalization_registry": normalization_registry,
                 "fiscal_year": fiscal_year,
                 "source_file": source_file,
                 "source_channel": source_channel,
@@ -539,7 +553,11 @@ def build_artifacts(repo_root: Path | str) -> dict[str, bytes]:
             )
             continue
 
-        payload = _stable_report_payload(report, source_file=source_file)
+        payload = _stable_report_payload(
+            report,
+            source_file=source_file,
+            normalization_registry=normalization_registry,
+        )
         artifacts[report_path] = _json_bytes(payload)
         snapshots.append(_snapshot_summary(payload, report_path))
         successful_years.add(fiscal_year)
@@ -565,6 +583,7 @@ def build_artifacts(repo_root: Path | str) -> dict[str, bytes]:
     manifest = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "generator_version": GENERATOR_VERSION,
+        "normalization_registry": normalization_registry,
         "source_glob": SOURCE_GLOB,
         "source_sort": "filename_ascending",
         "encoding": "latin-1",

@@ -43,10 +43,10 @@
                     <div class="dashboard-header-copy">
                         <div class="dashboard-kicker" data-i18n="dashboard.kicker">Instantánea de fiscalización</div>
                         <div class="dashboard-title-row">
-                            <h2 data-i18n="dashboard.title">Quién recibe y quién gasta</h2>
+                            <h2 data-i18n="dashboard.title">Cuantías reportadas de contratos</h2>
                             <span class="dashboard-mode-badge" id="dashboard-mode-badge">Sitewide snapshot</span>
                         </div>
-                        <p class="dashboard-summary" data-i18n="dashboard.summary">Vea los principales contratistas, las entidades con más gasto y la tendencia anual para orientar la búsqueda.</p>
+                        <p class="dashboard-summary" data-i18n="dashboard.summary">Explore contratistas, entidades y cuantías reportadas por año fiscal. Estas cuantías no representan pagos ni el valor actual del contrato.</p>
                     </div>
                     <button id="dashboard-toggle" class="dashboard-toggle" type="button" aria-expanded="true">
                         <span id="dashboard-toggle-label" data-i18n="dashboard.hide">Ocultar</span>
@@ -64,7 +64,7 @@
                             <ol class="leaderboard-list" id="dashboard-entities"></ol>
                         </article>
                         <article class="dashboard-card dashboard-card-trend">
-                            <h3 data-i18n="dashboard.yearlyTrend">Tendencia anual del gasto</h3>
+                            <h3 data-i18n="dashboard.yearlyTrend">Cuantías reportadas por año fiscal</h3>
                             <div class="dashboard-trend" id="dashboard-trend"></div>
                         </article>
                     </div>
@@ -98,14 +98,15 @@
             </div>
             <div class="filter-row">
                 <div class="filter-group">
-                    <label for="f-amount-min" data-i18n="filter.amountMin">Cuantia minima ($)</label>
+                    <label for="f-amount-min" data-i18n="filter.amountMin">Cuantía reportada mínima de la fila fuente ($)</label>
                     <input type="number" id="f-amount-min" data-i18n-ph="ph.amountMin" placeholder="0" min="0" step="1000">
                 </div>
                 <div class="filter-group">
-                    <label for="f-amount-max" data-i18n="filter.amountMax">Cuantia maxima ($)</label>
+                    <label for="f-amount-max" data-i18n="filter.amountMax">Cuantía reportada máxima de la fila fuente ($)</label>
                     <input type="number" id="f-amount-max" data-i18n-ph="ph.amountMax" placeholder="Sin limite" min="0" step="1000">
                 </div>
             </div>
+            <p class="filter-help" data-i18n="amount.filterScope">El filtro de cuantía se aplica a la cuantía reportada de cada fila fuente antes de agrupar familias.</p>
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="f-date-from" data-i18n="filter.dateFrom">Fecha desde</label>
@@ -190,6 +191,7 @@
 
         <!-- Results -->
         <section id="results-section" style="display:none;">
+            <p class="results-semantics" data-i18n="amount.familyWarning">La suma no validada de cuantías reportadas de las filas de la familia no representa el valor actual del contrato ni pagos reales.</p>
             <div class="results-header">
                 <span id="results-count"></span>
                 <span id="results-amount"></span>

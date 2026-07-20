@@ -15,19 +15,19 @@ const STRINGS = {
 
         // Stats
         "stats.contracts":  "contratos",
-        "stats.total":      "valor total",
+        "stats.total":      "suma de cuantías reportadas",
 
         // Dashboard
         "dashboard.kicker":       "Instantánea de fiscalización",
-        "dashboard.title":        "Quién recibe y quién gasta",
-        "dashboard.summary":      "Vea los principales contratistas, las entidades con más gasto y la tendencia anual para orientar la búsqueda.",
+        "dashboard.title":        "Cuantías reportadas de contratos",
+        "dashboard.summary":      "Explore contratistas, entidades y cuantías reportadas por año fiscal. Estas cuantías no representan pagos ni el valor actual del contrato.",
         "dashboard.hide":         "Ocultar",
         "dashboard.show":         "Mostrar",
         "dashboard.modeSitewide": "Vista general",
         "dashboard.modeFiltered": "Vista filtrada",
         "dashboard.topContractors": "Principales contratistas",
         "dashboard.topEntities":  "Principales entidades",
-        "dashboard.yearlyTrend":  "Tendencia anual del gasto",
+        "dashboard.yearlyTrend":  "Cuantías reportadas por año fiscal",
         "dashboard.families":     "familias de contratos",
         "dashboard.empty":        "No hay datos para esta vista.",
 
@@ -35,8 +35,10 @@ const STRINGS = {
         "filter.contractNumber":  "Número de Contrato",
         "filter.contractor":    "Contratista",
         "filter.entity":        "Entidad Gubernamental",
-        "filter.amountMin":     "Cuant\u00eda m\u00ednima ($)",
-        "filter.amountMax":     "Cuant\u00eda m\u00e1xima ($)",
+        "filter.amountMin":     "Cuantía reportada mínima de la fila fuente ($)",
+        "filter.amountMax":     "Cuantía reportada máxima de la fila fuente ($)",
+        "amount.filterScope":   "El filtro de cuantía se aplica a la cuantía reportada de cada fila fuente antes de agrupar familias.",
+        "amount.familyWarning": "La suma no validada de cuantías reportadas de las filas de la familia no representa el valor actual del contrato ni pagos reales.",
         "filter.dateFrom":      "Fecha desde",
         "filter.dateTo":        "Fecha hasta",
         "filter.category":      "Categor\u00eda de Servicio",
@@ -83,11 +85,11 @@ const STRINGS = {
         "export.tableFallback":     "Excel y CSV permiten exportaciones m\u00e1s grandes, hasta 100,000 filas.",
         "export.error":             "No se pudo generar la exportaci\u00f3n.",
         "export.familySize":        "Filas en la familia",
-        "export.familyTotalAmount": "Valor total de la familia",
+        "export.familyTotalAmount": "Suma no validada de cuantías reportadas de las filas de la familia",
 
         // Results
         "results.found":    "contrato(s) encontrado(s)",
-        "results.total":    "Valor total:",
+        "results.total":    "Suma no validada de cuantías reportadas:",
 
         // Sorting
         "sort.order":       "Orden",
@@ -99,7 +101,7 @@ const STRINGS = {
         "th.contract":      "Contrato",
         "th.contractor":    "Contratista",
         "th.entity":        "Entidad",
-        "th.amount":        "Cuant\u00eda",
+        "th.amount":        "Cuantía reportada de la fila original representativa",
         "th.date":          "Fecha",
         "th.category":      "Categor\u00eda",
 
@@ -123,8 +125,8 @@ const STRINGS = {
         "detail.contractor":        "Contratista",
         "detail.fiscalYear":        "A\u00f1o Fiscal",
         "detail.financial":         "Informaci\u00f3n Financiera",
-        "detail.amount":            "Cuant\u00eda a Pagar",
-        "detail.amountReceivable":  "Cuant\u00eda a Recibir",
+        "detail.amount":            "Cuantía reportada de la fila fuente",
+        "detail.amountReceivable":  "Cuantía por recibir reportada por la fuente",
         "detail.fundType":          "Tipo de Fondos",
         "detail.dates":             "Fechas",
         "detail.awardDate":         "Fecha Otorgado",
@@ -191,19 +193,19 @@ const STRINGS = {
 
         // Stats
         "stats.contracts":  "contracts",
-        "stats.total":      "total value",
+        "stats.total":      "reported amount sum",
 
         // Dashboard
         "dashboard.kicker":       "Accountability snapshot",
-        "dashboard.title":        "Who gets paid and who spends",
-        "dashboard.summary":      "See the top contractors, the biggest public entities, and the yearly spending trend before diving into search.",
+        "dashboard.title":        "Reported contract amounts",
+        "dashboard.summary":      "Explore contractors, entities, and reported amounts by fiscal year. These amounts are not payments or current contract value.",
         "dashboard.hide":         "Hide",
         "dashboard.show":         "Show",
         "dashboard.modeSitewide": "Sitewide snapshot",
         "dashboard.modeFiltered": "Filtered snapshot",
         "dashboard.topContractors": "Top contractors",
         "dashboard.topEntities":  "Top entities",
-        "dashboard.yearlyTrend":  "Yearly spending trend",
+        "dashboard.yearlyTrend":  "Reported amounts by fiscal year",
         "dashboard.families":     "contract families",
         "dashboard.empty":        "No data for this view.",
 
@@ -211,8 +213,10 @@ const STRINGS = {
         "filter.contractNumber":  "Contract Number",
         "filter.contractor":    "Contractor",
         "filter.entity":        "Government Entity",
-        "filter.amountMin":     "Minimum amount ($)",
-        "filter.amountMax":     "Maximum amount ($)",
+        "filter.amountMin":     "Minimum reported source-row amount ($)",
+        "filter.amountMax":     "Maximum reported source-row amount ($)",
+        "amount.filterScope":   "The amount filter applies to each source-row reported amount before contract families are grouped.",
+        "amount.familyWarning": "The unvalidated family-row sum of reported amounts is not current contract value or actual payments.",
         "filter.dateFrom":      "Date from",
         "filter.dateTo":        "Date to",
         "filter.category":      "Service Category",
@@ -259,11 +263,11 @@ const STRINGS = {
         "export.tableFallback":     "Excel and CSV support larger exports, up to 100,000 rows.",
         "export.error":             "The export could not be generated.",
         "export.familySize":        "Rows in family",
-        "export.familyTotalAmount": "Family total amount",
+        "export.familyTotalAmount": "Unvalidated family-row sum of reported amounts",
 
         // Results
         "results.found":    "contract(s) found",
-        "results.total":    "Total value:",
+        "results.total":    "Unvalidated sum of reported amounts:",
 
         // Sorting
         "sort.order":       "Order",
@@ -275,7 +279,7 @@ const STRINGS = {
         "th.contract":      "Contract",
         "th.contractor":    "Contractor",
         "th.entity":        "Entity",
-        "th.amount":        "Amount",
+        "th.amount":        "Representative original reported amount",
         "th.date":          "Date",
         "th.category":      "Category",
 
@@ -299,8 +303,8 @@ const STRINGS = {
         "detail.contractor":        "Contractor",
         "detail.fiscalYear":        "Fiscal Year",
         "detail.financial":         "Financial Information",
-        "detail.amount":            "Amount Payable",
-        "detail.amountReceivable":  "Amount Receivable",
+        "detail.amount":            "Reported source-row amount",
+        "detail.amountReceivable":  "Source-reported receivable field",
         "detail.fundType":          "Fund Type",
         "detail.dates":             "Dates",
         "detail.awardDate":         "Award Date",
