@@ -48,6 +48,9 @@ BROWSER_COLUMNS = [
     "fund_type",
     "pco_number",
     "cancelled",
+    "cancellation_raw",
+    "cancellation_date",
+    "cancellation_status",
     "document_url",
     "fiscal_year",
     "source_type",
@@ -218,6 +221,9 @@ def create_browser_schema(conn: sqlite3.Connection):
             fund_type           TEXT,
             pco_number          TEXT,
             cancelled           INTEGER DEFAULT 0,
+            cancellation_raw    TEXT,
+            cancellation_date   TEXT,
+            cancellation_status TEXT NOT NULL DEFAULT 'unknown',
             document_url        TEXT,
             fiscal_year         TEXT,
             source_type         TEXT,
@@ -287,9 +293,10 @@ def build_browser_db(source_db: Path, browser_db: Path):
             id, contract_number, entity, entity_number, contractor, amendment,
             service_category, service_type, amount, amount_receivable,
             award_date, valid_from, valid_to, procurement_method, fund_type,
-            pco_number, cancelled, document_url, fiscal_year,
+            pco_number, cancelled, cancellation_raw, cancellation_date,
+            cancellation_status, document_url, fiscal_year,
             source_type, source_url, source_contract_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
     cur = src.execute(select_sql)
@@ -318,6 +325,9 @@ def build_browser_db(source_db: Path, browser_db: Path):
                 normalize_text(row["fund_type"]),
                 normalize_text(row["pco_number"]),
                 row["cancelled"],
+                row["cancellation_raw"],
+                normalize_date(row["cancellation_date"]),
+                normalize_text(row["cancellation_status"]) or "unknown",
                 normalize_text(row["document_url"]),
                 normalize_text(row["fiscal_year"]),
                 normalize_text(row["source_type"]),

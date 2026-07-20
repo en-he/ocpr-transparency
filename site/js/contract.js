@@ -79,6 +79,20 @@ function formatRecoveryStatus(value) {
     return translated === key ? value : translated;
 }
 
+function formatCancellationStatus(value) {
+    const status = value || "unknown";
+    const key = `detail.cancellationStatus.${status}`;
+    const translated = t(key);
+    return translated === key ? status : translated;
+}
+
+function formatCancellationRaw(value) {
+    if (value == null) return "-";
+    const raw = String(value);
+    if (raw === "\u0000") return "\\0";
+    return raw.trim() ? raw : "-";
+}
+
 async function initDetail() {
     try {
         initLang();
@@ -170,9 +184,10 @@ function renderContract(c) {
     if (c.amendment) titleParts.push(`(${t("detail.amendment")}: ${c.amendment})`);
     document.getElementById("detail-title").textContent = titleParts.join(" ");
 
-    // Cancelled badge
+    // Cancellation badge is a compatibility projection of validated status.
     const badge = document.getElementById("detail-status");
-    if (c.cancelled) {
+    const cancellationStatus = c.cancellation_status || (c.cancelled ? "cancelled" : "unknown");
+    if (cancellationStatus === "cancelled") {
         badge.textContent = t("detail.cancelled");
         badge.className = "badge badge-danger";
         badge.style.display = "";
@@ -197,6 +212,9 @@ function renderContract(c) {
     setField("d-award-date", formatDate(c.award_date));
     setField("d-valid-from", formatDate(c.valid_from));
     setField("d-valid-to", formatDate(c.valid_to));
+    setField("d-cancellation-date", formatDate(c.cancellation_date));
+    setField("d-cancellation-status", formatCancellationStatus(cancellationStatus));
+    setField("d-cancellation-raw", formatCancellationRaw(c.cancellation_raw));
 
     // Service
     setField("d-service-category", c.service_category);

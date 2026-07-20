@@ -27,6 +27,7 @@ from certify_bulk import (
 from config import COLUMN_MAP
 from contract_utils import (
     BULK_ALLOWED_CANONICAL_STATUSES,
+    CANCELLATION_COLUMNS,
     CONTRACT_COLUMNS,
     CONTRACT_INSERT_SQL,
     RAW_SOURCE_TYPE,
@@ -278,7 +279,10 @@ def _build_observation(
             typed_values[canonical] = batch.evidence.fiscal_year
             field_statuses[canonical] = "valid"
             continue
-        index = batch.canonical_header_indexes.get(canonical)
+        source_canonical = (
+            "cancelled" if canonical in CANCELLATION_COLUMNS else canonical
+        )
+        index = batch.canonical_header_indexes.get(source_canonical)
         raw_value = raw_fields[index] if index is not None and index < len(raw_fields) else None
         parsed = parse_bulk_field(canonical, raw_value, profile=batch.evidence.header_profile)
         typed_values[canonical] = parsed.value

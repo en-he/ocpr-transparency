@@ -18,6 +18,15 @@ RAW_SOURCE_TYPE = "csv"
 LIVE_MONITOR_SOURCE_TYPE = "live_monitor"
 LIVE_RECOVERY_SOURCE_TYPE = "live_recovery"
 
+CANCELLATION_STATUSES = frozenset(
+    {"cancelled", "not_cancelled", "unknown", "malformed"}
+)
+CANCELLATION_COLUMNS = [
+    "cancellation_raw",
+    "cancellation_date",
+    "cancellation_status",
+]
+
 CANONICAL_LINEAGE_COLUMNS = [
     "representative_observation_id",
     "canonicalization_status",
@@ -41,6 +50,7 @@ CONTRACT_COLUMNS = [
     "fund_type",
     "pco_number",
     "cancelled",
+    *CANCELLATION_COLUMNS,
     "document_url",
     "fiscal_year",
 ]
@@ -244,6 +254,143 @@ class TypedFieldResult:
             raise ValueError(f"unknown bulk field status: {self.status!r}")
 
 
+@dataclass(frozen=True)
+class CancellationResult:
+    """Validated cancellation semantics plus the untouched source value."""
+
+    raw_value: str | None
+    date: str | None
+    status: str
+    legacy_cancelled: int
+
+    def __post_init__(self):
+        if self.status not in CANCELLATION_STATUSES:
+            raise ValueError(f"unknown cancellation status: {self.status!r}")
+        if self.legacy_cancelled not in (0, 1):
+            raise ValueError("legacy cancellation projection must be 0 or 1")
+        if self.legacy_cancelled != int(self.status == "cancelled"):
+            raise ValueError("legacy cancellation projection is not derived from status")
+
+
+_CANCELLATION_TRUE_TOKENS = frozenset(
+    {"SÍ", "SI", "YES", "Y", "S", "1", "TRUE", "T", "CANCELADO", "CANCELLED", "CANCELED"}
+)
+_CANCELLATION_FALSE_TOKENS = frozenset(
+    {"NO", "N", "0", "FALSE", "F", "NOT CANCELLED", "NO CANCELADO", "NO CANCELED"}
+)
+_CANCELLATION_UNKNOWN_TOKENS = frozenset(
+    {"UNKNOWN", "UNKNOW", "DESCONOCIDO", "N/A", "NA", "NONE", "NULL", "PENDING"}
+)
+
+
+def _parse_strict_cancellation_date(raw: Any) -> tuple[str | None, str]:
+    """Parse only the certified bulk ``MM-DD-YYYY`` cancellation shape."""
+    text = str(raw).strip()
+    parts = text.split("-")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return None, "malformed"
+    month, day, year = parts
+    if len(month) == 4:
+        return None, "malformed"
+    if len(year) == 2:
+        return None, "ambiguous"
+    if len(year) != 4:
+        return None, "malformed"
+    try:
+        return datetime.strptime(text, "%m-%d-%Y").date().isoformat(), "valid"
+    except ValueError:
+        return None, "malformed"
+
+
+def parse_cancellation(raw: Any) -> CancellationResult:
+    """Interpret a cancellation value without collapsing source evidence.
+
+    Bulk dates are certified as ``MM-DD-YYYY``.  A two-digit year is kept as
+    an unresolved/unknown value, while other nonblank values that do not match
+    a known live token are malformed.  In every case the original scalar is
+    retained as ``raw_value``.
+    """
+    raw_value = None if raw is None else str(raw)
+    if raw is None:
+        return CancellationResult(None, None, "unknown", 0)
+
+    text = str(raw).strip()
+    if text in {"", "\x00"}:
+        return CancellationResult(raw_value, None, "unknown", 0)
+
+    normalized = normalize_lookup_value(text)
+    if normalized in _CANCELLATION_TRUE_TOKENS:
+        return CancellationResult(raw_value, None, "cancelled", 1)
+    if normalized in _CANCELLATION_FALSE_TOKENS:
+        return CancellationResult(raw_value, None, "not_cancelled", 0)
+    if normalized in _CANCELLATION_UNKNOWN_TOKENS:
+        return CancellationResult(raw_value, None, "unknown", 0)
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        try:
+            parsed_date = datetime.strptime(text, "%Y-%m-%d").date().isoformat()
+            return CancellationResult(raw_value, parsed_date, "cancelled", 1)
+        except ValueError:
+            return CancellationResult(raw_value, None, "malformed", 0)
+
+    cancellation_date, date_status = _parse_strict_cancellation_date(text)
+    if date_status == "valid":
+        return CancellationResult(raw_value, cancellation_date, "cancelled", 1)
+    if date_status == "ambiguous":
+        return CancellationResult(raw_value, None, "unknown", 0)
+
+    # Live OCPR recovery surfaces also use MM/DD/YYYY and Microsoft AJAX
+    # date scalars. These shapes are accepted here but remain out of the
+    # certified bulk profile through ``_bulk_cancellation_field_status``.
+    if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{4}", text):
+        try:
+            parsed_date = datetime.strptime(text, "%m/%d/%Y").date().isoformat()
+            return CancellationResult(raw_value, parsed_date, "cancelled", 1)
+        except ValueError:
+            pass
+    if re.search(r"/Date\((-?\d+)", text):
+        parsed_date = parse_ms_ajax_date(text)
+        if parsed_date:
+            return CancellationResult(raw_value, parsed_date, "cancelled", 1)
+    return CancellationResult(raw_value, None, "malformed", 0)
+
+
+def _bulk_cancellation_field_status(raw: Any, parsed: CancellationResult) -> str:
+    if _bulk_blank(raw):
+        return "missing"
+    normalized = normalize_lookup_value(raw)
+    if normalized in (
+        _CANCELLATION_TRUE_TOKENS
+        | _CANCELLATION_FALSE_TOKENS
+        | _CANCELLATION_UNKNOWN_TOKENS
+    ):
+        return "valid"
+    _, date_status = _parse_strict_cancellation_date(raw)
+    if date_status == "ambiguous":
+        return "ambiguous"
+    if date_status != "valid" or parsed.status == "malformed":
+        return "malformed"
+    return "valid"
+
+
+def _parse_bulk_cancellation_date(raw: Any) -> TypedFieldResult:
+    parsed = parse_cancellation(raw)
+    field_status = _bulk_cancellation_field_status(raw, parsed)
+    return TypedFieldResult(parsed.date, parsed.raw_value, field_status)
+
+
+def _parse_bulk_cancellation_status(raw: Any) -> TypedFieldResult:
+    parsed = parse_cancellation(raw)
+    field_status = _bulk_cancellation_field_status(raw, parsed)
+    return TypedFieldResult(parsed.status, parsed.raw_value, field_status)
+
+
+def _parse_bulk_cancellation_raw(raw: Any) -> TypedFieldResult:
+    parsed = parse_cancellation(raw)
+    field_status = _bulk_cancellation_field_status(raw, parsed)
+    return TypedFieldResult(parsed.raw_value, parsed.raw_value, field_status)
+
+
 def _bulk_blank(raw: Any) -> bool:
     return raw is None or str(raw).strip() in {"", "\x00"}
 
@@ -288,29 +435,13 @@ def _parse_bulk_amount(raw: Any) -> TypedFieldResult:
 
 
 def _parse_bulk_cancelled(raw: Any) -> TypedFieldResult:
-    if _bulk_blank(raw):
-        return TypedFieldResult(0, None if raw is None else str(raw), "missing")
-
-    text = str(raw).strip()
-    normalized = normalize_lookup_value(text)
-    if normalized in {"SÍ", "SI", "YES", "S", "Y", "1", "TRUE"}:
-        return TypedFieldResult(1, str(raw), "valid")
-    if normalized in {"NO", "N", "0", "FALSE"}:
-        return TypedFieldResult(0, str(raw), "valid")
-
-    dated = _parse_bulk_date(text)
-    if dated.status == "valid":
-        # Task 3 preserves the source date/status while retaining the legacy
-        # boolean projection.  Task 4 owns the cancellation migration.
-        return TypedFieldResult(
-            0,
-            str(raw),
-            "valid",
-            warning="dated_cancellation_preserved_for_task_4",
-        )
-    if dated.status == "ambiguous":
-        return TypedFieldResult(None, str(raw), "ambiguous")
-    return TypedFieldResult(None, str(raw), "malformed")
+    parsed = parse_cancellation(raw)
+    field_status = _bulk_cancellation_field_status(raw, parsed)
+    return TypedFieldResult(
+        parsed.legacy_cancelled,
+        parsed.raw_value,
+        field_status,
+    )
 
 
 def parse_bulk_field(
@@ -334,6 +465,12 @@ def parse_bulk_field(
         return _parse_bulk_amount(raw)
     if canonical == "cancelled":
         return _parse_bulk_cancelled(raw)
+    if canonical == "cancellation_raw":
+        return _parse_bulk_cancellation_raw(raw)
+    if canonical == "cancellation_date":
+        return _parse_bulk_cancellation_date(raw)
+    if canonical == "cancellation_status":
+        return _parse_bulk_cancellation_status(raw)
     if _bulk_blank(raw):
         return TypedFieldResult(None, raw_value, "missing")
     return TypedFieldResult(clean_str(raw), raw_value, "valid")
@@ -418,8 +555,8 @@ def parse_date(raw) -> str | None:
 
 
 def parse_cancelled(raw) -> int:
-    normalized = normalize_lookup_value(raw)
-    return 1 if normalized in {"SÍ", "SI", "YES", "S", "Y", "1", "TRUE"} else 0
+    """Compatibility projection derived from validated cancellation status."""
+    return parse_cancellation(raw).legacy_cancelled
 
 
 def parse_ms_ajax_date(raw) -> str | None:
@@ -515,6 +652,12 @@ def normalize_contract_record(
             if source_type in {LIVE_MONITOR_SOURCE_TYPE, LIVE_RECOVERY_SOURCE_TYPE}
             else "legacy_unlinked"
         )
+    cancellation_source = (
+        record.get("cancellation_raw")
+        if "cancellation_raw" in record
+        else record.get("cancelled")
+    )
+    cancellation = parse_cancellation(cancellation_source)
     normalized = {
         "contract_number": clean_str(record.get("contract_number")),
         "entity": strip_entity_code(record.get("entity")),
@@ -531,7 +674,10 @@ def normalize_contract_record(
         "procurement_method": clean_str(record.get("procurement_method")),
         "fund_type": clean_str(record.get("fund_type")),
         "pco_number": clean_str(record.get("pco_number")),
-        "cancelled": parse_cancelled(record.get("cancelled")) if not isinstance(record.get("cancelled"), int) else int(record.get("cancelled")),
+        "cancelled": cancellation.legacy_cancelled,
+        "cancellation_raw": cancellation.raw_value,
+        "cancellation_date": cancellation.date,
+        "cancellation_status": cancellation.status,
         "document_url": clean_str(record.get("document_url")),
         "fiscal_year": clean_str(record.get("fiscal_year")) or fiscal_year_from_date(record.get("award_date")),
         "source_type": source_type,
@@ -592,6 +738,12 @@ def create_schema(conn: sqlite3.Connection):
                 fund_type           TEXT,
                 pco_number          TEXT,
                 cancelled           INTEGER DEFAULT 0,
+                cancellation_raw    TEXT,
+                cancellation_date   TEXT,
+                cancellation_status TEXT NOT NULL DEFAULT 'unknown'
+                    CHECK (cancellation_status IN (
+                        'cancelled', 'not_cancelled', 'unknown', 'malformed'
+                    )),
                 document_url        TEXT,
                 fiscal_year         TEXT,
                 source_type         TEXT NOT NULL DEFAULT 'csv',
@@ -609,6 +761,45 @@ def create_schema(conn: sqlite3.Connection):
 
     migrate_contracts_schema(conn)
     conn.executescript("""
+        CREATE TRIGGER IF NOT EXISTS normalize_contract_cancellation_insert
+        AFTER INSERT ON contracts
+        WHEN NEW.cancelled IS NULL
+        BEGIN
+            UPDATE contracts
+            SET cancelled = CASE
+                WHEN cancellation_status = 'cancelled' THEN 1 ELSE 0
+            END
+            WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_contract_cancellation_insert
+        BEFORE INSERT ON contracts
+        WHEN NEW.cancellation_status NOT IN (
+                 'cancelled', 'not_cancelled', 'unknown', 'malformed'
+             )
+          OR NEW.cancelled != CASE
+                 WHEN NEW.cancellation_status = 'cancelled' THEN 1 ELSE 0
+             END
+          OR (NEW.cancellation_date IS NOT NULL
+              AND NEW.cancellation_status != 'cancelled')
+        BEGIN
+            SELECT RAISE(ABORT, 'invalid cancellation projection');
+        END;
+        CREATE TRIGGER IF NOT EXISTS validate_contract_cancellation_update
+        BEFORE UPDATE OF cancelled, cancellation_raw,
+                         cancellation_date, cancellation_status ON contracts
+        WHEN NEW.cancellation_status NOT IN (
+                 'cancelled', 'not_cancelled', 'unknown', 'malformed'
+             )
+          OR NEW.cancelled != CASE
+                 WHEN NEW.cancellation_status = 'cancelled' THEN 1 ELSE 0
+             END
+          OR (NEW.cancellation_date IS NOT NULL
+              AND NEW.cancellation_status != 'cancelled')
+        BEGIN
+            SELECT RAISE(ABORT, 'invalid cancellation projection');
+        END;
+
         CREATE INDEX IF NOT EXISTS idx_entity       ON contracts(entity);
         CREATE INDEX IF NOT EXISTS idx_contractor   ON contracts(contractor);
         CREATE INDEX IF NOT EXISTS idx_amount       ON contracts(amount);
@@ -1006,6 +1197,9 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
         "fund_type": "TEXT",
         "pco_number": "TEXT",
         "cancelled": "INTEGER DEFAULT 0",
+        "cancellation_raw": "TEXT",
+        "cancellation_date": "TEXT",
+        "cancellation_status": "TEXT NOT NULL DEFAULT 'unknown'",
         "document_url": "TEXT",
         "fiscal_year": "TEXT",
         "source_type": "TEXT NOT NULL DEFAULT 'csv'",
@@ -1016,9 +1210,46 @@ def migrate_contracts_schema(conn: sqlite3.Connection):
         "canonicalization_status": "TEXT NOT NULL DEFAULT 'legacy_unlinked'",
         "normalizer_version": "TEXT",
     }
+    cancellation_status_added = "cancellation_status" not in existing
     for column, sql_type in additions.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE contracts ADD COLUMN {column} {sql_type}")
+
+    if cancellation_status_added:
+        conn.execute(
+            """
+            UPDATE contracts
+            SET cancellation_status = CASE
+                WHEN cancelled = 1 THEN 'cancelled'
+                ELSE 'unknown'
+            END
+            """
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE contracts
+            SET cancellation_status = CASE
+                WHEN cancelled = 1 THEN 'cancelled'
+                ELSE 'unknown'
+            END
+            WHERE cancellation_status IS NULL
+               OR TRIM(cancellation_status) = ''
+               OR cancellation_status NOT IN (
+                   'cancelled', 'not_cancelled', 'unknown', 'malformed'
+               )
+            """
+        )
+
+    conn.execute(
+        """
+        UPDATE contracts
+        SET cancelled = CASE
+            WHEN cancellation_status = 'cancelled' THEN 1 ELSE 0
+        END
+        WHERE cancelled IS NULL
+        """
+    )
 
     conn.execute(
         "UPDATE contracts SET source_type = ? WHERE source_type IS NULL OR TRIM(source_type) = ''",

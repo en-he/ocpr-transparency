@@ -196,7 +196,10 @@ def parse_contract_detail_html(
             "procurement_method": _find_input_value(soup, "ContractingForm"),
             "fund_type": _find_input_value(soup, "Fund"),
             "pco_number": _find_input_value(soup, "PcONumber"),
-            "cancelled": 0,
+            "cancellation_raw": (
+                _find_input_value(soup, "EffectiveCancellationDate")
+                or _find_input_value(soup, "CancellationDate")
+            ),
             "document_url": None,
             "fiscal_year": fiscal_year_from_date(_find_input_value(soup, "DateOfGrant")),
             "source_type": LIVE_RECOVERY_SOURCE_TYPE,
@@ -240,7 +243,7 @@ def normalize_search_result_row(search_row: dict, *, inserted_at: str, source_ty
             "procurement_method": None,
             "fund_type": None,
             "pco_number": None,
-            "cancelled": 1 if search_row.get("CancellationDate") else 0,
+            "cancellation_raw": search_row.get("CancellationDate"),
             "document_url": build_document_url(search_row.get("DocumentWithoutSocialSecurityId")),
             "fiscal_year": fiscal_year_from_date(parse_ms_ajax_date(search_row.get("DateOfGrant"))),
             "source_type": source_type,
@@ -416,6 +419,11 @@ def load_recovered_rows(path: Path) -> list[dict]:
         reader = csv.DictReader(fh)
         rows = []
         for row in reader:
+            # CSV has no distinct representation for ``None`` versus an empty
+            # scalar. Recovery rows canonicalize that boundary to unavailable;
+            # the certified bulk observation ledger remains byte-exact.
+            if row.get("cancellation_raw") == "":
+                row["cancellation_raw"] = None
             normalized = normalize_contract_record(
                 row,
                 default_source_type=row.get("source_type") or RAW_SOURCE_TYPE,
