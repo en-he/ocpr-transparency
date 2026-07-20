@@ -1,0 +1,3 @@
+domain,raw_value,canonical_id,display_label,decision,notes
+contractor,INTEGRA,contractor:integra-design-group,INTEGRA DESIGN GROUP,retained,Retained existing high-risk override; this row documents review and does not add an alias.
+contractor,T P CONSULTING,contractor:quantum-health-consulting,QUANTUM HEALTH CONSULTING,retained,Retained existing high-risk override; this row documents review and does not add an alias.

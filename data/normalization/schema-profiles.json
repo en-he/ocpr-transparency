@@ -1,0 +1,55 @@
+{
+  "schema_version": "normalization-schema-1",
+  "registry_version": "normalization-registry-1",
+  "algorithm_version": "lookup-v1",
+  "collision_policy": "fail_closed",
+  "domains": {
+    "contractor": {
+      "file": "contractor-aliases.csv",
+      "headers": [
+        "alias",
+        "canonical_id",
+        "display_label",
+        "review_status"
+      ]
+    },
+    "entity": {
+      "file": "entity-aliases.csv",
+      "headers": [
+        "alias",
+        "canonical_id",
+        "display_label",
+        "review_status"
+      ]
+    },
+    "service_category": {
+      "file": "service-category-aliases.csv",
+      "headers": [
+        "alias",
+        "canonical_id",
+        "display_label",
+        "review_status"
+      ]
+    },
+    "service_type": {
+      "file": "service-type-aliases.csv",
+      "headers": [
+        "alias",
+        "canonical_id",
+        "display_label",
+        "review_status"
+      ]
+    }
+  },
+  "review_decisions": {
+    "file": "review-decisions.csv",
+    "headers": [
+      "domain",
+      "raw_value",
+      "canonical_id",
+      "display_label",
+      "decision",
+      "notes"
+    ]
+  }
+}
