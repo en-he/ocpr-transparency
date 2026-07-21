@@ -298,7 +298,7 @@ class BulkObservationPersistenceTests(unittest.TestCase):
         replacement_observation["raw_record"] = "mutated by replace"
         with self.assertRaisesRegex(
             sqlite3.IntegrityError,
-            "bulk observations are append-only",
+            "bulk observations are append-only|invalid bulk observation identity",
         ):
             conn.execute(
                 f"INSERT OR REPLACE INTO bulk_observations ({', '.join(columns)}) "
@@ -376,7 +376,7 @@ class BulkObservationPersistenceTests(unittest.TestCase):
         columns = bulk_observations._OBSERVATION_COLUMNS
         with self.assertRaisesRegex(
             sqlite3.IntegrityError,
-            "only certified observations may be canonical eligible",
+            "only certified observations may be canonical eligible|invalid bulk observation identity",
         ):
             conn.execute(
                 f"INSERT INTO bulk_observations ({', '.join(columns)}) "
@@ -387,6 +387,85 @@ class BulkObservationPersistenceTests(unittest.TestCase):
             conn.execute(
                 "DELETE FROM evidence_objects WHERE evidence_id = ?",
                 (batch.evidence.evidence_id,),
+            )
+        conn.close()
+
+    def test_schema_recomputes_observation_identity_and_duplicate_lineage(self):
+        batch = bulk_observations.generate_bulk_observations(
+            FIXTURES / "ocpr-bulk-v1.csv",
+            fiscal_year="2010-2011",
+            source_channel="archive_bulk",
+        )
+        conn = sqlite3.connect(":memory:")
+        create_schema(conn)
+        bulk_observations.insert_bulk_observations(conn, batch)
+        columns = bulk_observations._OBSERVATION_COLUMNS
+
+        forged_identity = dict(batch[0])
+        forged_identity["observation_id"] = "sha256:" + ("f" * 64)
+        with self.assertRaisesRegex(
+            sqlite3.IntegrityError,
+            "invalid bulk observation identity",
+        ):
+            conn.execute(
+                f"INSERT INTO bulk_observations ({', '.join(columns)}) "
+                f"VALUES ({', '.join('?' for _ in columns)})",
+                tuple(forged_identity[column] for column in columns),
+            )
+
+        forged_duplicate = dict(batch[0])
+        forged_duplicate["source_row_number"] = 999
+        forged_duplicate["raw_record"] = "forged non-duplicate record"
+        forged_duplicate["raw_row_hash"] = hashlib.sha256(
+            forged_duplicate["raw_record"].encode(ENCODING)
+        ).hexdigest()
+        forged_duplicate["observation_id"] = bulk_observations.observation_id(
+            evidence_id=forged_duplicate["evidence_id"],
+            source_row_number=forged_duplicate["source_row_number"],
+            raw_row_hash=forged_duplicate["raw_row_hash"],
+            parser_version=forged_duplicate["parser_version"],
+            normalizer_version=forged_duplicate["normalizer_version"],
+        )
+        forged_duplicate["duplicate_status"] = "exact_duplicate"
+        forged_duplicate["duplicate_of_observation_id"] = batch[0]["observation_id"]
+        with self.assertRaisesRegex(
+            sqlite3.IntegrityError,
+            "invalid bulk observation identity",
+        ):
+            conn.execute(
+                f"INSERT INTO bulk_observations ({', '.join(columns)}) "
+                f"VALUES ({', '.join('?' for _ in columns)})",
+                tuple(forged_duplicate[column] for column in columns),
+            )
+        conn.close()
+
+    def test_duplicate_exclusion_requires_projection_and_contributor_edges(self):
+        batch = bulk_observations.generate_bulk_observations(
+            FIXTURES / "ocpr-bulk-v1.csv",
+            fiscal_year="2010-2011",
+            source_channel="archive_bulk",
+        )
+        conn = sqlite3.connect(":memory:")
+        create_schema(conn)
+        bulk_observations.insert_bulk_observations(conn, batch)
+        observation = batch[0]
+        with self.assertRaisesRegex(
+            sqlite3.IntegrityError,
+            "invalid projection exclusion semantics",
+        ):
+            conn.execute(
+                """
+                INSERT INTO bulk_projection_exclusions (
+                    exclusion_id, observation_id, evidence_id,
+                    source_row_number, reason, details_json
+                ) VALUES (?, ?, ?, ?, 'canonical_row_hash_duplicate', '{}')
+                """,
+                (
+                    "sha256:" + ("d" * 64),
+                    observation["observation_id"],
+                    observation["evidence_id"],
+                    observation["source_row_number"],
+                ),
             )
         conn.close()
 

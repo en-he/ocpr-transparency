@@ -799,9 +799,9 @@ class ImmutableCaptureContractTests(unittest.TestCase):
                 for path in (root / "evidence").rglob("*")
                 if path.is_file()
             )
-            second = module.capture_bulk_snapshot(
-                **self._capture_kwargs(root, response)
-            )
+            repeat_kwargs = self._capture_kwargs(root, response)
+            repeat_kwargs["captured_at"] = "2026-07-20T00:00:00+00:00"
+            second = module.capture_bulk_snapshot(**repeat_kwargs)
             self.assertEqual(second.status, "unchanged")
             self.assertEqual(second.sha256, first.sha256)
             self.assertEqual(second.evidence_path, first.evidence_path)
@@ -833,6 +833,40 @@ class ImmutableCaptureContractTests(unittest.TestCase):
                 'attachment; filename="contratos_2010-2011.csv"',
             )
             self.assertEqual(metadata["encoding"], "latin-1")
+
+    def test_same_bytes_with_conflicting_source_metadata_fail_closed(self):
+        module = _require_pipeline_module("capture_bulk_snapshot")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            body = _valid_csv_bytes()
+            original_url = BULK_URL_TEMPLATE.format(fiscal_year="2010-2011")
+            original = module.capture_bulk_snapshot(
+                **self._capture_kwargs(
+                    root,
+                    _csv_response(original_url, "2010-2011", content=body),
+                )
+            )
+            self.assertEqual(original.status, "captured")
+            metadata_before = original.metadata_path.read_bytes()
+
+            moved_url = (
+                f"https://{OFFICIAL_HOST}/records/bulk/"
+                "contratos_2010-2011.csv"
+            )
+            conflict_kwargs = self._capture_kwargs(
+                root,
+                _csv_response(moved_url, "2010-2011", content=body),
+            )
+            conflict_kwargs["source_url"] = moved_url
+            conflict_kwargs["captured_at"] = "2026-07-20T00:00:00+00:00"
+            conflict = module.capture_bulk_snapshot(**conflict_kwargs)
+
+            self.assertEqual(conflict.status, "rejected")
+            self.assertEqual(conflict.reason, "immutable metadata conflict")
+            self.assertEqual(conflict.evidence_path, original.evidence_path)
+            self.assertEqual(conflict.metadata_path, original.metadata_path)
+            self.assertEqual(original.evidence_path.read_bytes(), body)
+            self.assertEqual(original.metadata_path.read_bytes(), metadata_before)
 
     def test_changed_same_year_keeps_prior_evidence_and_explicit_promotion_selects_bytes(self):
         module = _require_pipeline_module("capture_bulk_snapshot")

@@ -672,6 +672,23 @@ def _stable_json_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
+def _metadata_matches_repeat_capture(path: Path, metadata: dict[str, object]) -> bool:
+    """Accept a later observation time, but never changed source semantics."""
+    try:
+        existing = json.loads(
+            _read_regular_file(path, max_bytes=1_000_001).decode("utf-8")
+        )
+    except (OSError, ValueError, UnicodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(existing, dict):
+        return False
+    existing = dict(existing)
+    expected = dict(metadata)
+    existing.pop("captured_at", None)
+    expected.pop("captured_at", None)
+    return existing == expected
+
+
 def _capture_result(
     *,
     fiscal_year: str,
@@ -933,14 +950,16 @@ def capture_bulk_snapshot(
             raise ValueError(f"refusing non-file metadata path: {metadata_path}")
         if metadata_existed:
             if not _file_matches(metadata_path, metadata_bytes):
-                return _capture_result(
-                    fiscal_year=fiscal_year,
-                    status="unchanged",
-                    digest=digest,
-                    quarantine_path=quarantine_path,
-                    evidence_path=evidence_path,
-                    metadata_path=metadata_path,
-                )
+                if not _metadata_matches_repeat_capture(metadata_path, metadata):
+                    return _capture_result(
+                        fiscal_year=fiscal_year,
+                        status="rejected",
+                        digest=digest,
+                        quarantine_path=quarantine_path,
+                        evidence_path=evidence_path,
+                        metadata_path=metadata_path,
+                        reason="immutable metadata conflict",
+                    )
         else:
             _write_once(metadata_path, metadata_bytes)
     except (OSError, ValueError) as exc:

@@ -15,9 +15,10 @@ The project is archival-first civic tech: preserve what was obtained, record how
 
 ### Storage and transformation
 
-- **Normalized records — Current, but not an observation ledger:** `pipeline/contract_utils.py` normalizes values and creates row hashes. `pipeline/ingest.py` reads the preserved CSVs and the tracked recovery CSV into SQLite, with row-level `source_type`, `source_url`, `source_contract_id`, and insertion timestamps.
-- **Canonical records — Current:** `data/db/contratos.db` contains a deduplicated `contracts` table plus FTS5 data. It is a canonical projection, not an immutable ledger of every fetched response or observation. Rebuilding it from sources is supported.
-- **Public projection — Current:** `pipeline/build_site_artifacts.py` creates a browser-oriented SQLite projection, gzip/chunks, a manifest, and a full downloadable SQLite artifact. The site runs `sql.js` in the browser; it does not query a hosted API.
+- **Bulk evidence and observations — Current:** `pipeline/ingest.py` certifies preserved CSVs one source at a time and writes immutable `evidence_objects`, append-only `bulk_observations`, typed parser results, explicit exclusions/projection results, and complete canonical contributor lineage. Raw values, source coordinates, evidence hashes, parser outcomes, and quarantined rows survive canonical projection. Supplemental live-recovery rows still use the compatibility path and do not yet have byte-retained evidence objects.
+- **Reviewed normalization — Current:** `pipeline/normalization.py` loads one deterministic, versioned exact-match registry for reviewed schema and contractor aliases. Registry collisions fail closed. Fuzzy or learned candidate scoring is not implemented and cannot affect publication.
+- **Canonical records — Current:** `data/db/contratos.db` contains a reproducible `contracts` projection plus FTS5 data. Bulk rows carry separate versioned `canonical_id` and `family_id` values, a deterministic representative observation, and append-only representative/duplicate contributor relations. Supplemental recovery rows remain `recovery_unlinked` until their acquisition lane gains immutable evidence and observations. Rebuilding from the certified source set is order-independent; introducing a new source through the single-source projection path fails closed so caller arrival order cannot become canonical state.
+- **Public projection — Current:** `pipeline/build_site_artifacts.py` creates a browser-oriented SQLite projection, gzip/chunks, a manifest, and a full downloadable SQLite artifact. It includes stable canonical/family identities and validated cancellation fields while intentionally excluding evidence, observation, exclusion, projection, and contributor audit tables. The site runs `sql.js` in the browser; it does not query a hosted API.
 - **Hosted query backend — Not yet implemented:** a server-side query API is the long-term replacement for requiring the browser to download the full searchable database. It must be built after evidence and reconciliation foundations are stable and before advanced analytics.
 
 ## Target flow
@@ -63,21 +64,21 @@ The target architecture keeps acquisition channels parallel and lets them conver
                     +--------------+   +--------------------+
 ```
 
-The diagram is a target flow. In the current checkout, the bulk and manual recovery lanes reach a deduplicated SQLite projection directly; the immutable-evidence and append-only-observation stages are incomplete, and the hosted API/document lane do not exist.
+The diagram is both a current bulk flow and a target cross-channel flow. In the current checkout, certified bulk CSVs pass through immutable evidence, append-only observations, reviewed normalization, deterministic reconciliation, and canonical projection. Manual live recovery still joins through a compatibility row path rather than byte-retained evidence and observations. The hosted API and document/OCR lanes do not exist.
 
 ## Target boundaries and contracts
 
 ### Immutable evidence
 
-**Target:** Every acquisition stores the original bytes (or a content-addressed immutable object) with source channel, request/response metadata, UTC capture time, SHA-256, and retention identity. A later parser correction adds a new observation; it does not overwrite the source bytes.
+**Current for bulk; target across channels:** Every certified bulk file has exact preserved bytes, source metadata, SHA-256 identity, deterministic certification, and a database evidence object. A later parser correction adds observations rather than replacing source evidence. Bounded future capture retains accepted changed bytes content-addressed before explicit promotion.
 
-**Current gap:** the bulk lane now has exact certification reports, bounded capture quarantine, and content-addressed future-version retention, while raw CSV and recovery outputs remain preserved. There is still no unified evidence store or append-only observation model spanning raw live JSON, detail HTML, documents, and every normalization/reconciliation event.
+**Current gap:** there is no unified evidence store spanning raw live JSON, detail HTML, and documents. Those channels must adopt the same immutable-object contract before they become broad automated acquisition lanes.
 
 ### Observations
 
-**Target:** A normalized observation references exactly one evidence object and records parser/normalizer versions, parse time, field-level extraction/status, and any validation warnings. Observations are append-only and can be reprojected.
+**Current for bulk; target across channels:** Each bulk observation references exactly one evidence object and retains parser/normalizer versions, source coordinates, raw values, field-level extraction/status, warnings, and projection eligibility. Observations and their projection/contributor relations are append-only and can be reprojected without deleting duplicates or quarantines.
 
-**Current gap:** the SQLite row schema has provenance fields and `inserted_at`, but the canonical table is deduplicated. It does not preserve every source observation or every parser result as a first-class immutable record.
+**Current gap:** supplemental live recovery still writes compatibility rows and does not preserve every API/HTML response or parser result as a first-class immutable observation.
 
 ### Reconciliation and human review
 
@@ -87,7 +88,7 @@ The diagram is a target flow. In the current checkout, the bulk and manual recov
 
 ### Canonical projections and public surfaces
 
-**Current:** the `contracts` projection includes row-level source fields and can be rebuilt from CSV plus recovery inputs. The static browser DB and downloadable DB are projections, not source authority.
+**Current:** the `contracts` projection includes row-level source fields, versioned canonical/family identities for bulk rows, conservative cancellation status, and deterministic representative links, and can be rebuilt from CSV plus recovery inputs. The static browser DB and downloadable DB are projections, not source authority; detailed evidence and lineage remain in the full database.
 
 **Target:** publish separate projections for reported source fields, derived family/current-value fields, lifecycle/status fields, and evidence links. A hosted query API should serve the public UI and bounded exports; full artifact downloads remain useful for reproducibility until the API is mature.
 
@@ -99,7 +100,7 @@ RAG is an optional downstream consumer of reviewed document text and canonical/e
 
 ## Amount and status boundary
 
-The current `amount`/`Cuantía` field is a reported or registered contract amount from a source row. It is not actual payment data. Amendment amounts may represent increase/decrease deltas, but sign/encoding and cancellation semantics still require source validation. A future derived current contract value must be labeled as derived and calculated only after those rules are validated. Actual payments require a separate evidence source and ledger; no such payment ledger is implemented here.
+The current `amount`/`Cuantía` field is an OCPR-reported contract amount from a source row. It is not actual payment data, spending, a disbursement, or current contract value. Amendment amounts may represent increase/decrease deltas, but sign/encoding still requires source validation. Cancellation is preserved separately as its raw scalar, a validated effective date when present, a closed status, and a compatibility boolean derived only from validated status; blank/NUL evidence remains unknown. A future derived current contract value must be labeled as derived and calculated only after family and amendment rules are validated. Actual payments require a separate evidence source and ledger; no such payment ledger is implemented here.
 
 ## Architectural non-goals for this migration
 

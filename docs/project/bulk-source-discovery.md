@@ -217,3 +217,7 @@ An invalid response has no evidence or active-view path. Its quarantine path rem
 ## Offline test evidence
 
 `tests/test_bulk_source_discovery.py` exercises the two modules with no live network. The three offline HTML fixtures cover the current registry shape, a moved official path, and an HTML/error payload. The existing Latin-1 `tests/fixtures/bulk/ocpr-bulk-v1.csv` fixture is reused as a valid CSV body. Security regressions cover pre-request redirect allowlisting, bounded streaming without `.content`, truncated quarantine semantics, strict UTC capture time, and symlink-ancestor rejection.
+
+## Operational review notification
+
+The scheduled/manual Contract Sync workflow treats an unknown schema, endpoint movement, invalid payload, failed certification, or later publication-gate failure as a hard stop. It uploads bounded quarantine/evidence diagnostics before notification, then creates or comments on the open GitHub issue titled `Contract Sync review required`; keeping one such issue open is the operator policy. Normal Actions failure email remains enabled, but the durable issue is the manual-review queue. A recognized, explicitly reviewed schema profile may proceed automatically; a novel or incompatible profile must be reviewed, versioned, tested, and registered before promotion is permitted.

@@ -169,7 +169,7 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertIn("continue-on-error: true", block)
         self.assertNotIn("echo next", block)
 
-    def test_sync_permissions_are_exactly_contents_and_actions_write(self):
+    def test_sync_permissions_are_exactly_contents_actions_and_issues_write(self):
         workflow = workflow_text("sync.yml")
         permissions = re.search(
             r"(?ms)^    permissions:\s*\n(?P<body>(?:^      [^\n]+\n?)+)",
@@ -181,7 +181,10 @@ class CIWorkflowTests(unittest.TestCase):
             for line in permissions.group("body").splitlines()
             if line.strip()
         ]
-        self.assertEqual(permission_lines, ["contents: write", "actions: write"])
+        self.assertEqual(
+            permission_lines,
+            ["contents: write", "actions: write", "issues: write"],
+        )
 
     def test_sync_is_main_only_serialized_and_checks_out_latest_main(self):
         workflow = workflow_text("sync.yml")
@@ -286,6 +289,38 @@ class CIWorkflowTests(unittest.TestCase):
             workflow.index("- name: Retain failed capture diagnostics"),
             workflow.index("- name: Dispatch Pages deployment"),
         )
+
+    def test_sync_opens_or_updates_one_failure_review_issue_after_diagnostics(self):
+        workflow = workflow_text("sync.yml")
+        diagnostics_start = workflow.index("- name: Retain failed capture diagnostics")
+        notification_start = workflow.index("- name: Notify failed sync review")
+        self.assertGreater(notification_start, diagnostics_start)
+
+        notification = named_step_block(workflow, "Notify failed sync review")
+        self.assertRegex(notification, r"(?m)^\s*if:\s*failure\(\)\s*$")
+        self.assertRegex(
+            notification,
+            r"(?ms)^\s*env:\s*\n\s+GH_TOKEN:\s*\$\{\{ github\.token \}\}",
+        )
+        self.assertIn("GH_REPO: ${{ github.repository }}", notification)
+        self.assertIn('TITLE: "Contract Sync review required"', notification)
+        self.assertIn("REQUESTED_MODE: ${{ inputs.mode }}", notification)
+        self.assertIn("SCHEDULE: ${{ github.event.schedule }}", notification)
+        self.assertNotIn("steps.mode.outputs.mode", notification)
+        self.assertIn("gh issue list --state open", notification)
+        self.assertIn(
+            "--search 'in:title \"Contract Sync review required\"'", notification
+        )
+        self.assertIn(
+            'select(.title == "Contract Sync review required")', notification
+        )
+        self.assertIn('if [ -n "$REQUESTED_MODE" ]; then', notification)
+        self.assertIn('elif [ "$SCHEDULE" = "0 7 * * 0" ]; then', notification)
+        self.assertIn('elif [ "$SCHEDULE" = "0 8 2 * *" ]; then', notification)
+        self.assertIn('gh issue comment "$issue_number" --body "$body"', notification)
+        self.assertIn('gh issue create --title "$TITLE" --body "$body"', notification)
+        self.assertIn("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}", notification)
+        self.assertNotIn("continue-on-error", notification)
 
     def test_pages_recertifies_repository_before_upload_and_deploy(self):
         pages = workflow_text("pages.yml")

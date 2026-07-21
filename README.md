@@ -2,7 +2,7 @@
 
 Open-source tool for searching and analyzing Puerto Rico government contracts from the [Oficina del Contralor](https://consultacontratos.ocpr.gov.pr/).
 
-**1.23M+ contract records in the current snapshot | 13 preserved fiscal years (2010-2023)**
+**1.23M+ records in the public compatibility snapshot | 13 preserved fiscal years (2010-2023)**
 
 Documentation: [project authority map](docs/project/README.md)
 
@@ -49,7 +49,7 @@ From the repository root, run the local baseline used by the PR/main CI workflow
 ## Features
 
 - **Cross-entity search** — find a contractor across all government agencies
-- **Amount range filter** — surface the largest contracts
+- **Reported-amount range filter** — match source rows by OCPR-reported `Cuantía` before family grouping
 - **Full-text search** — keyword search across all fields via FTS5
 - **Date filtering** — search by award date range
 - **Category & fiscal year filters** — drill into specific areas
@@ -63,7 +63,8 @@ From the repository root, run the local baseline used by the PR/main CI workflow
 pipeline/          Python data pipeline
   config.py        Constants, column mappings, OCPR URLs
   download.py      Bulk CSV downloader with archive-safe refreshes
-  ingest.py        CSV → SQLite with FTS5 full-text search
+  ingest.py        Certified evidence/observation → canonical SQLite + FTS5
+  normalization.py Versioned reviewed normalization registry
   monitor.py       Deferred live-monitor prototype (scheduled monitoring disabled)
 
 site/              Static search UI (sql.js / WebAssembly)
@@ -85,7 +86,7 @@ The full downloadable SQLite DB is published as a GitHub Release asset rather th
 ## Data Source
 Structured contract data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal-year CSVs are preserved when the official bulk endpoint serves them; the two oldest preserved files, `2010-2011` and `2011-2012`, were recovered from Archive.org. The integrity of the source data remains the responsibility of the entities that granted the contracts, as stated by OCPR.
 
-The current certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`, with 1,232,110 physical source records. Exact source hashes, per-file outcomes, 507 retained parser quarantines, 521 within-snapshot exact duplicates, and all 602 current canonical exclusions are documented in [`docs/project/bulk-certification.md`](docs/project/bulk-certification.md) and `data/certification/`. These measures describe different, overlapping audit dimensions. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
+The certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`, with 1,232,110 physical source records, 1,231,603 structurally certified observations, 507 retained parser quarantines, and 521 exact duplicates. The immutable Phase 1 reports preserve their original 1,231,508-row permissive projection and 602 historical exclusions. The stricter Milestone B projection retains every physical observation and produces 1,231,082 canonical bulk records, 1,231,603 contributor links, and 1,028 explicit exclusions (507 quarantines plus 521 duplicate contributors). These are different versioned projection contracts, not totals to combine. See [`docs/project/bulk-certification.md`](docs/project/bulk-certification.md), [`docs/project/data-provenance.md`](docs/project/data-provenance.md), and `data/certification/`. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
 
 ## Known Data Gaps
 
@@ -107,9 +108,11 @@ The current site handles those families with a synthetic parent/family view so u
 | valid_from / valid_to | Contract validity period |
 | service_category | Category of service |
 | service_type | Specific service type |
-| procurement_method | How the contract was procured |
-| fund_type | Funding source |
+| procurement_method | Schema-reserved; not populated by the certified bulk CSVs |
+| fund_type | Schema-reserved; not populated by the certified bulk CSVs |
 | fiscal_year | PR fiscal year (July-June) |
+
+The amount filter is source-row scoped. Any displayed family-row sum is an unvalidated aggregate, not spending, payment, or derived current contract value; amendment sign/encoding remains pending source validation.
 
 ## Automated Sync
 
@@ -121,7 +124,7 @@ GitHub Actions currently supports a weekly official bulk refresh, a monthly audi
 
 Scheduled live monitoring is disabled. The `monitor.py` code and monitor-state path are retained as deferred capability, not as an active nightly service.
 
-The workflow commits the browser DB artifact chunks and tracked metadata to the repo, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
+Runtime discovery evaluates the bounded current/new-year candidate window. Unchanged or unavailable candidates leave the active raw snapshot untouched; changed bytes are streamed to quarantine and fully certified before explicit promotion, while held/invalid candidates fail closed and preserve the last certified bytes. Archive-only years are never refreshed from the live endpoint. A schema, endpoint, payload, certification, or publication failure uploads bounded diagnostics and creates or comments on the open GitHub issue titled `Contract Sync review required`, supplementing normal Actions email. The workflow commits browser DB artifact chunks and tracked metadata only after the gates pass, and publishes the full SQLite DB as a GitHub Release asset for open-data downloads.
 
 Archive-only preserved years such as `2010-2011` and `2011-2012` remain committed in `data/raw/` and are intentionally not replaced from the live portal during refreshes.
 

@@ -1415,12 +1415,14 @@ function getContractFamilyRows(contractNumber, entity, contractor, familyId = nu
             .filter(row => row.family_id === familyId)
             .sort(compareFamilyMembers);
     }
-    const target = rows.find(row => row.contractor === contractor && !row.family_id);
+    const target = rows.find(row => (
+        row.contractor === contractor && !isPersistedFamilyId(row.family_id)
+    ));
     const contractorFamily = target?.contractor_canonical_id
         || normalizeContractorFamily(contractor);
     return rows
         .filter(row => (
-            !row.family_id && (
+            !isPersistedFamilyId(row.family_id) && (
                 row.contractor_canonical_id || normalizeContractorFamily(row.contractor)
             ) === contractorFamily
         ))

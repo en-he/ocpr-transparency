@@ -29,6 +29,7 @@ jobs:
     permissions:
       contents: write
       actions: write
+      issues: write
     env:
       FULL_DB_RELEASE_TAG: data-latest
       FULL_DB_RELEASE_ASSET: contratos-full.db.gz
@@ -262,3 +263,45 @@ jobs:
             data/evidence/bulk
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Notify failed sync review
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "Contract Sync review required"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REQUESTED_MODE: ${{ inputs.mode }}
+          SCHEDULE: ${{ github.event.schedule }}
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          issue_number="$(
+            gh issue list --state open --search 'in:title "Contract Sync review required"' \
+              --limit 100 --json number,title \
+              --jq '[.[] | select(.title == "Contract Sync review required")][0].number // empty'
+          )"
+          if [ -n "$REQUESTED_MODE" ]; then
+            mode="$REQUESTED_MODE"
+          elif [ "$SCHEDULE" = "0 7 * * 0" ]; then
+            mode="weekly"
+          elif [ "$SCHEDULE" = "0 8 2 * *" ]; then
+            mode="monthly-audit"
+          else
+            mode="unknown"
+          fi
+          body="$(printf '%s\n' \
+            'A Contract Sync run failed and requires review.' \
+            '' \
+            "- Run: $RUN_URL" \
+            "- Mode: $mode" \
+            "- Event: $EVENT" \
+            "- Source revision: $SHA" \
+            '' \
+            'The workflow blocked publication. Inspect the retained bulk-capture diagnostics when present, classify schema/payload/endpoint drift, and close this issue only after the exception is resolved.')"
+
+          if [ -n "$issue_number" ]; then
+            gh issue comment "$issue_number" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi

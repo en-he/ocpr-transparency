@@ -18,11 +18,25 @@ Exit criteria:
 
 ## Phase 1 — Certify the available bulk archive
 
-**Status: Complete.** The repository contains a reproducible inventory and one independent report for each of 13 preserved fiscal years, `2010-2011` through `2022-2023`. The evidence records source channel, source/capture metadata, exact SHA-256 and byte size, parser/rule versions, row outcomes, duplicate accounting, canonical contribution, and a source-row reconciliation for every current canonical exclusion. The two oldest snapshots link to exact-hash Archive.org captures.
+**Status: Complete.** The repository contains a reproducible inventory and one independent report for each of 13 preserved fiscal years, `2010-2011` through `2022-2023`. The evidence records source channel, source/capture metadata, exact SHA-256 and byte size, parser/rule versions, row outcomes, duplicate accounting, canonical contribution, and a source-row reconciliation for every exclusion in the historical Phase 1 compatibility projection. The two oldest snapshots link to exact-hash Archive.org captures.
 
-A missing or unavailable official CSV year is an explicit coverage state. It does **not** fail certification of the years whose source bytes are available, and it is not filled by assuming that live/recovered rows were once an official bulk export. Bounded official-source discovery currently confirms the preserved `2022-2023` bytes are unchanged; `2023-2024` is listed but unavailable, and later bounded candidates are unavailable.
+A missing or unavailable official CSV year is an explicit coverage state. It does **not** fail certification of the years whose source bytes are available, and it is not filled by assuming that live/recovered rows were once an official bulk export. The bounded discovery run used for Phase 1 closure confirmed the preserved `2022-2023` bytes were unchanged, `2023-2024` was listed but unavailable, and the later bounded candidates were unavailable at that observation time. Runtime discovery re-evaluates the bounded candidate window without treating that result as permanent.
 
 The archive-facing contract fails closed on unknown source profiles and unsupported records, quarantines invalid or suspicious future responses before validation, retains accepted changed bytes content-addressed, requires explicit promotion, and gates ingest/publication/Pages on deterministic certification. Independent immutable-revision review, GitHub CI, exact-revision Pages deployment, CDN-manifest parity, and representative public browser behavior all passed before this completion claim was recorded.
+
+## Phase 1→2 Milestone B — Data-contract migration
+
+**Status: Implemented; exact-revision release closure in progress.** This separately reviewed migration does not rewrite the Phase 1 archive certification. It adds an append-only bulk evidence/observation ledger, conservative cancellation evidence, one versioned reviewed normalization registry, full canonical and family identities, deterministic representatives, complete contributor lineage, and public language that treats `Cuantía` as an OCPR-reported source-row amount rather than spending, payment, or current contract value.
+
+The strict bulk projection retains all 1,232,110 physical observations, including 507 parser quarantines and 521 duplicate contributors, and produces 1,231,082 canonical bulk records with 1,231,603 contributor links. Versioned canonical identity preserves ten entity-number-distinct records that the previous runtime hash conflated. The browser projection carries stable identities and validated cancellation fields but excludes the evidence and lineage audit tables.
+
+Future official CSVs still pass through bounded discovery, immutable quarantine capture, exact schema certification, and explicit promotion before complete-set deterministic reprojection. An unknown schema, changed endpoint, invalid payload, or failed publication gate stops release and creates or comments on the open GitHub issue titled `Contract Sync review required`; no fuzzy or novel semantic match is auto-published.
+
+Exit criteria still in progress for this status line are the separate generated-artifact commit, exact-revision CI and sync/release gates, Pages deployment, CDN-manifest parity, and representative live-browser verification. Milestone B does not include the Audit Workspace, candidate scoring, broad live acquisition, documents/OCR, hosted query, analytics, RAG, or scheduled live monitoring.
+
+## Milestone C — Intermediate Audit Workspace
+
+**Status: Deferred; not implemented.** Milestone C redesigns the static search surface and adds only evidence-supported filters, query-state behavior, exports, responsive/mobile behavior, bilingual copy, accessibility, and audit-workflow QA. It remains a separate release after Milestone B and before broad Phase 2 acquisition. Procurement, fund, PCo, document, and other sparse fields stay capability-gated until later evidence exists.
 
 ## Phase 2 — Live reconciliation and enrichment
 
@@ -40,7 +54,7 @@ Start with fiscal years **2020-2023** and the highest-value/most ambiguous famil
 - retain normalized observations and parser versions instead of writing directly to a deduplicated canonical row;
 - expose supplemental live fields without relabeling a CSV-base row as live-origin;
 - implement human-reviewed, confidence-scored entity/family resolution with explicit conflicts and review status;
-- validate amendment amount sign/encoding and cancellation semantics;
+- validate amendment amount sign/encoding and cancellation effects on family/current-value lifecycle calculations; source-row cancellation raw/date/status semantics are already implemented;
 - distinguish reported amount, derived current contract value, and actual payments;
 - only after those controls are stable, operate a minimum weekly live-ingestion/reconciliation cadence. The current scheduled live monitor remains disabled.
 

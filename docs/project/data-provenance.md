@@ -26,9 +26,11 @@ A canonical row is never a substitute for the evidence that produced it. The cer
 - The certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`: 1,232,110 physical source records, 1,231,603 structurally certified records, 507 retained `shifted_row` quarantines, and 521 true canonical duplicates. The Milestone B strict bulk projection contains 1,231,082 canonical records and 1,231,603 contributor links: one representative per canonical record plus all 521 duplicate contributors. Its 1,028 explicit exclusions are the 507 parser quarantines plus those 521 duplicates. Versioned canonical identity includes entity number, which preserves 10 distinct records that the prior runtime hash conflated.
 - The immutable Phase 1 certification manifest remains a historical source-certification artifact: it records 1,231,508 permissive rows and 602 exclusions under its original truncated six-field hash contract. Milestone B does not rewrite those certified bytes or reuse that compatibility hash as canonical identity. These discrepancy dimensions describe different projection contracts and must not be added together. Post-2023 bulk exports are currently unavailable; a missing year is an unavailable-source state, not evidence of zero contracts.
 - The pre-Milestone-B deployed compatibility DB contains `1,238,597` rows: `1,231,508` `csv` rows plus `7,089` `live_recovery` rows. There are no `live_monitor` rows in that baseline. Milestone B bulk-gate counts above do not silently claim that supplemental live-recovery evidence has been recertified under the bulk ledger.
+- Bulk cancellation evidence accounts for every physical observation: 1,205,905 blank/NUL values remain `unknown`, 26,203 valid date-like values are retained as effective cancellation dates with `cancelled` status, and 2 malformed values remain `malformed`. Notification date and effective cancellation date are separate official concepts.
+- The active normalization registry is `normalization-registry-1` using exact `lookup-v1` resolution. It contains 23 reviewed contractor aliases, rejects registry collisions, and has a separate deterministic manifest under `data/normalization/`; no fuzzy candidate is auto-published.
 - The tracked Phase 2A recovery ledger has `11,983` targets: `7,177` recovered and `4,806` unrecoverable. The recovered-target count is not identical to the number of stored recovered rows because some outcomes resolve idempotently against an existing/recovered row.
 - The ledger's scope is the multi-row missing-original backlog it tracked. A broader audit found `31,264` families without stored originals, including `26,209` single-row amendment-only families. Those are unresolved coverage/review states, not proof that all families should or can be recovered.
-- Tier 2B structured enrichment and the document/OCR lane have not been implemented.
+- The reviewed exact-match normalization registry is implemented. Broader Phase 2B confidence-scored entity resolution/structured enrichment and the document/OCR lane have not been implemented.
 
 These figures describe this preserved/rebuilt baseline. They do not establish complete historical or live-registry coverage.
 
@@ -72,7 +74,7 @@ Current row-level `source_type` values are:
 - `live_recovery` — recovered from the live registry as part of the tracked Phase 2A missing-original process.
 - `live_monitor` — supported by the schema/code for a monitor observation, but absent from the current database and not scheduled.
 
-`source_url` and `source_contract_id` are useful row-level links, but they do not currently identify an immutable response object. The future model should link canonical fields to observation/evidence IDs instead of relying on one source label.
+For certified bulk rows, canonical projection and contributor relations link back to immutable observation/evidence IDs; `source_url` and `source_contract_id` remain compatibility/display fields rather than the provenance authority. Supplemental live-recovery rows still rely on normalized source links and do not identify an immutable API/HTML response object.
 
 Recovery ledger statuses (`pending`, `recovered`, `unrecoverable`, and `ambiguous`) describe a recovery target's workflow outcome. A terminal `unrecoverable` result means that the defined recovery attempt did not establish a parent; it does not mean the whole registry lacks that contract, and it does not close families outside the target seed scope. “Unreviewed,” “conflict,” and “not searched” should remain distinct in future reconciliation queues.
 
@@ -96,7 +98,7 @@ Cancellation is represented separately as exact source evidence (`cancellation_r
 
 - Raw live API responses and detail HTML are not yet durably retained; current recovery output preserves normalized results and links, not every response byte.
 - Downloaded documents, OCR text, document search, and document-to-contract review are not implemented.
-- The canonical DB is deduplicated and therefore cannot serve as the immutable observation ledger.
-- Current row hashes/deduplication are implementation aids, not proof of entity identity. Future entity resolution must expose confidence and human review decisions.
+- The full database contains both the deduplicated canonical projection and separate append-only bulk evidence/observation/contributor ledgers. The browser database intentionally omits those audit ledgers and is not source authority.
+- Versioned canonical and family IDs are deterministic projection identities, not proof that two real-world legal entities are the same. Future fuzzy/entity resolution must expose confidence and human review decisions.
 - The current archive-year list is intentionally derived from actual files in `data/raw/`, not from all fiscal years appearing in the canonical DB.
 - Any source gap, failed fetch, parser warning, or unresolved family must be retained as an explicit state; do not silently drop it or fill it with a synthetic fact.

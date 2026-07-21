@@ -213,6 +213,59 @@ class CanonicalLineageTests(unittest.TestCase):
                 )
         connection.close()
 
+    def test_schema_setup_replaces_every_weaker_managed_trigger(self):
+        connection = sqlite3.connect(":memory:")
+        contract_utils.create_schema(connection)
+        managed = {
+            row[0]: row[1]
+            for row in connection.execute(
+                """
+                SELECT name, tbl_name
+                FROM sqlite_master
+                WHERE type = 'trigger'
+                  AND name IN ({})
+                """.format(
+                    ", ".join("?" for _ in contract_utils.MANAGED_TRIGGER_NAMES)
+                ),
+                contract_utils.MANAGED_TRIGGER_NAMES,
+            )
+        }
+        self.assertEqual(set(managed), set(contract_utils.MANAGED_TRIGGER_NAMES))
+
+        for name, table in managed.items():
+            connection.execute(f'DROP TRIGGER "{name}"')
+            connection.execute(
+                f"""
+                CREATE TRIGGER "{name}"
+                BEFORE INSERT ON "{table}"
+                WHEN 0
+                BEGIN
+                    SELECT RAISE(ABORT, 'obsolete permissive trigger');
+                END
+                """
+            )
+        contract_utils.create_schema(connection)
+
+        refreshed = {
+            row[0]: row[1]
+            for row in connection.execute(
+                """
+                SELECT name, sql
+                FROM sqlite_master
+                WHERE type = 'trigger'
+                  AND name IN ({})
+                """.format(
+                    ", ".join("?" for _ in contract_utils.MANAGED_TRIGGER_NAMES)
+                ),
+                contract_utils.MANAGED_TRIGGER_NAMES,
+            )
+        }
+        self.assertEqual(set(refreshed), set(contract_utils.MANAGED_TRIGGER_NAMES))
+        for name, sql in refreshed.items():
+            with self.subTest(trigger=name):
+                self.assertNotIn("obsolete permissive trigger", sql)
+        connection.close()
+
     def test_projection_result_requires_contributor_relation(self):
         batch = bulk_observations.generate_bulk_observations(
             FIXTURE,
@@ -397,7 +450,8 @@ class CanonicalLineageTests(unittest.TestCase):
             )
             self.assertIn("representative_id AS id,\n            family_id,", browser_source)
             self.assertIn(".filter(row => row.family_id === familyId)", browser_source)
-            self.assertIn("!row.family_id && (", browser_source)
+            self.assertIn("!isPersistedFamilyId(row.family_id) && (", browser_source)
+            self.assertNotIn("!row.family_id && (", browser_source)
             self.assertIn("family_id: firstFamilyRow.family_id || null", browser_source)
             contract_source = (REPO_ROOT / "site" / "js" / "contract.js").read_text(
                 encoding="utf-8"

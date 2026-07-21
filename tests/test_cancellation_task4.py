@@ -18,6 +18,7 @@ from contract_utils import (  # noqa: E402
     CANCELLATION_STATUSES,
     create_schema,
     normalize_contract_record,
+    parse_bulk_field,
     parse_cancellation,
     records_equivalent,
 )
@@ -62,6 +63,31 @@ class CancellationParsingTests(unittest.TestCase):
             ("not_cancelled", None, 0),
         )
 
+    def test_live_tokens_are_malformed_in_the_certified_bulk_profile(self):
+        for raw in (
+            "true",
+            "FALSE",
+            "unknown",
+            "2011-09-30",
+            "09/30/2011",
+            "9-30-2011",
+            "09-3-2011",
+        ):
+            with self.subTest(raw=raw):
+                raw_field = parse_bulk_field("cancellation_raw", raw)
+                date_field = parse_bulk_field("cancellation_date", raw)
+                status_field = parse_bulk_field("cancellation_status", raw)
+                legacy_field = parse_bulk_field("cancelled", raw)
+                self.assertEqual(raw_field.raw_value, raw)
+                self.assertEqual(raw_field.value, raw)
+                self.assertEqual(raw_field.status, "malformed")
+                self.assertIsNone(date_field.value)
+                self.assertEqual(date_field.status, "malformed")
+                self.assertEqual(status_field.value, "malformed")
+                self.assertEqual(status_field.status, "malformed")
+                self.assertEqual(legacy_field.value, 0)
+                self.assertEqual(legacy_field.status, "malformed")
+
     def test_malformed_and_ambiguous_values_fail_closed_without_losing_raw(self):
         malformed = parse_cancellation("not-a-cancellation")
         ambiguous = parse_cancellation("05-06-14")
@@ -76,12 +102,22 @@ class CancellationParsingTests(unittest.TestCase):
         ajax = parse_cancellation("/Date(1317369600000)/")
         slash = parse_cancellation("09/30/2011")
         iso = parse_cancellation("2011-09-30")
+        single_digit_month = parse_cancellation("9-30-2011")
+        single_digit_day = parse_cancellation("09-3-2011")
         self.assertEqual(
             (ajax.raw_value, ajax.date, ajax.status),
             ("/Date(1317369600000)/", "2011-09-30", "cancelled"),
         )
         self.assertEqual((slash.date, slash.status), ("2011-09-30", "cancelled"))
         self.assertEqual((iso.date, iso.status), ("2011-09-30", "cancelled"))
+        self.assertEqual(
+            (single_digit_month.date, single_digit_month.status),
+            ("2011-09-30", "cancelled"),
+        )
+        self.assertEqual(
+            (single_digit_day.date, single_digit_day.status),
+            ("2011-09-03", "cancelled"),
+        )
 
     def test_normalized_record_derives_legacy_cancelled_from_validated_status(self):
         dated = normalize_contract_record(

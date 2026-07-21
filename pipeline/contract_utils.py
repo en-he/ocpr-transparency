@@ -28,6 +28,33 @@ CANONICAL_IDENTITY_VERSION = "canonical-record-v1"
 FAMILY_IDENTITY_VERSION = "contract-family-v1"
 CANONICAL_DECISION_VERSION = "canonical-decision-v1"
 
+MANAGED_TRIGGER_NAMES = (
+    "normalize_contract_cancellation_insert",
+    "validate_contract_cancellation_insert",
+    "validate_contract_cancellation_update",
+    "validate_bulk_observation_insert",
+    "validate_bulk_observation_identity_insert",
+    "evidence_objects_no_update",
+    "evidence_objects_no_delete",
+    "bulk_observations_no_update",
+    "bulk_observations_no_delete",
+    "validate_projection_exclusion_insert",
+    "bulk_projection_exclusions_no_update",
+    "bulk_projection_exclusions_no_delete",
+    "validate_canonical_contributor_insert",
+    "canonical_contributors_no_update",
+    "canonical_contributors_no_delete",
+    "validate_contract_lineage_insert",
+    "validate_contract_lineage_update",
+    "validate_projection_result_insert",
+    "validate_projection_result_update",
+    "bulk_projection_results_no_update",
+    "bulk_projection_results_no_delete",
+)
+
+_CONTRACT_TRIGGER_NAMES = MANAGED_TRIGGER_NAMES[:3]
+_BULK_TRIGGER_NAMES = MANAGED_TRIGGER_NAMES[3:]
+
 CANCELLATION_STATUSES = frozenset(
     {"cancelled", "not_cancelled", "unknown", "malformed"}
 )
@@ -304,6 +331,25 @@ def _parse_strict_cancellation_date(raw: Any) -> tuple[str | None, str]:
     if len(parts) != 3 or not all(part.isdigit() for part in parts):
         return None, "malformed"
     month, day, year = parts
+    if len(month) != 2 or len(day) != 2:
+        return None, "malformed"
+    if len(year) == 2:
+        return None, "ambiguous"
+    if len(year) != 4:
+        return None, "malformed"
+    try:
+        return datetime.strptime(text, "%m-%d-%Y").date().isoformat(), "valid"
+    except ValueError:
+        return None, "malformed"
+
+
+def _parse_compatible_cancellation_date(raw: Any) -> tuple[str | None, str]:
+    """Preserve the pre-bulk-contract live/recovery date compatibility."""
+    text = str(raw).strip()
+    parts = text.split("-")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return None, "malformed"
+    month, _day, year = parts
     if len(month) == 4:
         return None, "malformed"
     if len(year) == 2:
@@ -347,7 +393,7 @@ def parse_cancellation(raw: Any) -> CancellationResult:
         except ValueError:
             return CancellationResult(raw_value, None, "malformed", 0)
 
-    cancellation_date, date_status = _parse_strict_cancellation_date(text)
+    cancellation_date, date_status = _parse_compatible_cancellation_date(text)
     if date_status == "valid":
         return CancellationResult(raw_value, cancellation_date, "cancelled", 1)
     if date_status == "ambiguous":
@@ -372,13 +418,6 @@ def parse_cancellation(raw: Any) -> CancellationResult:
 def _bulk_cancellation_field_status(raw: Any, parsed: CancellationResult) -> str:
     if _bulk_blank(raw):
         return "missing"
-    normalized = normalize_lookup_value(raw)
-    if normalized in (
-        _CANCELLATION_TRUE_TOKENS
-        | _CANCELLATION_FALSE_TOKENS
-        | _CANCELLATION_UNKNOWN_TOKENS
-    ):
-        return "valid"
     _, date_status = _parse_strict_cancellation_date(raw)
     if date_status == "ambiguous":
         return "ambiguous"
@@ -390,13 +429,22 @@ def _bulk_cancellation_field_status(raw: Any, parsed: CancellationResult) -> str
 def _parse_bulk_cancellation_date(raw: Any) -> TypedFieldResult:
     parsed = parse_cancellation(raw)
     field_status = _bulk_cancellation_field_status(raw, parsed)
-    return TypedFieldResult(parsed.date, parsed.raw_value, field_status)
+    return TypedFieldResult(
+        parsed.date if field_status == "valid" else None,
+        parsed.raw_value,
+        field_status,
+    )
 
 
 def _parse_bulk_cancellation_status(raw: Any) -> TypedFieldResult:
     parsed = parse_cancellation(raw)
     field_status = _bulk_cancellation_field_status(raw, parsed)
-    return TypedFieldResult(parsed.status, parsed.raw_value, field_status)
+    status = parsed.status
+    if field_status == "malformed":
+        status = "malformed"
+    elif field_status in {"missing", "ambiguous"}:
+        status = "unknown"
+    return TypedFieldResult(status, parsed.raw_value, field_status)
 
 
 def _parse_bulk_cancellation_raw(raw: Any) -> TypedFieldResult:
@@ -452,7 +500,7 @@ def _parse_bulk_cancelled(raw: Any) -> TypedFieldResult:
     parsed = parse_cancellation(raw)
     field_status = _bulk_cancellation_field_status(raw, parsed)
     return TypedFieldResult(
-        parsed.legacy_cancelled,
+        parsed.legacy_cancelled if field_status == "valid" else 0,
         parsed.raw_value,
         field_status,
     )
@@ -668,6 +716,41 @@ def register_sqlite_functions(conn: sqlite3.Connection):
         lambda payload: _identity_from_parsed_values(payload, "family"),
         deterministic=True,
     )
+    conn.create_function(
+        "bulk_observation_id",
+        5,
+        lambda evidence_id, source_row_number, raw_row_hash, parser_version,
+        normalizer_version: "sha256:" + hashlib.sha256(
+            json.dumps(
+                [
+                    "bulk-observation-v1",
+                    evidence_id,
+                    source_row_number,
+                    raw_row_hash,
+                    parser_version,
+                    normalizer_version,
+                ],
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest(),
+        deterministic=True,
+    )
+    conn.create_function(
+        "sha256_latin1",
+        1,
+        lambda value: hashlib.sha256(str(value).encode("latin-1")).hexdigest(),
+        deterministic=True,
+    )
+
+
+def _drop_managed_triggers(
+    conn: sqlite3.Connection,
+    names: tuple[str, ...],
+) -> None:
+    for name in names:
+        conn.execute(f'DROP TRIGGER IF EXISTS "{name}"')
 
 
 def _identity_digest(version: str, fields: list[tuple[str, Any]]) -> str:
@@ -905,6 +988,7 @@ def create_schema(conn: sqlite3.Connection):
         """)
 
     migrate_contracts_schema(conn)
+    _drop_managed_triggers(conn, _CONTRACT_TRIGGER_NAMES)
     conn.executescript("""
         CREATE TRIGGER IF NOT EXISTS normalize_contract_cancellation_insert
         AFTER INSERT ON contracts
@@ -999,6 +1083,7 @@ def migrate_ingestion_log_schema(conn: sqlite3.Connection):
 
 def create_bulk_observation_schema(conn: sqlite3.Connection):
     """Create the full/audit observation ledger, never the browser projection."""
+    _drop_managed_triggers(conn, _BULK_TRIGGER_NAMES)
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS evidence_objects (
@@ -1090,6 +1175,35 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
             SELECT RAISE(ABORT, 'only certified observations may be canonical eligible');
         END;
 
+        CREATE TRIGGER IF NOT EXISTS validate_bulk_observation_identity_insert
+        BEFORE INSERT ON bulk_observations
+        WHEN NEW.observation_id != bulk_observation_id(
+                 NEW.evidence_id,
+                 NEW.source_row_number,
+                 NEW.raw_row_hash,
+                 NEW.parser_version,
+                 NEW.normalizer_version
+             )
+          OR NEW.raw_row_hash != sha256_latin1(NEW.raw_record)
+          OR (
+              NEW.duplicate_status = 'exact_duplicate'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM bulk_observations AS original
+                  WHERE original.observation_id = NEW.duplicate_of_observation_id
+                    AND original.evidence_id = NEW.evidence_id
+                    AND original.source_row_number < NEW.source_row_number
+                    AND original.raw_row_hash = NEW.raw_row_hash
+                    AND original.raw_record = NEW.raw_record
+                    AND original.parser_version = NEW.parser_version
+                    AND original.normalizer_version = NEW.normalizer_version
+                    AND original.observation_status = 'certified'
+              )
+          )
+        BEGIN
+            SELECT RAISE(ABORT, 'invalid bulk observation identity');
+        END;
+
         CREATE TRIGGER IF NOT EXISTS evidence_objects_no_update
         BEFORE UPDATE ON evidence_objects
         BEGIN
@@ -1147,6 +1261,18 @@ def create_bulk_observation_schema(conn: sqlite3.Connection):
                       observation.canonical_eligible = 1
                       AND observation.observation_status = 'certified'
                       AND NEW.reason = 'canonical_row_hash_duplicate'
+                      AND EXISTS (
+                          SELECT 1
+                          FROM bulk_projection_results AS result
+                          JOIN canonical_observation_contributors AS contributor
+                            ON contributor.observation_id = result.observation_id
+                          WHERE result.observation_id = NEW.observation_id
+                            AND result.projection_status = 'excluded'
+                            AND result.reason = NEW.reason
+                            AND contributor.contribution_role = 'duplicate'
+                            AND contributor.merge_reason =
+                                'canonical_record_duplicate'
+                      )
                   )
               )
         )
