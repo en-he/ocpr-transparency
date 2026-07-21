@@ -1,7 +1,11 @@
 {
-  "generated_at": "2026-07-18T17:46:10.017433+00:00",
-  "row_count": 1238597,
-  "total_amount": 218078932732.11,
+  "generated_at": "2026-07-21T17:38:03.244649+00:00",
+  "normalization_registry": {
+    "version": "normalization-registry-1",
+    "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced"
+  },
+  "row_count": 1238171,
+  "total_amount": 218082813568.71,
   "fiscal_years": [
     "2022-2023",
     "2021-2022",
@@ -36,7 +40,7 @@
     "top_contractors": [
       {
         "name": "Triple-S Salud, Inc.",
-        "family_count": 128,
+        "family_count": 127,
         "total_amount": 15126724206.49
       },
       {
@@ -73,85 +77,85 @@
       },
       {
         "name": "Autoridad de Carreteras y Transportaci\u00f3n de Puerto Rico",
-        "family_count": 3422,
+        "family_count": 3426,
         "total_amount": 7858420608.13
       },
       {
         "name": "Departamento de la Vivienda",
-        "family_count": 3569,
+        "family_count": 3573,
         "total_amount": 7203207727.13
       },
       {
         "name": "Departamento de Educaci\u00f3n de Puerto Rico",
-        "family_count": 13918,
+        "family_count": 13919,
         "total_amount": 7118877248.63
       }
     ],
     "yearly_spending": [
       {
         "fiscal_year": "2010-2011",
-        "family_count": 96227,
-        "total_amount": 23133355365.53
+        "family_count": 96169,
+        "total_amount": 23142028892.96
       },
       {
         "fiscal_year": "2011-2012",
-        "family_count": 95070,
-        "total_amount": 25168676060.14
+        "family_count": 95039,
+        "total_amount": 25210195100.87
       },
       {
         "fiscal_year": "2012-2013",
-        "family_count": 94086,
-        "total_amount": 12887865468.56
+        "family_count": 93795,
+        "total_amount": 12854814595.64
       },
       {
         "fiscal_year": "2013-2014",
-        "family_count": 86099,
-        "total_amount": 9992042356.83
+        "family_count": 85938,
+        "total_amount": 9972067728.57
       },
       {
         "fiscal_year": "2014-2015",
-        "family_count": 89472,
-        "total_amount": 19415855530.98
+        "family_count": 89435,
+        "total_amount": 19414419720.23
       },
       {
         "fiscal_year": "2015-2016",
-        "family_count": 90877,
-        "total_amount": 30381159413.34
+        "family_count": 90853,
+        "total_amount": 30385039462.64
       },
       {
         "fiscal_year": "2016-2017",
-        "family_count": 88135,
-        "total_amount": 6572537175.88
+        "family_count": 88105,
+        "total_amount": 6572223404.88
       },
       {
         "fiscal_year": "2017-2018",
-        "family_count": 73516,
-        "total_amount": 10731767044.83
+        "family_count": 73383,
+        "total_amount": 10739305004.47
       },
       {
         "fiscal_year": "2018-2019",
-        "family_count": 75913,
-        "total_amount": 38665090688.98
+        "family_count": 75863,
+        "total_amount": 38663954917.86
       },
       {
         "fiscal_year": "2019-2020",
-        "family_count": 63846,
-        "total_amount": 10341813151.51
+        "family_count": 63812,
+        "total_amount": 10340897236.78
       },
       {
         "fiscal_year": "2020-2021",
-        "family_count": 60439,
-        "total_amount": 17055733604.19
+        "family_count": 60427,
+        "total_amount": 16984259793.34
       },
       {
         "fiscal_year": "2021-2022",
-        "family_count": 12011,
-        "total_amount": 9236732151.45
+        "family_count": 11984,
+        "total_amount": 9295207136.63
       },
       {
         "fiscal_year": "2022-2023",
-        "family_count": 8882,
-        "total_amount": 1373356517.19
+        "family_count": 8873,
+        "total_amount": 1373331410.78
       }
     ]
   },
@@ -131972,18 +131976,20 @@
     }
   ],
   "browser_db": {
-    "sha256": "6c1cdca2c234cc9f7ac222d8462e5aa8a15c3c9bd163eb7e1df11e73a43b87db",
-    "size_bytes": 114219736,
+    "sha256": "b8862e31c62b20b4d2905672dd525bf3f8fa093e3c2209a2ecc7e4906568ba09",
+    "size_bytes": 377176542,
     "format": "sqlite+gzip",
     "parts": [
       "contratos.db.gz.part-001",
-      "contratos.db.gz.part-002"
+      "contratos.db.gz.part-002",
+      "contratos.db.gz.part-003",
+      "contratos.db.gz.part-004"
     ]
   },
   "full_download_db": {
     "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
-    "sha256": "1d8d16ca49091ee72f85019a798aae09949410c62238a67895078d2dd2b460cf",
-    "size_bytes": 184587369,
+    "sha256": "7e39c89a07cb13201575cd3f9e4675c8d0bbb1dcf68ffbb8b0d0b10f28937f53",
+    "size_bytes": 1225167488,
     "format": "sqlite+gzip"
   }
 }
