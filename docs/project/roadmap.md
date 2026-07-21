@@ -26,13 +26,13 @@ The archive-facing contract fails closed on unknown source profiles and unsuppor
 
 ## Phase 1→2 Milestone B — Data-contract migration
 
-**Status: Implemented; exact-revision release closure in progress.** This separately reviewed migration does not rewrite the Phase 1 archive certification. It adds an append-only bulk evidence/observation ledger, conservative cancellation evidence, one versioned reviewed normalization registry, full canonical and family identities, deterministic representatives, complete contributor lineage, and public language that treats `Cuantía` as an OCPR-reported source-row amount rather than spending, payment, or current contract value.
+**Status: Complete.** This separately reviewed migration does not rewrite the Phase 1 archive certification. It adds an append-only bulk evidence/observation ledger, conservative cancellation evidence, one versioned reviewed normalization registry, full canonical and family identities, deterministic representatives, complete contributor lineage, and public language that treats `Cuantía` as an OCPR-reported source-row amount rather than spending, payment, disbursement, or a derived current contract value.
 
 The strict bulk projection retains all 1,232,110 physical observations, including 507 parser quarantines and 521 duplicate contributors, and produces 1,231,082 canonical bulk records with 1,231,603 contributor links. Versioned canonical identity preserves ten entity-number-distinct records that the previous runtime hash conflated. The browser projection carries stable identities and validated cancellation fields but excludes the evidence and lineage audit tables.
 
 Future official CSVs still pass through bounded discovery, immutable quarantine capture, exact schema certification, and explicit promotion before complete-set deterministic reprojection. An unknown schema, changed endpoint, invalid payload, or failed publication gate stops release and creates or comments on the open GitHub issue titled `Contract Sync review required`; no fuzzy or novel semantic match is auto-published.
 
-Exit criteria still in progress for this status line are the separate generated-artifact commit, exact-revision CI and sync/release gates, Pages deployment, CDN-manifest parity, and representative live-browser verification. Milestone B does not include the Audit Workspace, candidate scoring, broad live acquisition, documents/OCR, hosted query, analytics, RAG, or scheduled live monitoring.
+The generated-artifact commit, exact-revision CI, monthly sync/release chain, Pages deployment, CDN-manifest parity, full/browser artifact integrity, and representative Spanish/English live-browser checks all passed before this completion claim. The deployed browser snapshot contains 1,238,171 rows: 1,231,082 strict canonical bulk records plus the 7,089 supplemental live-recovery compatibility rows. Milestone B does not include the Audit Workspace, candidate scoring, broad live acquisition, documents/OCR, hosted query, analytics, RAG, or scheduled live monitoring.
 
 ## Milestone C — Intermediate Audit Workspace
 

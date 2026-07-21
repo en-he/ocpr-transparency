@@ -2,7 +2,7 @@
 
 Open-source tool for searching and analyzing Puerto Rico government contracts from the [Oficina del Contralor](https://consultacontratos.ocpr.gov.pr/).
 
-**1.23M+ records in the public compatibility snapshot | 13 preserved fiscal years (2010-2023)**
+**1.23M+ records in the deployed browser snapshot | 13 preserved fiscal years (2010-2023)**
 
 Documentation: [project authority map](docs/project/README.md)
 
@@ -87,6 +87,8 @@ The full downloadable SQLite DB is published as a GitHub Release asset rather th
 Structured contract data comes from the OCPR contract registry at `consultacontratos.ocpr.gov.pr`. Fiscal-year CSVs are preserved when the official bulk endpoint serves them; the two oldest preserved files, `2010-2011` and `2011-2012`, were recovered from Archive.org. The integrity of the source data remains the responsibility of the entities that granted the contracts, as stated by OCPR.
 
 The certified bulk corpus contains 13 fiscal years, `2010-2011` through `2022-2023`, with 1,232,110 physical source records, 1,231,603 structurally certified observations, 507 retained parser quarantines, and 521 exact duplicates. The immutable Phase 1 reports preserve their original 1,231,508-row permissive projection and 602 historical exclusions. The stricter Milestone B projection retains every physical observation and produces 1,231,082 canonical bulk records, 1,231,603 contributor links, and 1,028 explicit exclusions (507 quarantines plus 521 duplicate contributors). These are different versioned projection contracts, not totals to combine. See [`docs/project/bulk-certification.md`](docs/project/bulk-certification.md), [`docs/project/data-provenance.md`](docs/project/data-provenance.md), and `data/certification/`. Post-2023 official bulk exports are not currently preserved. A year shown in the live portal is not treated as an available bulk snapshot until its source bytes are recovered and recorded.
+
+Milestone B is deployed. The public browser snapshot contains 1,238,171 rows: the 1,231,082 strict canonical bulk records plus 7,089 supplemental live-recovery compatibility rows. Its full downloadable database and four browser chunks are published from the same gated monthly-audit build.
 
 ## Known Data Gaps
 
