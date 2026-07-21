@@ -214,19 +214,31 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertRegex(checkout.group("body"), r"(?m)^\s+fetch-depth:\s*0\s*$")
         self.assertRegex(checkout.group("body"), r"(?m)^\s+lfs:\s*false\s*$")
 
-    def test_sync_auto_commit_keeps_contract_and_has_stable_id(self):
+    def test_sync_auto_commit_handles_optional_paths_and_has_stable_id(self):
         workflow = workflow_text("sync.yml")
         auto_commit = named_step_block(workflow, "Commit updated data")
         self.assertIn("id: auto_commit", auto_commit)
-        self.assertIn("uses: stefanzweifel/git-auto-commit-action@v5", auto_commit)
+        self.assertNotIn("git-auto-commit-action", auto_commit)
         self.assertIn(
-            'commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"',
+            'COMMIT_MESSAGE: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"',
             auto_commit,
         )
-        self.assertIn(
-            'file_pattern: "data/raw/ data/evidence/bulk/ data/certification/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"',
-            auto_commit,
-        )
+        self.assertIn('add_if_present_or_tracked "data/evidence/bulk"', auto_commit)
+        self.assertIn('add_if_present_or_tracked "data/db/monitor_state.json"', auto_commit)
+        self.assertIn("git ls-files 'site/contratos.db.gz*'", auto_commit)
+        self.assertIn("compgen -G 'site/contratos.db.gz*' || true", auto_commit)
+        self.assertIn('git add -A -- "${paths[@]}"', auto_commit)
+        self.assertIn('echo "changes_detected=false" >> "$GITHUB_OUTPUT"', auto_commit)
+        self.assertIn('echo "changes_detected=true" >> "$GITHUB_OUTPUT"', auto_commit)
+        self.assertIn('git push origin HEAD:main', auto_commit)
+
+    def test_sync_commits_before_release_publication_and_pages_dispatch(self):
+        workflow = workflow_text("sync.yml")
+        commit = workflow.index("- name: Commit updated data")
+        publish = workflow.index("- name: Publish full DB release asset")
+        dispatch = workflow.index("- name: Dispatch Pages deployment")
+        self.assertLess(commit, publish)
+        self.assertLess(publish, dispatch)
 
     def test_sync_dispatches_pages_only_after_a_detected_auto_commit(self):
         workflow = workflow_text("sync.yml")
@@ -269,6 +281,8 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertLess(full_certify, full_ingest)
         self.assertLess(max(weekly_ingest, full_ingest), post_gate)
         self.assertLess(post_gate, min(build, publish, commit))
+        self.assertLess(build, commit)
+        self.assertLess(commit, publish)
         for step_name in (
             "Weekly — certify promoted snapshots",
             "Full rebuild — certify promoted snapshots",
@@ -320,6 +334,8 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertIn('gh issue comment "$issue_number" --body "$body"', notification)
         self.assertIn('gh issue create --title "$TITLE" --body "$body"', notification)
         self.assertIn("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}", notification)
+        self.assertIn("The workflow did not complete the publication chain.", notification)
+        self.assertNotIn("The workflow blocked publication.", notification)
         self.assertNotIn("continue-on-error", notification)
 
     def test_pages_recertifies_repository_before_upload_and_deploy(self):

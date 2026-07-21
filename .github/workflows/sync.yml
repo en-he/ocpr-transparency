@@ -213,6 +213,51 @@ jobs:
           --repo-raw-base https://github.com/${{ github.repository }}/raw/main
           --full-download-url https://github.com/${{ github.repository }}/releases/download/${{ env.FULL_DB_RELEASE_TAG }}/${{ env.FULL_DB_RELEASE_ASSET }}
 
+      # ── Commit changes ───────────────────────────────────────────────
+      - name: Commit updated data
+        id: auto_commit
+        env:
+          COMMIT_MESSAGE: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"
+        run: |
+          set -euo pipefail
+          paths=()
+          add_if_present_or_tracked() {
+            local path="$1"
+            if [ -e "$path" ] || [ -n "$(git ls-files "$path" "$path/**")" ]; then
+              paths+=("$path")
+            fi
+          }
+
+          add_if_present_or_tracked "data/raw"
+          add_if_present_or_tracked "data/evidence/bulk"
+          add_if_present_or_tracked "data/certification"
+          add_if_present_or_tracked "data/db/monitor_state.json"
+          add_if_present_or_tracked "site/data-manifest.json"
+          while IFS= read -r artifact; do
+            paths+=("$artifact")
+          done < <(
+            {
+              git ls-files 'site/contratos.db.gz*'
+              compgen -G 'site/contratos.db.gz*' || true
+            } | sort -u
+          )
+
+          if [ "${#paths[@]}" -eq 0 ]; then
+            echo "changes_detected=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git add -A -- "${paths[@]}"
+          if git diff --cached --quiet; then
+            echo "changes_detected=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "$COMMIT_MESSAGE"
+          git push origin HEAD:main
+          echo "changes_detected=true" >> "$GITHUB_OUTPUT"
+
       - name: Publish full DB release asset
         if: steps.artifacts.outputs.rebuild == 'true'
         env:
@@ -225,14 +270,6 @@ jobs:
 
           gh release upload "$FULL_DB_RELEASE_TAG" "data/db/$FULL_DB_RELEASE_ASSET" --clobber
           gh release edit "$FULL_DB_RELEASE_TAG" --draft=false
-
-      # ── Commit changes ───────────────────────────────────────────────
-      - name: Commit updated data
-        id: auto_commit
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "data: ${{ steps.mode.outputs.mode }} sync ${{ steps.stamp.outputs.date }}"
-          file_pattern: "data/raw/ data/evidence/bulk/ data/certification/ data/db/monitor_state.json site/contratos.db.gz* site/data-manifest.json"
 
       - name: Dispatch Pages deployment
         if: steps.auto_commit.outputs.changes_detected == 'true'
@@ -298,7 +335,7 @@ jobs:
             "- Event: $EVENT" \
             "- Source revision: $SHA" \
             '' \
-            'The workflow blocked publication. Inspect the retained bulk-capture diagnostics when present, classify schema/payload/endpoint drift, and close this issue only after the exception is resolved.')"
+            'The workflow did not complete the publication chain. Inspect retained bulk-capture diagnostics when present, classify schema/payload/endpoint drift, and close this issue only after the exception is resolved.')"
 
           if [ -n "$issue_number" ]; then
             gh issue comment "$issue_number" --body "$body"
