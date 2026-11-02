@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02T15:51:55.326288+00:00",
+  "generated_at": "2026-11-02T19:12:51.890439+00:00",
   "normalization_registry": {
     "version": "normalization-registry-1",
     "sha256": "8601f90783373d6c12aab77e43046127473a5c1a82f5b4eb3c8cf3d6a4e5aced"
@@ -131976,7 +131976,7 @@
     }
   ],
   "browser_db": {
-    "sha256": "4150d1a137a654142fcd25a03553d11a8be0d021cc35d134a136b91eec9cc80b",
+    "sha256": "af0eb1a808b7c6614d42932125254103c0c98e0ab7248431596a9ba9036007c5",
     "size_bytes": 377176542,
     "format": "sqlite+gzip",
     "parts": [
@@ -131988,8 +131988,8 @@
   },
   "full_download_db": {
     "url": "https://github.com/en-he/ocpr-transparency/releases/download/data-latest/contratos-full.db.gz",
-    "sha256": "22189124730fc70066a40ed5d5df39aea81ab512445107fe54a786ef6295c6eb",
-    "size_bytes": 1225166481,
+    "sha256": "e91c319d4e3d81f11be2f99ba8e804218ff6fdf26b7e4fbe4e9504f3df542c94",
+    "size_bytes": 1225166379,
     "format": "sqlite+gzip"
   }
 }
